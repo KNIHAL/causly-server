@@ -72,4 +72,4 @@ causly-server/
 
 ## License
 
-MIT
+MIT — see [LICENSE](./LICENSE) for details.
