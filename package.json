@@ -1,0 +1,15 @@
+{
+  "name": "causly-server",
+  "version": "1.0.0",
+  "description": "Causly custom MCP server — full filesystem + git + command execution",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.29.0",
+    "simple-git": "^3.36.0",
+    "zod": "^4.4.3"
+  }
+}
