@@ -1,12 +1,12 @@
 # Causly Server
 
-A custom MCP (Model Context Protocol) server that gives Claude full, direct access to your local filesystem, shell, and git — so it can read, write, edit, and manage real projects on your machine instead of just talking about code.
+A custom MCP (Model Context Protocol) server that gives Claude full, direct control over your local machine and your core dev stack — filesystem, git, shell, GitHub, Vercel, and Supabase — all from a single self-hosted server you fully own.
 
-Built for [Causly](#) as the core dev-automation layer behind our AI agency workflow, and open-sourced so anyone can plug it into their own Claude Desktop setup.
+Built for [Causly](#) as the core dev-automation layer behind our AI agency workflow, and open-sourced so other builders/founders can run their own instance.
 
 ## Why this exists
 
-Claude is great at writing code, but by default it can't touch your actual project files. Causly Server closes that gap: once connected, Claude can create files, edit them in place, run your build/test commands, and commit changes — all on your own machine, under your own control.
+Claude is great at writing code, but by default it can't touch your files, run your commands, or talk to the services you actually ship with. Most solutions bolt on a separate hosted connector for every service — which adds latency, extra hops, and confusion for the model. Causly Server takes the opposite approach: **one server, one process, full control**, running entirely on your own machine. Every tool call is logged locally, every credential lives in your own `.env`, and nothing routes through a third party.
 
 ## Features
 
@@ -22,8 +22,33 @@ Claude is great at writing code, but by default it can't touch your actual proje
 **Shell execution**
 `run_command` — run any shell command (npm install, tests, builds, etc.) in a given directory. A short list of destructive patterns (drive wipes, `format`, `shutdown`) is hard-blocked; everything else runs with full permissions, since this is designed for trusted, single-user local use.
 
+**GitHub**
+`github_get_authenticated_user` · `github_create_repo` · `github_delete_repo` · `github_list_repos` · `github_create_issue` · `github_list_issues` · `github_create_pull_request` · `github_list_pull_requests` · `github_add_comment`
+
+**Vercel**
+`vercel_get_authenticated_user` · `vercel_list_projects` · `vercel_get_project` · `vercel_list_deployments` · `vercel_get_deployment` · `vercel_create_deployment` · `vercel_delete_project`
+
+**Supabase**
+`supabase_list_organizations` · `supabase_list_projects` · `supabase_get_project` · `supabase_create_project` · `supabase_delete_project` · `supabase_run_sql`
+
 **Logging**
 Every tool call — success or failure — is appended to `logs/activity.log` for auditability.
+
+## The workflow this enables
+
+```mermaid
+flowchart TD
+    A["💬 You describe a task in Claude"] --> B["📝 Claude edits/creates files\n(read_file, edit_file, write_file)"]
+    B --> C["🖥️ Claude runs commands\n(run_command: install, build, test)"]
+    C --> D["🔀 Claude commits & pushes\n(git_add, git_commit, git_push)"]
+    D --> E["🐙 Claude manages GitHub\n(issues, PRs, repos)"]
+    D --> F["🗄️ Claude manages Supabase\n(create tables, run SQL)"]
+    E --> G["🚀 Claude triggers Vercel deploy\n(vercel_create_deployment)"]
+    F --> G
+    G --> H["✅ Live app, DB, and repo —\nall driven from one chat"]
+```
+
+In short: you talk, Claude codes, tests, commits, provisions the database, opens the PR, and ships the deploy — all through one local server, without you ever leaving the conversation.
 
 ## Requirements
 
@@ -32,12 +57,19 @@ Every tool call — success or failure — is appended to `logs/activity.log` fo
 
 ## Setup
 
-1. Clone or download this repo anywhere on your machine, e.g. `D:\causly-server`
+1. Clone this repo anywhere on your machine, e.g. `D:\causly-server`
 2. Install dependencies:
    ```bash
    npm install
    ```
-3. Add it to your Claude Desktop config (`%APPDATA%\Claude\claude_desktop_config.json` on Windows):
+3. Create a `.env` file in the project root with the tokens you want to enable:
+   ```
+   GITHUB_TOKEN=github_pat_...
+   VERCEL_TOKEN=...
+   SUPABASE_ACCESS_TOKEN=sbp_...
+   ```
+   All three are optional — the filesystem, git, and shell tools work with no tokens at all.
+4. Add it to your Claude Desktop config (`%APPDATA%\Claude\claude_desktop_config.json` on Windows):
    ```json
    {
      "mcpServers": {
@@ -48,11 +80,11 @@ Every tool call — success or failure — is appended to `logs/activity.log` fo
      }
    }
    ```
-4. Restart Claude Desktop. Claude will now have direct access to the tools above.
+5. Restart Claude Desktop. Claude will now have direct access to every tool above.
 
 ## Security note
 
-This server runs with **full, unrestricted access** to whatever machine it's installed on — there are no path restrictions. That's an intentional design choice for personal/trusted single-user setups, not a general-purpose deployment. If you plan to expose this to other users or run it in a shared environment, you should add path allow-listing and stricter command controls before doing so.
+This server runs with **full, unrestricted access** to whatever machine it's installed on — there are no path restrictions, and API tokens are used with whatever scope you grant them. That's an intentional design choice for personal/trusted single-user setups, not a general-purpose deployment. If you plan to expose this to other users or run it in a shared environment, add path allow-listing and stricter permission scoping before doing so.
 
 ## Project structure
 
@@ -60,15 +92,24 @@ This server runs with **full, unrestricted access** to whatever machine it's ins
 causly-server/
 ├── index.js              # Server entry point, tool registration
 ├── package.json
+├── .env                   # Your local tokens (never committed)
 ├── tools/
 │   ├── fileOps.js         # File read/write/edit/move/copy
 │   ├── directoryOps.js    # Directory listing, tree, search
 │   ├── gitOps.js          # Git operations via simple-git
 │   ├── commandOps.js      # Shell command execution
+│   ├── githubOps.js       # GitHub REST API
+│   ├── vercelOps.js       # Vercel REST API
+│   ├── supabaseOps.js     # Supabase Management API
+│   ├── envLoader.js       # Dependency-free .env parser
 │   └── logger.js          # Activity logging
 └── logs/
     └── activity.log        # Auto-generated
 ```
+
+## Roadmap
+
+Planned additions, following the same self-contained pattern: Slack, Gmail, Figma.
 
 ## License
 

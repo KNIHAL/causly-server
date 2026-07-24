@@ -1,3 +1,6 @@
+import { loadEnv } from "./tools/envLoader.js";
+loadEnv();
+
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
@@ -6,11 +9,14 @@ import * as fileOps from "./tools/fileOps.js";
 import * as dirOps from "./tools/directoryOps.js";
 import * as gitOps from "./tools/gitOps.js";
 import * as commandOps from "./tools/commandOps.js";
+import * as githubOps from "./tools/githubOps.js";
+import * as vercelOps from "./tools/vercelOps.js";
+import * as supabaseOps from "./tools/supabaseOps.js";
 import { logActivity } from "./tools/logger.js";
 
 const server = new McpServer({
   name: "causly-server",
-  version: "1.0.0",
+  version: "1.1.0",
 });
 
 /**
@@ -290,6 +296,264 @@ server.registerTool(
     },
   },
   wrap("run_command", commandOps.runCommand)
+);
+
+// ---------------- GitHub tools ----------------
+
+server.registerTool(
+  "github_get_authenticated_user",
+  {
+    description: "Get the authenticated GitHub user's profile. Useful as a connectivity/auth check.",
+    inputSchema: {},
+  },
+  wrap("github_get_authenticated_user", githubOps.githubGetAuthenticatedUser)
+);
+
+server.registerTool(
+  "github_create_repo",
+  {
+    description: "Create a new GitHub repository for the authenticated user.",
+    inputSchema: {
+      name: z.string(),
+      description: z.string().optional(),
+      private: z.boolean().optional().describe("Defaults to false (public)"),
+      auto_init: z.boolean().optional().describe("Initialize with a README, defaults to true"),
+    },
+  },
+  wrap("github_create_repo", githubOps.githubCreateRepo)
+);
+
+server.registerTool(
+  "github_delete_repo",
+  {
+    description: "Delete a GitHub repository. Requires Administration: write on the token.",
+    inputSchema: { owner: z.string(), repo: z.string() },
+  },
+  wrap("github_delete_repo", githubOps.githubDeleteRepo)
+);
+
+server.registerTool(
+  "github_list_repos",
+  {
+    description: "List repositories for the authenticated user.",
+    inputSchema: {
+      per_page: z.number().optional(),
+      sort: z.string().optional().describe("created, updated, pushed, or full_name"),
+    },
+  },
+  wrap("github_list_repos", githubOps.githubListRepos)
+);
+
+server.registerTool(
+  "github_create_issue",
+  {
+    description: "Create an issue on a GitHub repository.",
+    inputSchema: {
+      owner: z.string(),
+      repo: z.string(),
+      title: z.string(),
+      body: z.string().optional(),
+      labels: z.array(z.string()).optional(),
+    },
+  },
+  wrap("github_create_issue", githubOps.githubCreateIssue)
+);
+
+server.registerTool(
+  "github_list_issues",
+  {
+    description: "List issues on a GitHub repository.",
+    inputSchema: {
+      owner: z.string(),
+      repo: z.string(),
+      state: z.string().optional().describe("open, closed, or all"),
+      per_page: z.number().optional(),
+    },
+  },
+  wrap("github_list_issues", githubOps.githubListIssues)
+);
+
+server.registerTool(
+  "github_create_pull_request",
+  {
+    description: "Create a pull request on a GitHub repository.",
+    inputSchema: {
+      owner: z.string(),
+      repo: z.string(),
+      title: z.string(),
+      head: z.string().describe("Branch containing the changes"),
+      base: z.string().optional().describe("Branch to merge into, defaults to main"),
+      body: z.string().optional(),
+    },
+  },
+  wrap("github_create_pull_request", githubOps.githubCreatePullRequest)
+);
+
+server.registerTool(
+  "github_list_pull_requests",
+  {
+    description: "List pull requests on a GitHub repository.",
+    inputSchema: {
+      owner: z.string(),
+      repo: z.string(),
+      state: z.string().optional().describe("open, closed, or all"),
+      per_page: z.number().optional(),
+    },
+  },
+  wrap("github_list_pull_requests", githubOps.githubListPullRequests)
+);
+
+server.registerTool(
+  "github_add_comment",
+  {
+    description: "Add a comment to a GitHub issue or pull request.",
+    inputSchema: {
+      owner: z.string(),
+      repo: z.string(),
+      issue_number: z.number(),
+      body: z.string(),
+    },
+  },
+  wrap("github_add_comment", githubOps.githubAddComment)
+);
+
+// ---------------- Vercel tools ----------------
+
+server.registerTool(
+  "vercel_get_authenticated_user",
+  {
+    description: "Get the authenticated Vercel user/team. Useful as a connectivity/auth check.",
+    inputSchema: {},
+  },
+  wrap("vercel_get_authenticated_user", vercelOps.vercelGetAuthenticatedUser)
+);
+
+server.registerTool(
+  "vercel_list_projects",
+  {
+    description: "List Vercel projects for the authenticated account.",
+    inputSchema: { limit: z.number().optional() },
+  },
+  wrap("vercel_list_projects", vercelOps.vercelListProjects)
+);
+
+server.registerTool(
+  "vercel_get_project",
+  {
+    description: "Get details of a single Vercel project by name or ID.",
+    inputSchema: { project: z.string() },
+  },
+  wrap("vercel_get_project", vercelOps.vercelGetProject)
+);
+
+server.registerTool(
+  "vercel_list_deployments",
+  {
+    description: "List recent Vercel deployments, optionally scoped to a project.",
+    inputSchema: { project: z.string().optional(), limit: z.number().optional() },
+  },
+  wrap("vercel_list_deployments", vercelOps.vercelListDeployments)
+);
+
+server.registerTool(
+  "vercel_get_deployment",
+  {
+    description: "Get the status/details of a specific Vercel deployment.",
+    inputSchema: { deployment_id: z.string() },
+  },
+  wrap("vercel_get_deployment", vercelOps.vercelGetDeployment)
+);
+
+server.registerTool(
+  "vercel_create_deployment",
+  {
+    description:
+      "Trigger a new deployment for a git-connected Vercel project by deploying from a given git ref (branch/commit). The project must already be linked to a git repo in Vercel.",
+    inputSchema: {
+      name: z.string().describe("Deployment/project name"),
+      project: z.string().describe("Vercel project ID or name"),
+      git_source_repo: z.string().describe("owner/repo"),
+      git_source_ref: z.string().optional().describe("Branch or commit, defaults to main"),
+      git_source_type: z.string().optional().describe("Defaults to github"),
+    },
+  },
+  wrap("vercel_create_deployment", vercelOps.vercelCreateDeployment)
+);
+
+server.registerTool(
+  "vercel_delete_project",
+  {
+    description: "Delete a Vercel project.",
+    inputSchema: { project: z.string() },
+  },
+  wrap("vercel_delete_project", vercelOps.vercelDeleteProject)
+);
+
+// ---------------- Supabase tools ----------------
+
+server.registerTool(
+  "supabase_list_organizations",
+  {
+    description: "List organizations the authenticated account belongs to. Needed to create a new project.",
+    inputSchema: {},
+  },
+  wrap("supabase_list_organizations", supabaseOps.supabaseListOrganizations)
+);
+
+server.registerTool(
+  "supabase_list_projects",
+  {
+    description: "List Supabase projects for the authenticated account.",
+    inputSchema: {},
+  },
+  wrap("supabase_list_projects", supabaseOps.supabaseListProjects)
+);
+
+server.registerTool(
+  "supabase_get_project",
+  {
+    description: "Get details of a single Supabase project by its ref/ID.",
+    inputSchema: { project_ref: z.string() },
+  },
+  wrap("supabase_get_project", supabaseOps.supabaseGetProject)
+);
+
+server.registerTool(
+  "supabase_create_project",
+  {
+    description:
+      "Create a new Supabase project. Requires an organization_id (use supabase_list_organizations to find it) and a database password.",
+    inputSchema: {
+      name: z.string(),
+      organization_id: z.string(),
+      db_pass: z.string(),
+      region: z.string().optional().describe("Defaults to ap-south-1"),
+      plan: z.string().optional().describe("Defaults to free"),
+    },
+  },
+  wrap("supabase_create_project", supabaseOps.supabaseCreateProject)
+);
+
+server.registerTool(
+  "supabase_delete_project",
+  {
+    description: "Delete a Supabase project.",
+    inputSchema: { project_ref: z.string() },
+  },
+  wrap("supabase_delete_project", supabaseOps.supabaseDeleteProject)
+);
+
+server.registerTool(
+  "supabase_run_sql",
+  {
+    description:
+      "Run raw SQL against a project's database — used for creating tables, altering schema, seeding data, or running queries.",
+    inputSchema: {
+      project_ref: z.string(),
+      query: z.string().describe("Raw SQL statement(s) to execute"),
+    },
+  },
+  wrap("supabase_run_sql", supabaseOps.supabaseRunSql)
 );
 
 // ---------------- Start server ----------------
