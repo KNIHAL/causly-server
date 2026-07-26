@@ -1,7 +1,13 @@
 import { exec } from "child_process";
 import { promisify } from "util";
+import os from "os";
 
 const execAsync = promisify(exec);
+
+// On Windows, run through PowerShell instead of the default cmd.exe —
+// cmd.exe can't handle multi-statement scripts, several quoting styles,
+// or common PowerShell cmdlets that Claude may reasonably try to use.
+const SHELL_OPTION = os.platform() === "win32" ? { shell: "powershell.exe" } : {};
 
 // Commands containing these patterns are blocked outright — no override.
 // Keeps a single mistaken/careless call from wiping a drive or the OS.
@@ -45,6 +51,7 @@ export async function runCommand({ command, cwd, timeout_ms = DEFAULT_TIMEOUT_MS
       timeout: timeout_ms,
       maxBuffer: 10 * 1024 * 1024, // 10MB
       windowsHide: true,
+      ...SHELL_OPTION,
     });
     return {
       command,

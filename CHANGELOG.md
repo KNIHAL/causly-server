@@ -15,6 +15,7 @@ All notable changes to this project are documented here.
 ### Fixed
 - `move_file` / `copy_file` / `write_file` / `create_file` failing with `EPERM` when the destination directory was a drive root on Windows (e.g. `D:\`)
 - Removed the `dotenv` dependency — its stdout banner was corrupting the MCP stdio JSON-RPC stream, causing "Unexpected token" errors. Replaced with a small dependency-free `.env` parser.
+- `run_command` was running through `cmd.exe` on Windows by default, which can't handle multi-statement scripts or many PowerShell-style commands. Now runs through `powershell.exe` on Windows.
 
 ## [1.0.0]
 
