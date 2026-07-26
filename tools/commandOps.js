@@ -1,13 +1,11 @@
-import { exec } from "child_process";
+import { exec, execFile } from "child_process";
 import { promisify } from "util";
 import os from "os";
 
 const execAsync = promisify(exec);
+const execFileAsync = promisify(execFile);
 
-// On Windows, run through PowerShell instead of the default cmd.exe —
-// cmd.exe can't handle multi-statement scripts, several quoting styles,
-// or common PowerShell cmdlets that Claude may reasonably try to use.
-const SHELL_OPTION = os.platform() === "win32" ? { shell: "powershell.exe" } : {};
+const IS_WINDOWS = os.platform() === "win32";
 
 // Commands containing these patterns are blocked outright — no override.
 // Keeps a single mistaken/careless call from wiping a drive or the OS.
@@ -45,14 +43,24 @@ export async function runCommand({ command, cwd, timeout_ms = DEFAULT_TIMEOUT_MS
     }
   }
 
+  const runOpts = {
+    cwd,
+    timeout: timeout_ms,
+    maxBuffer: 10 * 1024 * 1024, // 10MB
+    windowsHide: true,
+  };
+
   try {
-    const { stdout, stderr } = await execAsync(command, {
-      cwd,
-      timeout: timeout_ms,
-      maxBuffer: 10 * 1024 * 1024, // 10MB
-      windowsHide: true,
-      ...SHELL_OPTION,
-    });
+    // On Windows, spawn powershell.exe directly as the target process
+    // (not via exec's "shell" option) — this is what makes windowsHide
+    // actually suppress the console window. Using exec's shell option
+    // with a custom shell path leaves windowsHide ineffective on Windows,
+    // which was popping up (and auto-closing) a visible terminal window
+    // on every single tool call.
+    const { stdout, stderr } = IS_WINDOWS
+      ? await execFileAsync("powershell.exe", ["-NoProfile", "-NonInteractive", "-Command", command], runOpts)
+      : await execAsync(command, runOpts);
+
     return {
       command,
       cwd,
@@ -61,8 +69,8 @@ export async function runCommand({ command, cwd, timeout_ms = DEFAULT_TIMEOUT_MS
       exit_code: 0,
     };
   } catch (err) {
-    // exec rejects on non-zero exit code — surface it as data, not a hard throw,
-    // so the caller can see stdout/stderr even on failure.
+    // exec/execFile reject on non-zero exit code — surface it as data, not
+    // a hard throw, so the caller can see stdout/stderr even on failure.
     return {
       command,
       cwd,
