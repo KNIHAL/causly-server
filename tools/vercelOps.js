@@ -4,7 +4,7 @@ function getToken() {
   const token = process.env.VERCEL_TOKEN;
   if (!token) {
     throw new Error(
-      "VERCEL_TOKEN not set. Add it to your .env file in the server root: VERCEL_TOKEN=..."
+      "VERCEL_TOKEN not set. Run `npm run setup` to configure it, or add it manually to your .env file: VERCEL_TOKEN=..."
     );
   }
   return token;

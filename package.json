@@ -1,11 +1,12 @@
 {
   "name": "causly-server",
-  "version": "1.0.0",
-  "description": "Causly custom MCP server — full filesystem + git + command execution",
+  "version": "1.1.0",
+  "description": "Causly custom MCP server — filesystem, git, shell, GitHub, Vercel, and Supabase, all in one",
   "main": "index.js",
   "type": "module",
   "scripts": {
-    "start": "node index.js"
+    "start": "node index.js",
+    "setup": "node setup.js"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.29.0",

@@ -4,7 +4,7 @@ function getToken() {
   const token = process.env.SUPABASE_ACCESS_TOKEN;
   if (!token) {
     throw new Error(
-      "SUPABASE_ACCESS_TOKEN not set. Add it to your .env file: SUPABASE_ACCESS_TOKEN=sbp_..."
+      "SUPABASE_ACCESS_TOKEN not set. Run `npm run setup` to configure it, or add it manually to your .env file: SUPABASE_ACCESS_TOKEN=sbp_..."
     );
   }
   return token;

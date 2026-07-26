@@ -1,5 +1,9 @@
 # Causly Server
 
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
+[![CI](https://github.com/KNIHAL/causly-server/actions/workflows/ci.yml/badge.svg)](https://github.com/KNIHAL/causly-server/actions/workflows/ci.yml)
+[![PRs welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](./CONTRIBUTING.md)
+
 A custom MCP (Model Context Protocol) server that gives Claude full, direct control over your local machine and your core dev stack — filesystem, git, shell, GitHub, Vercel, and Supabase — all from a single self-hosted server you fully own.
 
 Built for [Causly](#) as the core dev-automation layer behind our AI agency workflow, and open-sourced so other builders/founders can run their own instance.
@@ -62,14 +66,11 @@ In short: you talk, Claude codes, tests, commits, provisions the database, opens
    ```bash
    npm install
    ```
-3. Create a `.env` file in the project root with the tokens you want to enable:
+3. Run the setup wizard — it asks for each token (skip any you don't need) and automatically writes your `.env` file **and** updates your Claude Desktop config:
+   ```bash
+   npm run setup
    ```
-   GITHUB_TOKEN=github_pat_...
-   VERCEL_TOKEN=...
-   SUPABASE_ACCESS_TOKEN=sbp_...
-   ```
-   All three are optional — the filesystem, git, and shell tools work with no tokens at all.
-4. Add it to your Claude Desktop config (`%APPDATA%\Claude\claude_desktop_config.json` on Windows):
+   Prefer to do it by hand? Copy `.env.example` to `.env` and fill in what you need, then add the `mcpServers` entry to your Claude Desktop config yourself (`%APPDATA%\Claude\claude_desktop_config.json` on Windows):
    ```json
    {
      "mcpServers": {
@@ -80,7 +81,7 @@ In short: you talk, Claude codes, tests, commits, provisions the database, opens
      }
    }
    ```
-5. Restart Claude Desktop. Claude will now have direct access to every tool above.
+4. Restart Claude Desktop. Claude will now have direct access to every tool above.
 
 ## Security note
 
@@ -91,8 +92,16 @@ This server runs with **full, unrestricted access** to whatever machine it's ins
 ```
 causly-server/
 ├── index.js              # Server entry point, tool registration
+├── setup.js               # Interactive setup wizard (npm run setup)
 ├── package.json
 ├── .env                   # Your local tokens (never committed)
+├── .env.example           # Template of tokens you can configure
+├── CONTRIBUTING.md
+├── CHANGELOG.md
+├── .github/
+│   ├── workflows/ci.yml    # Syntax check + boot check on push/PR
+│   ├── ISSUE_TEMPLATE/
+│   └── PULL_REQUEST_TEMPLATE.md
 ├── tools/
 │   ├── fileOps.js         # File read/write/edit/move/copy
 │   ├── directoryOps.js    # Directory listing, tree, search
@@ -110,6 +119,14 @@ causly-server/
 ## Roadmap
 
 Planned additions, following the same self-contained pattern: Slack, Gmail, Figma.
+
+## Contributing
+
+See [CONTRIBUTING.md](./CONTRIBUTING.md) for how to add a new tool module and the manual testing checklist.
+
+## Changelog
+
+See [CHANGELOG.md](./CHANGELOG.md) for release history.
 
 ## License
 

@@ -1,0 +1,35 @@
+name: CI
+
+on:
+  push:
+    branches: [master, main]
+  pull_request:
+    branches: [master, main]
+
+jobs:
+  syntax-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Check syntax of all JS files
+        run: |
+          find . -name "*.js" -not -path "./node_modules/*" -print0 | \
+            xargs -0 -n1 node --check
+
+      - name: Verify server boots without crashing
+        run: |
+          timeout 5 node index.js < /dev/null; code=$?
+          # 0 = clean exit, 124 = timeout killed it (expected, server runs forever)
+          if [ "$code" != "0" ] && [ "$code" != "124" ]; then
+            echo "Server failed to start (exit code $code)"
+            exit 1
+          fi

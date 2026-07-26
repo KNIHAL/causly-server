@@ -4,7 +4,7 @@ function getToken() {
   const token = process.env.GITHUB_TOKEN;
   if (!token) {
     throw new Error(
-      "GITHUB_TOKEN not set. Add it to your .env file in the server root: GITHUB_TOKEN=github_pat_..."
+      "GITHUB_TOKEN not set. Run `npm run setup` to configure it, or add it manually to your .env file: GITHUB_TOKEN=github_pat_..."
     );
   }
   return token;
