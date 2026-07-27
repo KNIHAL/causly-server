@@ -7,6 +7,25 @@ const execFileAsync = promisify(execFile);
 
 const IS_WINDOWS = os.platform() === "win32";
 
+// Claude Desktop launches this server with a stripped-down environment —
+// on Windows, PATHEXT in particular often arrives missing .EXE/.CMD/.BAT,
+// which makes PowerShell unable to resolve commands like `node` or `npm`
+// even though their directory is present in PATH and the file exists.
+// Restore a sane default so command resolution works the way it would in
+// a normal interactive terminal.
+const DEFAULT_PATHEXT = ".COM;.EXE;.BAT;.CMD;.VBS;.VBE;.JS;.JSE;.WSF;.WSH;.MSC";
+
+function buildEnv() {
+  if (!IS_WINDOWS) return process.env;
+  const env = { ...process.env };
+  const currentExt = env.PATHEXT || "";
+  const missing = DEFAULT_PATHEXT.split(";").filter(
+    (ext) => !currentExt.toUpperCase().includes(ext)
+  );
+  env.PATHEXT = missing.length ? `${currentExt};${missing.join(";")}` : currentExt || DEFAULT_PATHEXT;
+  return env;
+}
+
 // Commands containing these patterns are blocked outright — no override.
 // Keeps a single mistaken/careless call from wiping a drive or the OS.
 const BLOCKED_PATTERNS = [
@@ -48,6 +67,7 @@ export async function runCommand({ command, cwd, timeout_ms = DEFAULT_TIMEOUT_MS
     timeout: timeout_ms,
     maxBuffer: 10 * 1024 * 1024, // 10MB
     windowsHide: true,
+    env: buildEnv(),
   };
 
   try {

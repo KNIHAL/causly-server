@@ -2,6 +2,11 @@
 
 All notable changes to this project are documented here.
 
+## [1.1.1]
+
+### Fixed
+- `run_command` was failing to find `node`, `npm`, and other executables on Windows — Claude Desktop launches the server with a stripped-down environment where `PATHEXT` arrives missing standard extensions (`.EXE`, `.CMD`, `.BAT`, etc.), so PowerShell couldn't resolve commands even though they existed and their folder was in `PATH`. Now restores a sane default `PATHEXT` when spawning commands on Windows.
+
 ## [1.1.0]
 
 ### Added
