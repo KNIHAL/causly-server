@@ -95,11 +95,33 @@ export async function vercelGetDeployment({ deployment_id }) {
 }
 
 /**
+ * Resolve a GitHub "owner/repo" string to the numeric repo ID Vercel's
+ * gitSource requires. Uses GITHUB_TOKEN if set; falls back to an
+ * unauthenticated call for public repos if it isn't.
+ */
+async function resolveGithubRepoId(ownerSlashRepo) {
+  const headers = { Accept: "application/vnd.github+json", "User-Agent": "causly-server" };
+  if (process.env.GITHUB_TOKEN) headers.Authorization = `Bearer ${process.env.GITHUB_TOKEN}`;
+
+  const res = await fetch(`https://api.github.com/repos/${ownerSlashRepo}`, { headers });
+  if (!res.ok) {
+    throw new Error(
+      `Could not resolve GitHub repo "${ownerSlashRepo}" to an ID (${res.status}). Check the owner/repo is correct and accessible.`
+    );
+  }
+  const data = await res.json();
+  return data.id;
+}
+
+/**
  * Trigger a new deployment for a git-connected project by redeploying
- * from a given git ref (branch/commit). The project must already be
- * linked to a git repo in Vercel.
+ * from a given git ref (branch/commit). Vercel's API needs the numeric
+ * GitHub repo ID (not just "owner/repo"), so this resolves it via the
+ * GitHub API automatically.
  */
 export async function vercelCreateDeployment({ name, project, git_source_repo, git_source_ref = "main", git_source_type = "github" }) {
+  const repoId = await resolveGithubRepoId(git_source_repo);
+
   const data = await vercelFetch("/v13/deployments", {
     method: "POST",
     body: JSON.stringify({
@@ -107,7 +129,7 @@ export async function vercelCreateDeployment({ name, project, git_source_repo, g
       project,
       gitSource: {
         type: git_source_type,
-        repo: git_source_repo,
+        repoId,
         ref: git_source_ref,
       },
     }),

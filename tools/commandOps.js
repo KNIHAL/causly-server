@@ -7,6 +7,25 @@ const execFileAsync = promisify(execFile);
 
 const IS_WINDOWS = os.platform() === "win32";
 
+// Resolve PowerShell by absolute path instead of relying on PATH lookup —
+// Claude Desktop's spawned environment has an unreliable/stripped PATH on
+// some machines, which made `execFile("powershell.exe", ...)` fail with
+// ENOENT even though PowerShell was installed. The System32 location is
+// standard on every Windows install; SystemRoot env var (or C:\Windows as
+// a fallback) makes it correct even on non-C drive Windows installs.
+const POWERSHELL_PATH = IS_WINDOWS
+  ? `${process.env.SystemRoot || "C:\\Windows"}\\System32\\WindowsPowerShell\\v1.0\\powershell.exe`
+  : null;
+
+// cmd.exe is used as a last-resort fallback below. Resolve it by absolute
+// path too — the same stripped-environment issue that breaks PATH lookup
+// for powershell.exe also breaks lookup of "cmd.exe" (via a missing/broken
+// ComSpec env var), so execAsync(command) with the default shell option
+// can ENOENT even though cmd.exe is present on every Windows install.
+const CMD_PATH = IS_WINDOWS
+  ? `${process.env.SystemRoot || "C:\\Windows"}\\System32\\cmd.exe`
+  : null;
+
 // Claude Desktop launches this server with a stripped-down environment —
 // on Windows, PATHEXT in particular often arrives missing .EXE/.CMD/.BAT,
 // which makes PowerShell unable to resolve commands like `node` or `npm`
@@ -23,6 +42,26 @@ function buildEnv() {
     (ext) => !currentExt.toUpperCase().includes(ext)
   );
   env.PATHEXT = missing.length ? `${currentExt};${missing.join(";")}` : currentExt || DEFAULT_PATHEXT;
+
+  // Claude Desktop's spawned environment also carries a stripped-down PATH
+  // on some machines — missing the Node.js install dir and the npm global
+  // bin dir. This breaks any subprocess spawned BY a tool we run (e.g.
+  // `npm install`'s own internal `node postinstall.js` calls), even though
+  // our own top-level `node`/`npm` calls succeed via PowerShell's separate
+  // system-PATH resolution. Ensure these are always present.
+  const home = env.USERPROFILE || env.HOME || "C:\\Users\\nihal";
+  const criticalPaths = [
+    "C:\\Program Files\\nodejs",
+    `${home}\\AppData\\Roaming\\npm`,
+  ];
+  const currentPath = env.PATH || env.Path || "";
+  const missingPaths = criticalPaths.filter(
+    (p) => !currentPath.toLowerCase().includes(p.toLowerCase())
+  );
+  if (missingPaths.length) {
+    env.PATH = `${currentPath}${currentPath ? ";" : ""}${missingPaths.join(";")}`;
+  }
+
   return env;
 }
 
@@ -70,6 +109,32 @@ export async function runCommand({ command, cwd, timeout_ms = DEFAULT_TIMEOUT_MS
     env: buildEnv(),
   };
 
+  async function runOnWindows() {
+    const psArgs = ["-NoProfile", "-NonInteractive", "-Command", command];
+    try {
+      // Preferred: absolute path, bypasses any PATH resolution issues.
+      return await execFileAsync(POWERSHELL_PATH, psArgs, runOpts);
+    } catch (err) {
+      if (err.code !== "ENOENT") throw err;
+      try {
+        // Fallback 1: let the OS resolve "powershell.exe" via PATH.
+        return await execFileAsync("powershell.exe", psArgs, runOpts);
+      } catch (err2) {
+        if (err2.code !== "ENOENT") throw err2;
+        try {
+          // Fallback 2: let the OS resolve "cmd.exe" via PATH/ComSpec.
+          return await execAsync(command, runOpts);
+        } catch (err3) {
+          if (err3.code !== "ENOENT") throw err3;
+          // Fallback 3: absolute path to cmd.exe, bypasses ComSpec/PATH
+          // entirely. Runs the command as-is (loses PowerShell-specific
+          // syntax, but covers plain commands like npm/node/git).
+          return await execFileAsync(CMD_PATH, ["/d", "/s", "/c", command], runOpts);
+        }
+      }
+    }
+  }
+
   try {
     // On Windows, spawn powershell.exe directly as the target process
     // (not via exec's "shell" option) — this is what makes windowsHide
@@ -77,9 +142,7 @@ export async function runCommand({ command, cwd, timeout_ms = DEFAULT_TIMEOUT_MS
     // with a custom shell path leaves windowsHide ineffective on Windows,
     // which was popping up (and auto-closing) a visible terminal window
     // on every single tool call.
-    const { stdout, stderr } = IS_WINDOWS
-      ? await execFileAsync("powershell.exe", ["-NoProfile", "-NonInteractive", "-Command", command], runOpts)
-      : await execAsync(command, runOpts);
+    const { stdout, stderr } = IS_WINDOWS ? await runOnWindows() : await execAsync(command, runOpts);
 
     return {
       command,

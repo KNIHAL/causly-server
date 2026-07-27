@@ -83,6 +83,11 @@ In short: you talk, Claude codes, tests, commits, provisions the database, opens
    ```
 4. Restart Claude Desktop. Claude will now have direct access to every tool above.
 
+## Known limitations
+
+- **`supabase_run_sql`** uses Supabase's Management API, which restricts direct SQL execution for personal access tokens by default (`403: insufficient privileges`). Workaround: connect directly via Postgres (using the project's database password) or use the project's own PostgREST API instead — not yet implemented here, tracked as a future improvement.
+- **Vercel preview deployments** created via `vercel_create_deployment` may be served behind Vercel's own Deployment Protection (SSO wall) rather than your app directly, depending on your account's settings. Production deployments/custom domains are unaffected.
+
 ## Security note
 
 This server runs with **full, unrestricted access** to whatever machine it's installed on — there are no path restrictions, and API tokens are used with whatever scope you grant them. That's an intentional design choice for personal/trusted single-user setups, not a general-purpose deployment. If you plan to expose this to other users or run it in a shared environment, add path allow-listing and stricter permission scoping before doing so.
