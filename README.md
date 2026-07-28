@@ -87,6 +87,7 @@ In short: you talk, Claude codes, tests, commits, provisions the database, opens
 
 - **`supabase_run_sql`** uses Supabase's Management API, which restricts direct SQL execution for personal access tokens by default (`403: insufficient privileges`). Workaround: connect directly via Postgres (using the project's database password) or use the project's own PostgREST API instead — not yet implemented here, tracked as a future improvement.
 - **Vercel preview deployments** created via `vercel_create_deployment` may be served behind Vercel's own Deployment Protection (SSO wall) rather than your app directly, depending on your account's settings. Production deployments/custom domains are unaffected.
+- **`npm install` on some packages with native postinstall scripts** can fail with `'node' is not recognized` on Windows. This happens because npm always runs lifecycle scripts (`postinstall`, etc.) through `cmd.exe` regardless of what shell invoked npm, and that nested `cmd.exe` process doesn't always inherit a working `node` on PATH in Claude Desktop's spawned environment. Workaround: run `npm install --ignore-scripts`, then run the specific package's postinstall manually if needed, or run `npm install` for that one dependency from a normal terminal instead of through `run_command`. Tracked as an open issue.
 
 ## Security note
 
