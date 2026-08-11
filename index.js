@@ -966,6 +966,26 @@ server.registerTool(
   wrap("verify_ci_fix", workflowOps.verifyCiFix)
 );
 
+server.registerTool(
+  "deploy_project",
+  {
+    description:
+      "WORKFLOW: safely deploy a project and verify it. Checks project health (working tree clean), runs tests + build (aborts if either fails), triggers a Vercel deployment, polls until ready, then HTTP health-checks the live URL. Returns a verified pass/fail result, not just a 'deployment triggered' status.",
+    inputSchema: {
+      repo_path: z.string(),
+      project: z.string().describe("Vercel project ID or name"),
+      git_source_repo: z.string().describe("owner/repo"),
+      git_source_ref: z.string().optional().describe("Branch or commit, defaults to main"),
+      deployment_name: z.string().optional().describe("Defaults to the project name"),
+      health_check_url: z.string().optional().describe("Defaults to the deployment's own URL"),
+      run_checks: z.boolean().optional().describe("Run tests + build before deploying, defaults to true"),
+      poll_interval_ms: z.number().optional().describe("Defaults to 10000"),
+      max_polls: z.number().optional().describe("Defaults to 30 (5 min at default interval)"),
+    },
+  },
+  wrap("deploy_project", workflowOps.deployProject)
+);
+
 // ---------------- Supabase tools ----------------
 
 server.registerTool(
