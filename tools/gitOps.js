@@ -57,3 +57,114 @@ export async function gitBranch({ repo_path }) {
   const branches = await git.branch();
   return { repo_path, branches };
 }
+
+export async function gitCreateBranch({ repo_path, branch_name, checkout = true }) {
+  const git = getGit(repo_path);
+  if (checkout) {
+    await git.checkoutLocalBranch(branch_name);
+  } else {
+    await git.branch([branch_name]);
+  }
+  return { repo_path, branch_name, checked_out: checkout };
+}
+
+export async function gitCheckout({ repo_path, branch }) {
+  const git = getGit(repo_path);
+  await git.checkout(branch);
+  return { repo_path, checked_out: branch };
+}
+
+export async function gitMerge({ repo_path, branch }) {
+  const git = getGit(repo_path);
+  const result = await git.merge([branch]);
+  return { repo_path, branch, result };
+}
+
+export async function gitReset({ repo_path, mode = "mixed", ref = "HEAD" }) {
+  const git = getGit(repo_path);
+  const flag = mode === "hard" ? "--hard" : mode === "soft" ? "--soft" : "--mixed";
+  await git.reset([flag, ref]);
+  return { repo_path, mode, ref };
+}
+
+export async function gitStash({ repo_path, action = "save", message, stash_id }) {
+  const git = getGit(repo_path);
+  let result;
+  if (action === "save") {
+    result = message ? await git.stash(["push", "-m", message]) : await git.stash();
+  } else if (action === "pop") {
+    result = await git.stash(["pop", ...(stash_id ? [stash_id] : [])]);
+  } else if (action === "apply") {
+    result = await git.stash(["apply", ...(stash_id ? [stash_id] : [])]);
+  } else if (action === "list") {
+    result = await git.stashList();
+  } else if (action === "drop") {
+    result = await git.stash(["drop", ...(stash_id ? [stash_id] : [])]);
+  } else {
+    throw new Error(`Unknown stash action: ${action}`);
+  }
+  return { repo_path, action, result };
+}
+
+export async function gitShow({ repo_path, ref = "HEAD" }) {
+  const git = getGit(repo_path);
+  const result = await git.show([ref]);
+  return { repo_path, ref, result };
+}
+
+export async function gitRemote({ repo_path, action = "list", name, url }) {
+  const git = getGit(repo_path);
+  let result;
+  if (action === "list") {
+    result = await git.getRemotes(true);
+  } else if (action === "add") {
+    result = await git.addRemote(name, url);
+  } else if (action === "remove") {
+    result = await git.removeRemote(name);
+  } else {
+    throw new Error(`Unknown remote action: ${action}`);
+  }
+  return { repo_path, action, result };
+}
+
+export async function gitTag({ repo_path, action = "list", tag_name, message }) {
+  const git = getGit(repo_path);
+  let result;
+  if (action === "list") {
+    result = await git.tags();
+  } else if (action === "create") {
+    result = message ? await git.addAnnotatedTag(tag_name, message) : await git.addTag(tag_name);
+  } else if (action === "delete") {
+    result = await git.tag(["-d", tag_name]);
+  } else {
+    throw new Error(`Unknown tag action: ${action}`);
+  }
+  return { repo_path, action, result };
+}
+
+export async function gitChangedFiles({ repo_path }) {
+  const git = getGit(repo_path);
+  const status = await git.status();
+  return {
+    repo_path,
+    changed_files: [
+      ...status.modified.map((f) => ({ file: f, type: "modified" })),
+      ...status.not_added.map((f) => ({ file: f, type: "untracked" })),
+      ...status.created.map((f) => ({ file: f, type: "created" })),
+      ...status.deleted.map((f) => ({ file: f, type: "deleted" })),
+      ...status.renamed.map((f) => ({ file: f.to, type: "renamed" })),
+    ],
+  };
+}
+
+export async function gitDiffStat({ repo_path, file }) {
+  const git = getGit(repo_path);
+  const summary = file ? await git.diffSummary([file]) : await git.diffSummary();
+  return { repo_path, summary };
+}
+
+export async function gitCheckClean({ repo_path }) {
+  const git = getGit(repo_path);
+  const status = await git.status();
+  return { repo_path, is_clean: status.isClean(), status };
+}
