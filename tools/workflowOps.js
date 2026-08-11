@@ -14,6 +14,138 @@ function parseOwnerRepoFromRemoteUrl(url) {
 }
 
 /**
+ * fix_ci — investigate a failed GitHub Actions run and prepare the fix loop.
+ *
+ * This does NOT write code fixes itself (that requires the AI's own
+ * reasoning + file tools). Instead it does the mechanical investigation
+ * work end-to-end — find the failing run, find the failing job(s), pull
+ * the actual log text — so the AI can read the logs, make the fix with
+ * file tools, then call `verify_ci_fix` (below) to commit/push and confirm
+ * the run goes green.
+ *
+ * Flow:
+ *   find latest failing run on branch -> list its jobs -> find failed jobs
+ *   -> pull logs for each failed job -> return structured diagnosis
+ */
+export async function fixCi({ owner, repo, branch, run_id }) {
+  const steps = [];
+
+  // 1. Resolve the run to investigate
+  let run;
+  if (run_id) {
+    run = await githubOps.githubGetWorkflowRun({ owner, repo, run_id });
+    steps.push({ step: "get_workflow_run", run });
+  } else {
+    const runs = await githubOps.githubListWorkflowRuns({ owner, repo, branch, status: "failure", per_page: 5 });
+    steps.push({ step: "list_workflow_runs", found: runs.runs?.length || 0 });
+    if (!runs.runs || runs.runs.length === 0) {
+      return { ok: false, reason: `No failing workflow runs found${branch ? ` on branch '${branch}'` : ""}.`, steps };
+    }
+    run = runs.runs[0]; // most recent
+  }
+
+  if (run.conclusion && run.conclusion !== "failure" && run.status !== "in_progress") {
+    return { ok: false, reason: `Run ${run.id} is not currently failing (conclusion: ${run.conclusion}).`, steps, run };
+  }
+
+  // 2. Get jobs for that run
+  const jobsResult = await githubOps.githubGetWorkflowRunJobs({ owner, repo, run_id: run.id });
+  steps.push({ step: "get_workflow_run_jobs", job_count: jobsResult.jobs?.length || 0 });
+
+  const failedJobs = (jobsResult.jobs || []).filter((j) => j.conclusion === "failure");
+  if (failedJobs.length === 0) {
+    return { ok: false, reason: `No failed jobs found in run ${run.id} — it may still be in progress.`, steps, run, jobs: jobsResult.jobs };
+  }
+
+  // 3. Pull logs for each failed job
+  const diagnosis = [];
+  for (const job of failedJobs) {
+    try {
+      const logResult = await githubOps.githubGetJobLogs({ owner, repo, job_id: job.id });
+      const failedSteps = (job.steps || []).filter((s) => s.conclusion === "failure");
+      diagnosis.push({
+        job_id: job.id,
+        job_name: job.name,
+        failed_steps: failedSteps.map((s) => s.name),
+        html_url: job.html_url,
+        // Trim to the tail — that's where the actual error usually is, and
+        // full CI logs can be enormous.
+        logs_tail: logResult.logs.slice(-8000),
+      });
+    } catch (err) {
+      diagnosis.push({ job_id: job.id, job_name: job.name, error: `Could not fetch logs: ${err.message}` });
+    }
+  }
+  steps.push({ step: "fetch_job_logs", jobs_diagnosed: diagnosis.length });
+
+  return {
+    ok: true,
+    run: { id: run.id, branch: run.branch || run.head_branch, html_url: run.html_url },
+    failed_jobs: diagnosis,
+    steps,
+    next_step:
+      "Read logs_tail for each failed job, fix the code with file tools, then call verify_ci_fix to commit, push, and confirm CI passes.",
+  };
+}
+
+/**
+ * verify_ci_fix — after the AI has made a code fix on disk, commit + push
+ * it and poll the new workflow run until it finishes, reporting the result.
+ *
+ * Flow:
+ *   commit -> push -> poll new run on branch until complete -> report pass/fail
+ */
+export async function verifyCiFix({
+  repo_path,
+  owner,
+  repo,
+  branch,
+  commit_message,
+  poll_interval_ms = 15_000,
+  max_polls = 20,
+}) {
+  const steps = [];
+
+  try {
+    await gitOps.gitAdd({ repo_path, files: "." });
+    const commitResult = await gitOps.gitCommit({ repo_path, message: commit_message });
+    steps.push({ step: "commit", ...commitResult });
+  } catch (err) {
+    return { ok: false, failed_step: "commit", reason: err.message, steps };
+  }
+
+  try {
+    const pushResult = await gitOps.gitPush({ repo_path, branch });
+    steps.push({ step: "push", ...pushResult });
+  } catch (err) {
+    return { ok: false, failed_step: "push", reason: err.message, steps };
+  }
+
+  // Poll for the new run to appear and finish
+  let latestRun = null;
+  for (let i = 0; i < max_polls; i++) {
+    await new Promise((resolve) => setTimeout(resolve, poll_interval_ms));
+    const runs = await githubOps.githubListWorkflowRuns({ owner, repo, branch, per_page: 1 });
+    latestRun = runs.runs?.[0] || null;
+    if (latestRun && latestRun.status === "completed") break;
+  }
+  steps.push({ step: "poll_workflow_run", final_status: latestRun?.status, conclusion: latestRun?.conclusion });
+
+  if (!latestRun) {
+    return { ok: false, failed_step: "poll_workflow_run", reason: "No workflow run found after push.", steps };
+  }
+  if (latestRun.status !== "completed") {
+    return { ok: null, reason: "Run still in progress after max_polls — check back later.", run: latestRun, steps };
+  }
+
+  return {
+    ok: latestRun.conclusion === "success",
+    run: latestRun,
+    steps,
+  };
+}
+
+/**
  * ship_change — take a set of already-made file edits from request to PR.
  *
  * Assumes the caller (the AI, using file/directory tools) has already made
