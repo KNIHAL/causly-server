@@ -1,6 +1,7 @@
 import * as gitOps from "./gitOps.js";
 import * as githubOps from "./githubOps.js";
 import * as projectOps from "./projectOps.js";
+import * as vercelOps from "./vercelOps.js";
 
 /**
  * Extract "owner" and "repo" from a git remote URL like
@@ -259,4 +260,103 @@ export async function shipChange({
   } catch (err) {
     return fail("create_pull_request", err.message, { checks });
   }
+}
+
+/**
+ * deploy_project — safely deploy a project and verify it actually works.
+ *
+ * Flow:
+ *   project health -> tests -> build -> trigger deployment -> poll until
+ *   ready -> if ready, HTTP health check the live URL -> verified result
+ *
+ * Stops early (without deploying) if health/tests/build fail, so broken
+ * code never reaches a deployment.
+ */
+export async function deployProject({
+  repo_path,
+  project,
+  git_source_repo,
+  git_source_ref = "main",
+  deployment_name,
+  health_check_url,
+  run_checks = true,
+  poll_interval_ms = 10_000,
+  max_polls = 30,
+}) {
+  const steps = [];
+  const fail = (step, reason, extra = {}) => ({ ok: false, failed_step: step, reason, steps, ...extra });
+
+  // 1. Project health
+  const health = await projectOps.projectHealth({ repo_path });
+  steps.push({ step: "project_health", ...health });
+  if (health.git_status && health.git_status.is_clean === false) {
+    return fail("project_health", "Working tree has uncommitted changes — commit or stash before deploying.", { health });
+  }
+
+  // 2. Tests + build (best-effort skip if project has no such script)
+  const checks = {};
+  if (run_checks) {
+    for (const [name, fn] of Object.entries({ tests: projectOps.runTests, build: projectOps.runBuild })) {
+      const result = await fn({ repo_path });
+      checks[name] = result;
+      if (result.ran && result.exit_code !== 0) {
+        steps.push({ step: `check_${name}`, ...result });
+        return fail(`check_${name}`, `${name} failed (exit code ${result.exit_code}) — deployment aborted.`, { checks });
+      }
+    }
+    steps.push({ step: "run_checks", checks });
+  }
+
+  // 3. Trigger deployment
+  let deployment;
+  try {
+    deployment = await vercelOps.vercelCreateDeployment({
+      name: deployment_name || project,
+      project,
+      git_source_repo,
+      git_source_ref,
+    });
+    steps.push({ step: "trigger_deployment", ...deployment });
+  } catch (err) {
+    return fail("trigger_deployment", err.message, { checks });
+  }
+
+  // 4. Poll until ready or errored
+  let finalState = null;
+  for (let i = 0; i < max_polls; i++) {
+    await new Promise((resolve) => setTimeout(resolve, poll_interval_ms));
+    const events = await vercelOps.vercelGetDeploymentEvents({ deployment_id: deployment.uid });
+    finalState = events;
+    if (events.state === "READY" || events.state === "ERROR" || events.state === "CANCELED") break;
+  }
+  steps.push({ step: "poll_deployment", final_state: finalState?.state });
+
+  if (!finalState || finalState.state !== "READY") {
+    // Pull build logs to help diagnose the failure
+    let logs = null;
+    try {
+      logs = await vercelOps.vercelGetDeploymentLogs({ deployment_id: deployment.uid, limit: 200 });
+    } catch {
+      // best-effort — logs are a bonus, not required for the failure report
+    }
+    return fail("poll_deployment", `Deployment did not become ready (state: ${finalState?.state || "unknown"}).`, {
+      checks,
+      deployment,
+      build_errors: finalState?.build_errors,
+      logs,
+    });
+  }
+
+  // 5. HTTP health check the live URL
+  const url = health_check_url || `https://${deployment.url}`;
+  const httpResult = await vercelOps.httpCheck({ url });
+  steps.push({ step: "http_check", ...httpResult });
+
+  return {
+    ok: httpResult.healthy,
+    deployment,
+    checks,
+    http_check: httpResult,
+    steps,
+  };
 }
