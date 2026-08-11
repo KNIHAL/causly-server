@@ -13,6 +13,7 @@ import * as githubOps from "./tools/githubOps.js";
 import * as vercelOps from "./tools/vercelOps.js";
 import * as supabaseOps from "./tools/supabaseOps.js";
 import * as projectOps from "./tools/projectOps.js";
+import * as workflowOps from "./tools/workflowOps.js";
 import { logActivity } from "./tools/logger.js";
 
 const server = new McpServer({
@@ -907,6 +908,29 @@ server.registerTool(
     inputSchema: { repo_path: z.string(), timeout_ms: z.number().optional() },
   },
   wrap("run_build", projectOps.runBuild)
+);
+
+// ---------------- Supabase tools ----------------
+
+server.registerTool(
+  "ship_change",
+  {
+    description:
+      "WORKFLOW: take already-made file edits from working tree to an open pull request. Inspects changed files, creates a branch, runs tests/lint/typecheck/build (stopping early on failure), commits, pushes, and opens a PR. Does not edit files itself — make the code changes first with file tools, then call this.",
+    inputSchema: {
+      repo_path: z.string(),
+      branch_name: z.string(),
+      commit_message: z.string(),
+      pr_title: z.string().optional().describe("Defaults to commit_message"),
+      pr_body: z.string().optional(),
+      base: z.string().optional().describe("Base branch to PR into, defaults to main"),
+      owner: z.string().optional().describe("GitHub owner, auto-resolved from git remote if omitted"),
+      repo: z.string().optional().describe("GitHub repo, auto-resolved from git remote if omitted"),
+      run_checks: z.boolean().optional().describe("Run tests/lint/typecheck/build before committing, defaults to true"),
+      skip_if_no_changes: z.boolean().optional().describe("Defaults to true"),
+    },
+  },
+  wrap("ship_change", workflowOps.shipChange)
 );
 
 // ---------------- Supabase tools ----------------
