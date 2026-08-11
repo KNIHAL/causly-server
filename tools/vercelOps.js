@@ -142,3 +142,57 @@ export async function vercelDeleteProject({ project }) {
   await vercelFetch(`/v9/projects/${project}`, { method: "DELETE" });
   return { project, deleted: true };
 }
+
+/** Get build/runtime logs for a deployment. */
+export async function vercelGetDeploymentLogs({ deployment_id, limit = 200 }) {
+  const data = await vercelFetch(`/v3/deployments/${deployment_id}/events?limit=${limit}`);
+  const events = Array.isArray(data) ? data : data.events || [];
+  return {
+    deployment_id,
+    logs: events.map((e) => ({ type: e.type, text: e.text ?? e.payload?.text, created: e.created })),
+  };
+}
+
+/** Get deployment build/progress events (separate from raw logs — includes build step states). */
+export async function vercelGetDeploymentEvents({ deployment_id }) {
+  const data = await vercelFetch(`/v13/deployments/${deployment_id}`);
+  return {
+    deployment_id,
+    state: data.readyState,
+    ready_substate: data.readySubstate,
+    checks_state: data.checksState,
+    build_errors: data.errorMessage ? { message: data.errorMessage, code: data.errorCode } : null,
+  };
+}
+
+/** Cancel a currently building/queued deployment. */
+export async function vercelCancelDeployment({ deployment_id }) {
+  const data = await vercelFetch(`/v12/deployments/${deployment_id}/cancel`, { method: "PATCH" });
+  return { deployment_id, state: data.readyState };
+}
+
+/** Hit a URL and report status/response time — used to verify a deployment is actually healthy after it goes live. */
+export async function httpCheck({ url, timeout_ms = 10_000 }) {
+  const start = Date.now();
+  try {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeout_ms);
+    const res = await fetch(url, { method: "GET", redirect: "follow", signal: controller.signal });
+    clearTimeout(timer);
+    const response_time_ms = Date.now() - start;
+    return {
+      url,
+      status: res.status,
+      healthy: res.status >= 200 && res.status < 400,
+      response_time_ms,
+    };
+  } catch (err) {
+    return {
+      url,
+      status: null,
+      healthy: false,
+      response_time_ms: Date.now() - start,
+      error: err.name === "AbortError" ? "timeout" : err.message,
+    };
+  }
+}
