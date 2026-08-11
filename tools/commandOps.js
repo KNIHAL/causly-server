@@ -34,33 +34,60 @@ const CMD_PATH = IS_WINDOWS
 // a normal interactive terminal.
 const DEFAULT_PATHEXT = ".COM;.EXE;.BAT;.CMD;.VBS;.VBE;.JS;.JSE;.WSF;.WSH;.MSC";
 
+// Find the actual casing of an env var key (Windows env keys can be
+// "Path", "PATH", "PathExt", etc. depending on how they were originally
+// set). Returns the real key if found, otherwise undefined.
+function findKey(env, name) {
+  return Object.keys(env).find((k) => k.toUpperCase() === name.toUpperCase());
+}
+
 function buildEnv() {
   if (!IS_WINDOWS) return process.env;
   const env = { ...process.env };
-  const currentExt = env.PATHEXT || "";
-  const missing = DEFAULT_PATHEXT.split(";").filter(
-    (ext) => !currentExt.toUpperCase().includes(ext)
+
+  // IMPORTANT: always read/write through the env's *actual* existing key
+  // casing (e.g. "Path" vs "PATH"). Setting env.PATH when the real key is
+  // "Path" creates two distinct keys in the plain JS object. Node then
+  // serializes BOTH into the child process's environment block. Nested
+  // processes (cmd.exe spawned by npm, which then spawns node) can end up
+  // reading the wrong/empty duplicate for their own command resolution —
+  // this was the actual cause of "'node' is not recognized" inside
+  // `npm run <script>`, even though PATH looked correct when echoed at
+  // the top level.
+  const pathExtKey = findKey(env, "PATHEXT") || "PATHEXT";
+  const currentExt = env[pathExtKey] || "";
+  // Normalize: split, drop empty segments (a stray leading/trailing/double
+  // semicolon produces an empty entry, e.g. ";.COM;.EXE"). An empty entry
+  // here silently breaks Windows' extension-less command resolution
+  // (`node`, `npm`, `where`, etc.) inside nested cmd.exe processes — this
+  // was the actual root cause of "'node' is not recognized" inside
+  // `npm run <script>` (npm spawns its own cmd.exe internally), even
+  // though the PATHEXT value looked fine when echoed at the top level.
+  const currentExtList = currentExt.split(";").map((e) => e.trim()).filter(Boolean);
+  const missingExt = DEFAULT_PATHEXT.split(";").filter(
+    (ext) => !currentExtList.some((e) => e.toUpperCase() === ext)
   );
-  env.PATHEXT = missing.length ? `${currentExt};${missing.join(";")}` : currentExt || DEFAULT_PATHEXT;
+  env[pathExtKey] = [...currentExtList, ...missingExt].join(";") || DEFAULT_PATHEXT;
 
   // Claude Desktop's spawned environment also carries a stripped-down PATH
   // on some machines — missing the Node.js install dir and the npm global
   // bin dir. This breaks any subprocess spawned BY a tool we run (e.g.
-  // `npm install`'s own internal `node postinstall.js` calls), even though
+  // `npm install`'s own internal `node postinstall.js` calls, or
+  // `npm run <script>`'s nested cmd.exe -> node.exe spawn), even though
   // our own top-level `node`/`npm` calls succeed via PowerShell's separate
   // system-PATH resolution. Ensure these are always present.
+  const pathKey = findKey(env, "PATH") || "PATH";
   const home = env.USERPROFILE || env.HOME || "C:\\Users\\nihal";
   const criticalPaths = [
     "C:\\Program Files\\nodejs",
     `${home}\\AppData\\Roaming\\npm`,
   ];
-  const currentPath = env.PATH || env.Path || "";
+  const currentPath = env[pathKey] || "";
+  const currentPathList = currentPath.split(";").map((p) => p.trim()).filter(Boolean);
   const missingPaths = criticalPaths.filter(
-    (p) => !currentPath.toLowerCase().includes(p.toLowerCase())
+    (p) => !currentPathList.some((existing) => existing.toLowerCase() === p.toLowerCase())
   );
-  if (missingPaths.length) {
-    env.PATH = `${currentPath}${currentPath ? ";" : ""}${missingPaths.join(";")}`;
-  }
+  env[pathKey] = [...currentPathList, ...missingPaths].join(";");
 
   return env;
 }
