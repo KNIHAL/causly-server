@@ -933,6 +933,39 @@ server.registerTool(
   wrap("ship_change", workflowOps.shipChange)
 );
 
+server.registerTool(
+  "fix_ci",
+  {
+    description:
+      "WORKFLOW: investigate a failing GitHub Actions run — finds the latest failing run (or a given run_id), lists its jobs, pulls logs for every failed job, and returns a structured diagnosis. Does not write the fix itself. After reading the logs and fixing the code with file tools, call verify_ci_fix.",
+    inputSchema: {
+      owner: z.string(),
+      repo: z.string(),
+      branch: z.string().optional().describe("Filter to a branch when auto-finding the latest failing run"),
+      run_id: z.number().optional().describe("Investigate a specific run instead of auto-finding the latest failure"),
+    },
+  },
+  wrap("fix_ci", workflowOps.fixCi)
+);
+
+server.registerTool(
+  "verify_ci_fix",
+  {
+    description:
+      "WORKFLOW: after fixing code found via fix_ci, commit and push the change, then poll GitHub Actions until the new run completes and report pass/fail.",
+    inputSchema: {
+      repo_path: z.string(),
+      owner: z.string(),
+      repo: z.string(),
+      branch: z.string(),
+      commit_message: z.string(),
+      poll_interval_ms: z.number().optional().describe("Defaults to 15000"),
+      max_polls: z.number().optional().describe("Defaults to 20 (5 min at default interval)"),
+    },
+  },
+  wrap("verify_ci_fix", workflowOps.verifyCiFix)
+);
+
 // ---------------- Supabase tools ----------------
 
 server.registerTool(
