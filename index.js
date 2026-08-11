@@ -12,6 +12,7 @@ import * as commandOps from "./tools/commandOps.js";
 import * as githubOps from "./tools/githubOps.js";
 import * as vercelOps from "./tools/vercelOps.js";
 import * as supabaseOps from "./tools/supabaseOps.js";
+import * as projectOps from "./tools/projectOps.js";
 import { logActivity } from "./tools/logger.js";
 
 const server = new McpServer({
@@ -282,6 +283,128 @@ server.registerTool(
   wrap("git_branch", gitOps.gitBranch)
 );
 
+server.registerTool(
+  "git_create_branch",
+  {
+    description: "Create a new local branch, optionally checking it out immediately (default: yes).",
+    inputSchema: {
+      repo_path: z.string(),
+      branch_name: z.string(),
+      checkout: z.boolean().optional().describe("Defaults to true"),
+    },
+  },
+  wrap("git_create_branch", gitOps.gitCreateBranch)
+);
+
+server.registerTool(
+  "git_checkout",
+  {
+    description: "Checkout an existing local branch.",
+    inputSchema: { repo_path: z.string(), branch: z.string() },
+  },
+  wrap("git_checkout", gitOps.gitCheckout)
+);
+
+server.registerTool(
+  "git_merge",
+  {
+    description: "Merge the given branch into the current branch.",
+    inputSchema: { repo_path: z.string(), branch: z.string() },
+  },
+  wrap("git_merge", gitOps.gitMerge)
+);
+
+server.registerTool(
+  "git_reset",
+  {
+    description: "Reset the current branch to a ref. mode: 'soft' | 'mixed' | 'hard' (defaults to mixed).",
+    inputSchema: {
+      repo_path: z.string(),
+      mode: z.string().optional().describe("soft, mixed, or hard"),
+      ref: z.string().optional().describe("Defaults to HEAD"),
+    },
+  },
+  wrap("git_reset", gitOps.gitReset)
+);
+
+server.registerTool(
+  "git_stash",
+  {
+    description: "Stash working changes. action: 'save' | 'pop' | 'apply' | 'list' | 'drop' (defaults to save).",
+    inputSchema: {
+      repo_path: z.string(),
+      action: z.string().optional().describe("save, pop, apply, list, or drop"),
+      message: z.string().optional().describe("Stash message, only used with save"),
+      stash_id: z.string().optional().describe("e.g. stash@{0}, used with pop/apply/drop"),
+    },
+  },
+  wrap("git_stash", gitOps.gitStash)
+);
+
+server.registerTool(
+  "git_show",
+  {
+    description: "Show details of a commit or object. Defaults to HEAD.",
+    inputSchema: { repo_path: z.string(), ref: z.string().optional() },
+  },
+  wrap("git_show", gitOps.gitShow)
+);
+
+server.registerTool(
+  "git_remote",
+  {
+    description: "Manage git remotes. action: 'list' | 'add' | 'remove' (defaults to list).",
+    inputSchema: {
+      repo_path: z.string(),
+      action: z.string().optional().describe("list, add, or remove"),
+      name: z.string().optional().describe("Remote name, required for add/remove"),
+      url: z.string().optional().describe("Remote URL, required for add"),
+    },
+  },
+  wrap("git_remote", gitOps.gitRemote)
+);
+
+server.registerTool(
+  "git_tag",
+  {
+    description: "Manage git tags. action: 'list' | 'create' | 'delete' (defaults to list).",
+    inputSchema: {
+      repo_path: z.string(),
+      action: z.string().optional().describe("list, create, or delete"),
+      tag_name: z.string().optional().describe("Required for create/delete"),
+      message: z.string().optional().describe("Annotation message, optional for create"),
+    },
+  },
+  wrap("git_tag", gitOps.gitTag)
+);
+
+server.registerTool(
+  "git_changed_files",
+  {
+    description: "List changed files in the working tree with their change type (modified/untracked/created/deleted/renamed).",
+    inputSchema: { repo_path: z.string() },
+  },
+  wrap("git_changed_files", gitOps.gitChangedFiles)
+);
+
+server.registerTool(
+  "git_diff_stat",
+  {
+    description: "Show a summary of changes (files changed, insertions, deletions) rather than the full diff.",
+    inputSchema: { repo_path: z.string(), file: z.string().optional() },
+  },
+  wrap("git_diff_stat", gitOps.gitDiffStat)
+);
+
+server.registerTool(
+  "git_check_clean",
+  {
+    description: "Check whether the working tree is clean (no uncommitted changes).",
+    inputSchema: { repo_path: z.string() },
+  },
+  wrap("git_check_clean", gitOps.gitCheckClean)
+);
+
 // ---------------- Command execution ----------------
 
 server.registerTool(
@@ -417,6 +540,202 @@ server.registerTool(
   wrap("github_add_comment", githubOps.githubAddComment)
 );
 
+server.registerTool(
+  "github_get_repo",
+  {
+    description: "Get a repository's details (default branch, visibility, open issues, language, etc).",
+    inputSchema: { owner: z.string(), repo: z.string() },
+  },
+  wrap("github_get_repo", githubOps.githubGetRepo)
+);
+
+server.registerTool(
+  "github_get_issue",
+  {
+    description: "Get a single issue's details.",
+    inputSchema: { owner: z.string(), repo: z.string(), issue_number: z.number() },
+  },
+  wrap("github_get_issue", githubOps.githubGetIssue)
+);
+
+server.registerTool(
+  "github_update_issue",
+  {
+    description: "Update an issue's title, body, state, or labels.",
+    inputSchema: {
+      owner: z.string(),
+      repo: z.string(),
+      issue_number: z.number(),
+      title: z.string().optional(),
+      body: z.string().optional(),
+      state: z.string().optional().describe("open or closed"),
+      labels: z.array(z.string()).optional(),
+    },
+  },
+  wrap("github_update_issue", githubOps.githubUpdateIssue)
+);
+
+server.registerTool(
+  "github_get_pull_request",
+  {
+    description: "Get a single pull request's details, including mergeable status.",
+    inputSchema: { owner: z.string(), repo: z.string(), pull_number: z.number() },
+  },
+  wrap("github_get_pull_request", githubOps.githubGetPullRequest)
+);
+
+server.registerTool(
+  "github_update_pull_request",
+  {
+    description: "Update a pull request's title, body, state, or base branch.",
+    inputSchema: {
+      owner: z.string(),
+      repo: z.string(),
+      pull_number: z.number(),
+      title: z.string().optional(),
+      body: z.string().optional(),
+      state: z.string().optional().describe("open or closed"),
+      base: z.string().optional(),
+    },
+  },
+  wrap("github_update_pull_request", githubOps.githubUpdatePullRequest)
+);
+
+server.registerTool(
+  "github_merge_pull_request",
+  {
+    description: "Merge a pull request.",
+    inputSchema: {
+      owner: z.string(),
+      repo: z.string(),
+      pull_number: z.number(),
+      merge_method: z.string().optional().describe("merge, squash, or rebase — defaults to merge"),
+      commit_title: z.string().optional(),
+      commit_message: z.string().optional(),
+    },
+  },
+  wrap("github_merge_pull_request", githubOps.githubMergePullRequest)
+);
+
+server.registerTool(
+  "github_get_pull_request_files",
+  {
+    description: "List the files changed in a pull request, with additions/deletions per file.",
+    inputSchema: { owner: z.string(), repo: z.string(), pull_number: z.number(), per_page: z.number().optional() },
+  },
+  wrap("github_get_pull_request_files", githubOps.githubGetPullRequestFiles)
+);
+
+server.registerTool(
+  "github_get_pull_request_diff",
+  {
+    description: "Get the full raw diff of a pull request.",
+    inputSchema: { owner: z.string(), repo: z.string(), pull_number: z.number() },
+  },
+  wrap("github_get_pull_request_diff", githubOps.githubGetPullRequestDiff)
+);
+
+server.registerTool(
+  "github_get_pull_request_comments",
+  {
+    description: "List conversation comments on a pull request.",
+    inputSchema: { owner: z.string(), repo: z.string(), pull_number: z.number(), per_page: z.number().optional() },
+  },
+  wrap("github_get_pull_request_comments", githubOps.githubGetPullRequestComments)
+);
+
+server.registerTool(
+  "github_get_pull_request_reviews",
+  {
+    description: "List reviews (approved/changes-requested/commented) on a pull request.",
+    inputSchema: { owner: z.string(), repo: z.string(), pull_number: z.number(), per_page: z.number().optional() },
+  },
+  wrap("github_get_pull_request_reviews", githubOps.githubGetPullRequestReviews)
+);
+
+server.registerTool(
+  "github_get_branch",
+  {
+    description: "Get details of a single branch, including protection status and latest commit SHA.",
+    inputSchema: { owner: z.string(), repo: z.string(), branch: z.string() },
+  },
+  wrap("github_get_branch", githubOps.githubGetBranch)
+);
+
+server.registerTool(
+  "github_list_branches",
+  {
+    description: "List branches on a repository.",
+    inputSchema: { owner: z.string(), repo: z.string(), per_page: z.number().optional() },
+  },
+  wrap("github_list_branches", githubOps.githubListBranches)
+);
+
+server.registerTool(
+  "github_list_workflows",
+  {
+    description: "List workflows defined in a repository (from .github/workflows).",
+    inputSchema: { owner: z.string(), repo: z.string() },
+  },
+  wrap("github_list_workflows", githubOps.githubListWorkflows)
+);
+
+server.registerTool(
+  "github_list_workflow_runs",
+  {
+    description: "List recent GitHub Actions workflow runs, optionally filtered by branch or status (e.g. 'failure', 'in_progress').",
+    inputSchema: {
+      owner: z.string(),
+      repo: z.string(),
+      branch: z.string().optional(),
+      status: z.string().optional(),
+      per_page: z.number().optional(),
+    },
+  },
+  wrap("github_list_workflow_runs", githubOps.githubListWorkflowRuns)
+);
+
+server.registerTool(
+  "github_get_workflow_run",
+  {
+    description: "Get details of a single workflow run (status, conclusion, branch, timestamps).",
+    inputSchema: { owner: z.string(), repo: z.string(), run_id: z.number() },
+  },
+  wrap("github_get_workflow_run", githubOps.githubGetWorkflowRun)
+);
+
+server.registerTool(
+  "github_get_workflow_run_jobs",
+  {
+    description: "List jobs in a workflow run, with per-job and per-step status/conclusion — use to find which job/step failed.",
+    inputSchema: { owner: z.string(), repo: z.string(), run_id: z.number() },
+  },
+  wrap("github_get_workflow_run_jobs", githubOps.githubGetWorkflowRunJobs)
+);
+
+server.registerTool(
+  "github_get_job_logs",
+  {
+    description: "Get the raw log text for a specific job — use after finding a failed job via github_get_workflow_run_jobs.",
+    inputSchema: { owner: z.string(), repo: z.string(), job_id: z.number() },
+  },
+  wrap("github_get_job_logs", githubOps.githubGetJobLogs)
+);
+
+server.registerTool(
+  "github_rerun_workflow",
+  {
+    description: "Re-run a workflow run. Set failed_only=true to re-run only the failed jobs instead of the whole run.",
+    inputSchema: {
+      owner: z.string(),
+      repo: z.string(),
+      run_id: z.number(),
+      failed_only: z.boolean().optional().describe("Defaults to false"),
+    },
+  },
+  wrap("github_rerun_workflow", githubOps.githubRerunWorkflow)
+);
+
 // ---------------- Vercel tools ----------------
 
 server.registerTool(
@@ -487,6 +806,107 @@ server.registerTool(
     inputSchema: { project: z.string() },
   },
   wrap("vercel_delete_project", vercelOps.vercelDeleteProject)
+);
+
+server.registerTool(
+  "vercel_get_deployment_logs",
+  {
+    description: "Get build/runtime logs for a deployment.",
+    inputSchema: { deployment_id: z.string(), limit: z.number().optional() },
+  },
+  wrap("vercel_get_deployment_logs", vercelOps.vercelGetDeploymentLogs)
+);
+
+server.registerTool(
+  "vercel_get_deployment_events",
+  {
+    description: "Get a deployment's build/progress state — ready state, checks state, and build error details if it failed.",
+    inputSchema: { deployment_id: z.string() },
+  },
+  wrap("vercel_get_deployment_events", vercelOps.vercelGetDeploymentEvents)
+);
+
+server.registerTool(
+  "vercel_cancel_deployment",
+  {
+    description: "Cancel a currently building or queued deployment.",
+    inputSchema: { deployment_id: z.string() },
+  },
+  wrap("vercel_cancel_deployment", vercelOps.vercelCancelDeployment)
+);
+
+server.registerTool(
+  "http_check",
+  {
+    description: "Hit a URL and report status code, health, and response time — use to verify a deployment is actually live and healthy.",
+    inputSchema: { url: z.string(), timeout_ms: z.number().optional() },
+  },
+  wrap("http_check", vercelOps.httpCheck)
+);
+
+// ---------------- Project intelligence tools ----------------
+
+server.registerTool(
+  "project_detect",
+  {
+    description: "Detect a project's language, framework, and package manager by inspecting its manifest files.",
+    inputSchema: { repo_path: z.string() },
+  },
+  wrap("project_detect", projectOps.projectDetect)
+);
+
+server.registerTool(
+  "project_info",
+  {
+    description: "Get structured project info: language, framework, package manager, resolved test/lint/typecheck/build commands, and current git branch/remotes.",
+    inputSchema: { repo_path: z.string() },
+  },
+  wrap("project_info", projectOps.projectInfo)
+);
+
+server.registerTool(
+  "project_health",
+  {
+    description: "Get a health snapshot of a project: git cleanliness/ahead-behind, whether dependencies are installed, and which env files are present.",
+    inputSchema: { repo_path: z.string() },
+  },
+  wrap("project_health", projectOps.projectHealth)
+);
+
+server.registerTool(
+  "run_tests",
+  {
+    description: "Detect and run the project's test command, returning stdout/stderr/exit_code.",
+    inputSchema: { repo_path: z.string(), timeout_ms: z.number().optional() },
+  },
+  wrap("run_tests", projectOps.runTests)
+);
+
+server.registerTool(
+  "run_lint",
+  {
+    description: "Detect and run the project's lint command, returning stdout/stderr/exit_code.",
+    inputSchema: { repo_path: z.string(), timeout_ms: z.number().optional() },
+  },
+  wrap("run_lint", projectOps.runLint)
+);
+
+server.registerTool(
+  "run_typecheck",
+  {
+    description: "Detect and run the project's typecheck command, returning stdout/stderr/exit_code.",
+    inputSchema: { repo_path: z.string(), timeout_ms: z.number().optional() },
+  },
+  wrap("run_typecheck", projectOps.runTypecheck)
+);
+
+server.registerTool(
+  "run_build",
+  {
+    description: "Detect and run the project's build command, returning stdout/stderr/exit_code.",
+    inputSchema: { repo_path: z.string(), timeout_ms: z.number().optional() },
+  },
+  wrap("run_build", projectOps.runBuild)
 );
 
 // ---------------- Supabase tools ----------------
