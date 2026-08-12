@@ -1,5 +1,11 @@
 import fs from "fs/promises";
 import path from "path";
+import { isPathDenied } from "./security.js";
+
+function assertPathAllowed(targetPath) {
+  const check = isPathDenied(targetPath);
+  if (check.denied) throw new Error(check.reason);
+}
 
 /** List immediate contents (files + folders) of a directory. */
 export async function listDirectory({ path: dirPath }) {
@@ -41,12 +47,14 @@ export async function directoryTree({ path: dirPath, max_depth = 5, _currentDept
 
 /** Create a new directory (and any missing parents). */
 export async function createDirectory({ path: dirPath }) {
+  assertPathAllowed(dirPath);
   await fs.mkdir(dirPath, { recursive: true });
   return { path: dirPath, created: true };
 }
 
 /** Delete a directory. Recursive by default so nested folders can be removed. */
 export async function deleteDirectory({ path: dirPath, recursive = true }) {
+  assertPathAllowed(dirPath);
   await fs.rm(dirPath, { recursive, force: false });
   return { path: dirPath, deleted: true };
 }
