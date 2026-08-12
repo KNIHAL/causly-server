@@ -1,7 +1,7 @@
 import { loadEnv } from "./tools/envLoader.js";
 loadEnv();
 
-import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { McpServer, ResourceTemplate } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
 
@@ -1070,6 +1070,63 @@ server.registerTool(
     },
   },
   wrap("supabase_run_sql", supabaseOps.supabaseRunSql)
+);
+
+// ---------------- MCP Resources ----------------
+//
+// Give the AI project context without forcing it to reconstruct
+// everything through individual tool calls. The repo path is passed
+// URI-encoded as a single path segment (Windows paths contain ':' and
+// '\', which aren't safe as raw URI template variables) and decoded on
+// read. Example URI: causly://project/D%3A%5Ccausly-server/health
+
+function projectResourceUri(kind) {
+  return new ResourceTemplate(`causly://project/{encodedPath}/${kind}`, { list: undefined });
+}
+
+server.registerResource(
+  "project_health_resource",
+  projectResourceUri("health"),
+  {
+    title: "Project Health",
+    description: "Git cleanliness, dependency install status, and env file presence for a project directory.",
+    mimeType: "application/json",
+  },
+  async (uri, { encodedPath }) => {
+    const repo_path = decodeURIComponent(encodedPath);
+    const data = await projectOps.projectHealth({ repo_path });
+    return { contents: [{ uri: uri.href, mimeType: "application/json", text: JSON.stringify(data, null, 2) }] };
+  }
+);
+
+server.registerResource(
+  "project_info_resource",
+  projectResourceUri("info"),
+  {
+    title: "Project Info",
+    description: "Language, framework, package manager, resolved commands, and git branch/remotes for a project directory.",
+    mimeType: "application/json",
+  },
+  async (uri, { encodedPath }) => {
+    const repo_path = decodeURIComponent(encodedPath);
+    const data = await projectOps.projectInfo({ repo_path });
+    return { contents: [{ uri: uri.href, mimeType: "application/json", text: JSON.stringify(data, null, 2) }] };
+  }
+);
+
+server.registerResource(
+  "project_git_resource",
+  projectResourceUri("git"),
+  {
+    title: "Project Git State",
+    description: "Current git status (changed files, ahead/behind, clean state) for a project directory.",
+    mimeType: "application/json",
+  },
+  async (uri, { encodedPath }) => {
+    const repo_path = decodeURIComponent(encodedPath);
+    const data = await gitOps.gitStatus({ repo_path });
+    return { contents: [{ uri: uri.href, mimeType: "application/json", text: JSON.stringify(data, null, 2) }] };
+  }
 );
 
 // ---------------- Start server ----------------
