@@ -222,3 +222,36 @@ export function checkApproval(toolName, input) {
     reason: `'${toolName}' is a ${level}-risk action and requires explicit confirmation. Re-call with confirm: true to proceed.`,
   };
 }
+
+// ---------------- Command risk classification ----------------
+
+// Beyond the hard BLOCKED_PATTERNS in commandOps.js (which stop a call
+// outright), this gives a *graded* risk read on a command string so it can
+// be surfaced in logs/results for auditability — per the roadmap's own
+// warning: "Do not rely only on regex-based destructive command blocking."
+const RISKY_COMMAND_SIGNALS = [
+  { pattern: /\b(rm|del|erase)\b/i, reason: "deletes files" },
+  { pattern: /\bdrop\s+(table|database|schema)\b/i, reason: "drops a database object" },
+  { pattern: /\btruncate\s+table\b/i, reason: "truncates a table" },
+  { pattern: /\bgit\s+push\s+.*--force/i, reason: "force-pushes (can overwrite remote history)" },
+  { pattern: /\bgit\s+reset\s+--hard/i, reason: "hard-resets (can discard uncommitted work)" },
+  { pattern: /\bcurl\b.*\|\s*(bash|sh|powershell)/i, reason: "pipes a remote script directly into a shell" },
+  { pattern: /\biwr\b.*\|\s*iex\b/i, reason: "downloads and executes a remote script (PowerShell)" },
+  { pattern: /\bchmod\s+-R\s+777\b/i, reason: "recursively opens permissions" },
+  { pattern: /\bsudo\b|\brunas\b/i, reason: "elevates privileges" },
+  { pattern: />\s*\/dev\/(sd|nvme|hd)/i, reason: "writes directly to a disk device" },
+  { pattern: /\bnpm\s+publish\b/i, reason: "publishes a package publicly" },
+  { pattern: /\bgh\s+repo\s+delete\b/i, reason: "deletes a GitHub repository" },
+];
+
+/**
+ * Returns a risk read on a shell command string: { risk: "LOW"|"ELEVATED",
+ * signals: [reasons] }. Purely informational (does not block) — the hard
+ * BLOCKED_PATTERNS check in commandOps.js still runs separately and does
+ * block outright. This exists so risky-but-legitimate commands (force
+ * push, drop table, etc.) are visible in the audit log even when allowed.
+ */
+export function classifyCommandRisk(command) {
+  const signals = RISKY_COMMAND_SIGNALS.filter((s) => s.pattern.test(command)).map((s) => s.reason);
+  return { risk: signals.length ? "ELEVATED" : "LOW", signals };
+}
