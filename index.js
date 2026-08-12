@@ -36,14 +36,15 @@ function wrap(toolName, handler) {
         isError: true,
       };
     }
+    const startedAt = Date.now();
     try {
       const result = await handler(input);
-      logActivity(toolName, input, "SUCCESS");
+      logActivity(toolName, input, "SUCCESS", "", Date.now() - startedAt);
       return {
         content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
       };
     } catch (err) {
-      logActivity(toolName, input, "ERROR", err.message);
+      logActivity(toolName, input, "ERROR", err.message, Date.now() - startedAt);
       return {
         content: [{ type: "text", text: `Error: ${err.message}` }],
         isError: true,
