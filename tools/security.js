@@ -255,3 +255,36 @@ export function classifyCommandRisk(command) {
   const signals = RISKY_COMMAND_SIGNALS.filter((s) => s.pattern.test(command)).map((s) => s.reason);
   return { risk: signals.length ? "ELEVATED" : "LOW", signals };
 }
+
+// ---------------- Path security ----------------
+
+// System-critical directories that must never be targeted by delete/write
+// operations, even on a trusted single-user machine — a wrong path here
+// is the difference between "oops, undo" and "reinstall Windows". Matched
+// case-insensitively against the resolved absolute path prefix.
+const DENIED_PATH_PREFIXES = [
+  "C:\\Windows",
+  "C:\\Program Files",
+  "C:\\Program Files (x86)",
+  "C:\\ProgramData",
+  "C:\\Users\\Default",
+  "C:\\Users\\Public",
+  "C:\\System Volume Information",
+  "C:\\Recovery",
+  "C:\\Boot",
+];
+
+/**
+ * Checks whether a path falls inside a denied system directory. Compares
+ * the normalized, lowercased path against known-dangerous prefixes.
+ * Returns { denied, reason }.
+ */
+export function isPathDenied(targetPath) {
+  if (!targetPath || typeof targetPath !== "string") return { denied: false };
+  const normalized = targetPath.replace(/\//g, "\\").toLowerCase();
+  const hit = DENIED_PATH_PREFIXES.find((prefix) => normalized.startsWith(prefix.toLowerCase()));
+  if (hit) {
+    return { denied: true, reason: `'${targetPath}' is inside a protected system directory (${hit}) and cannot be modified through this tool.` };
+  }
+  return { denied: false };
+}
