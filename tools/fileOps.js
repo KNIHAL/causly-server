@@ -1,5 +1,11 @@
 import fs from "fs/promises";
 import path from "path";
+import { isPathDenied } from "./security.js";
+
+function assertPathAllowed(targetPath) {
+  const check = isPathDenied(targetPath);
+  if (check.denied) throw new Error(check.reason);
+}
 
 /**
  * mkdir(recursive: true) that tolerates Windows quirks where the target
@@ -37,6 +43,7 @@ export async function readMultipleFiles({ paths, encoding = "utf8" }) {
 
 /** Create a brand-new file. Fails if the file already exists (safety). */
 export async function createFile({ path: filePath, content = "" }) {
+  assertPathAllowed(filePath);
   await safeMkdir(path.dirname(filePath));
   await fs.writeFile(filePath, content, { flag: "wx" });
   return { path: filePath, created: true };
@@ -44,6 +51,7 @@ export async function createFile({ path: filePath, content = "" }) {
 
 /** Write/overwrite a file completely. Creates parent dirs if needed. */
 export async function writeFile({ path: filePath, content }) {
+  assertPathAllowed(filePath);
   await safeMkdir(path.dirname(filePath));
   await fs.writeFile(filePath, content, "utf8");
   return { path: filePath, written: true };
@@ -55,6 +63,7 @@ export async function writeFile({ path: filePath, content }) {
  * replace_all is true.
  */
 export async function editFile({ path: filePath, old_str, new_str, replace_all = false }) {
+  assertPathAllowed(filePath);
   const original = await fs.readFile(filePath, "utf8");
 
   if (!original.includes(old_str)) {
@@ -81,12 +90,15 @@ export async function editFile({ path: filePath, old_str, new_str, replace_all =
 
 /** Delete a single file. */
 export async function deleteFile({ path: filePath }) {
+  assertPathAllowed(filePath);
   await fs.unlink(filePath);
   return { path: filePath, deleted: true };
 }
 
 /** Move or rename a file/directory. */
 export async function moveFile({ source, destination }) {
+  assertPathAllowed(source);
+  assertPathAllowed(destination);
   await safeMkdir(path.dirname(destination));
   await fs.rename(source, destination);
   return { source, destination, moved: true };
