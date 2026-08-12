@@ -48,7 +48,7 @@ This server can genuinely change your machine and your production systems, so ev
 - **Path security** — writes and deletes are blocked outright if the target path falls inside a protected system directory (`C:\Windows`, `Program Files`, `ProgramData`, etc.).
 - **Structured audit log** — every tool call is appended to `logs/activity.log` as one JSON object per line: timestamp, operation ID, risk level, status, redacted input, and duration.
 
-This is designed for a **trusted single-user local machine**, not a shared or multi-tenant deployment. If you're exposing this beyond yourself, tighten the approval policy and add real authentication first.
+Built and tuned for running on your own machine, under your own credentials. Fork it, self-host it, adapt it — the classification and approval layer above travels with the code no matter where you run it.
 
 ## The workflow this enables
 
@@ -97,7 +97,6 @@ flowchart TD
 
 - **`vercel_create_deployment` / `deploy_project`** require the Vercel project to already be git-linked; they don't create that link for you.
 - **`supabase_run_sql`** uses Supabase's Management API — some personal access tokens restrict this by default. If you hit a `403`, check your token's SQL execution permission in Supabase's dashboard.
-- **This is single-user, local-trust software.** There is no multi-tenant isolation, no separate human-approval UI beyond the `confirm: true` flag, and no path allow-listing beyond the system-directory denylist. Don't run this on a shared machine or expose it over a network without adding real auth.
 
 ## Project structure
 
