@@ -15,6 +15,7 @@ import * as supabaseOps from "./tools/supabaseOps.js";
 import * as projectOps from "./tools/projectOps.js";
 import * as workflowOps from "./tools/workflowOps.js";
 import { logActivity } from "./tools/logger.js";
+import { checkApproval } from "./tools/security.js";
 
 const server = new McpServer({
   name: "causly-server",
@@ -27,6 +28,14 @@ const server = new McpServer({
  */
 function wrap(toolName, handler) {
   return async (input) => {
+    const approval = checkApproval(toolName, input);
+    if (!approval.allowed) {
+      logActivity(toolName, input, "BLOCKED", approval.reason);
+      return {
+        content: [{ type: "text", text: `Blocked: ${approval.reason}` }],
+        isError: true,
+      };
+    }
     try {
       const result = await handler(input);
       logActivity(toolName, input, "SUCCESS");
@@ -111,8 +120,8 @@ server.registerTool(
 server.registerTool(
   "delete_file",
   {
-    description: "Delete a single file.",
-    inputSchema: { path: z.string() },
+    description: "Delete a single file. DESTRUCTIVE — requires confirm: true.",
+    inputSchema: { path: z.string(), confirm: z.boolean().optional().describe("Must be true to proceed") },
   },
   wrap("delete_file", fileOps.deleteFile)
 );
@@ -179,10 +188,11 @@ server.registerTool(
 server.registerTool(
   "delete_directory",
   {
-    description: "Delete a directory. Recursive by default so it removes nested contents too.",
+    description: "Delete a directory. Recursive by default so it removes nested contents too. DESTRUCTIVE — requires confirm: true.",
     inputSchema: {
       path: z.string(),
       recursive: z.boolean().optional(),
+      confirm: z.boolean().optional().describe("Must be true to proceed"),
     },
   },
   wrap("delete_directory", dirOps.deleteDirectory)
@@ -318,11 +328,12 @@ server.registerTool(
 server.registerTool(
   "git_reset",
   {
-    description: "Reset the current branch to a ref. mode: 'soft' | 'mixed' | 'hard' (defaults to mixed).",
+    description: "Reset the current branch to a ref. mode: 'soft' | 'mixed' | 'hard' (defaults to mixed). HIGH risk (can lose uncommitted work with --hard) — requires confirm: true.",
     inputSchema: {
       repo_path: z.string(),
       mode: z.string().optional().describe("soft, mixed, or hard"),
       ref: z.string().optional().describe("Defaults to HEAD"),
+      confirm: z.boolean().optional().describe("Must be true to proceed"),
     },
   },
   wrap("git_reset", gitOps.gitReset)
@@ -412,11 +423,12 @@ server.registerTool(
   "run_command",
   {
     description:
-      "Run a shell command in a given working directory (npm install, npm run build, pip install, tests, etc.). A short list of catastrophic patterns (drive wipes, format, shutdown) is blocked; everything else executes with full permissions.",
+      "Run a shell command in a given working directory (npm install, npm run build, pip install, tests, etc.). A short list of catastrophic patterns (drive wipes, format, shutdown) is blocked; everything else executes with full permissions. HIGH risk — requires confirm: true.",
     inputSchema: {
       command: z.string().describe("The shell command to run"),
       cwd: z.string().describe("Working directory to run the command in"),
       timeout_ms: z.number().optional().describe("Timeout in ms, default 60000"),
+      confirm: z.boolean().optional().describe("Must be true to proceed"),
     },
   },
   wrap("run_command", commandOps.runCommand)
@@ -450,8 +462,8 @@ server.registerTool(
 server.registerTool(
   "github_delete_repo",
   {
-    description: "Delete a GitHub repository. Requires Administration: write on the token.",
-    inputSchema: { owner: z.string(), repo: z.string() },
+    description: "Delete a GitHub repository. Requires Administration: write on the token. DESTRUCTIVE — requires confirm: true.",
+    inputSchema: { owner: z.string(), repo: z.string(), confirm: z.boolean().optional().describe("Must be true to proceed") },
   },
   wrap("github_delete_repo", githubOps.githubDeleteRepo)
 );
@@ -605,7 +617,7 @@ server.registerTool(
 server.registerTool(
   "github_merge_pull_request",
   {
-    description: "Merge a pull request.",
+    description: "Merge a pull request. HIGH risk — requires confirm: true.",
     inputSchema: {
       owner: z.string(),
       repo: z.string(),
@@ -613,6 +625,7 @@ server.registerTool(
       merge_method: z.string().optional().describe("merge, squash, or rebase — defaults to merge"),
       commit_title: z.string().optional(),
       commit_message: z.string().optional(),
+      confirm: z.boolean().optional().describe("Must be true to proceed"),
     },
   },
   wrap("github_merge_pull_request", githubOps.githubMergePullRequest)
@@ -788,13 +801,14 @@ server.registerTool(
   "vercel_create_deployment",
   {
     description:
-      "Trigger a new deployment for a git-connected Vercel project by deploying from a given git ref (branch/commit). The project must already be linked to a git repo in Vercel.",
+      "Trigger a new deployment for a git-connected Vercel project by deploying from a given git ref (branch/commit). The project must already be linked to a git repo in Vercel. HIGH risk — requires confirm: true.",
     inputSchema: {
       name: z.string().describe("Deployment/project name"),
       project: z.string().describe("Vercel project ID or name"),
       git_source_repo: z.string().describe("owner/repo"),
       git_source_ref: z.string().optional().describe("Branch or commit, defaults to main"),
       git_source_type: z.string().optional().describe("Defaults to github"),
+      confirm: z.boolean().optional().describe("Must be true to proceed"),
     },
   },
   wrap("vercel_create_deployment", vercelOps.vercelCreateDeployment)
@@ -803,8 +817,8 @@ server.registerTool(
 server.registerTool(
   "vercel_delete_project",
   {
-    description: "Delete a Vercel project.",
-    inputSchema: { project: z.string() },
+    description: "Delete a Vercel project. DESTRUCTIVE — requires confirm: true.",
+    inputSchema: { project: z.string(), confirm: z.boolean().optional().describe("Must be true to proceed") },
   },
   wrap("vercel_delete_project", vercelOps.vercelDeleteProject)
 );
@@ -916,7 +930,7 @@ server.registerTool(
   "ship_change",
   {
     description:
-      "WORKFLOW: take already-made file edits from working tree to an open pull request. Inspects changed files, creates a branch, runs tests/lint/typecheck/build (stopping early on failure), commits, pushes, and opens a PR. Does not edit files itself — make the code changes first with file tools, then call this.",
+      "WORKFLOW: take already-made file edits from working tree to an open pull request. Inspects changed files, creates a branch, runs tests/lint/typecheck/build (stopping early on failure), commits, pushes, and opens a PR. Does not edit files itself — make the code changes first with file tools, then call this. HIGH risk — requires confirm: true.",
     inputSchema: {
       repo_path: z.string(),
       branch_name: z.string(),
@@ -928,6 +942,7 @@ server.registerTool(
       repo: z.string().optional().describe("GitHub repo, auto-resolved from git remote if omitted"),
       run_checks: z.boolean().optional().describe("Run tests/lint/typecheck/build before committing, defaults to true"),
       skip_if_no_changes: z.boolean().optional().describe("Defaults to true"),
+      confirm: z.boolean().optional().describe("Must be true to proceed"),
     },
   },
   wrap("ship_change", workflowOps.shipChange)
@@ -952,7 +967,7 @@ server.registerTool(
   "verify_ci_fix",
   {
     description:
-      "WORKFLOW: after fixing code found via fix_ci, commit and push the change, then poll GitHub Actions until the new run completes and report pass/fail.",
+      "WORKFLOW: after fixing code found via fix_ci, commit and push the change, then poll GitHub Actions until the new run completes and report pass/fail. HIGH risk — requires confirm: true.",
     inputSchema: {
       repo_path: z.string(),
       owner: z.string(),
@@ -961,6 +976,7 @@ server.registerTool(
       commit_message: z.string(),
       poll_interval_ms: z.number().optional().describe("Defaults to 15000"),
       max_polls: z.number().optional().describe("Defaults to 20 (5 min at default interval)"),
+      confirm: z.boolean().optional().describe("Must be true to proceed"),
     },
   },
   wrap("verify_ci_fix", workflowOps.verifyCiFix)
@@ -970,7 +986,7 @@ server.registerTool(
   "deploy_project",
   {
     description:
-      "WORKFLOW: safely deploy a project and verify it. Checks project health (working tree clean), runs tests + build (aborts if either fails), triggers a Vercel deployment, polls until ready, then HTTP health-checks the live URL. Returns a verified pass/fail result, not just a 'deployment triggered' status.",
+      "WORKFLOW: safely deploy a project and verify it. Checks project health (working tree clean), runs tests + build (aborts if either fails), triggers a Vercel deployment, polls until ready, then HTTP health-checks the live URL. Returns a verified pass/fail result, not just a 'deployment triggered' status. HIGH risk — requires confirm: true.",
     inputSchema: {
       repo_path: z.string(),
       project: z.string().describe("Vercel project ID or name"),
@@ -981,6 +997,7 @@ server.registerTool(
       run_checks: z.boolean().optional().describe("Run tests + build before deploying, defaults to true"),
       poll_interval_ms: z.number().optional().describe("Defaults to 10000"),
       max_polls: z.number().optional().describe("Defaults to 30 (5 min at default interval)"),
+      confirm: z.boolean().optional().describe("Must be true to proceed"),
     },
   },
   wrap("deploy_project", workflowOps.deployProject)
@@ -1034,8 +1051,8 @@ server.registerTool(
 server.registerTool(
   "supabase_delete_project",
   {
-    description: "Delete a Supabase project.",
-    inputSchema: { project_ref: z.string() },
+    description: "Delete a Supabase project. DESTRUCTIVE — requires confirm: true.",
+    inputSchema: { project_ref: z.string(), confirm: z.boolean().optional().describe("Must be true to proceed") },
   },
   wrap("supabase_delete_project", supabaseOps.supabaseDeleteProject)
 );
@@ -1044,10 +1061,11 @@ server.registerTool(
   "supabase_run_sql",
   {
     description:
-      "Run raw SQL against a project's database — used for creating tables, altering schema, seeding data, or running queries.",
+      "Run raw SQL against a project's database — used for creating tables, altering schema, seeding data, or running queries. HIGH risk — requires confirm: true.",
     inputSchema: {
       project_ref: z.string(),
       query: z.string().describe("Raw SQL statement(s) to execute"),
+      confirm: z.boolean().optional().describe("Must be true to proceed"),
     },
   },
   wrap("supabase_run_sql", supabaseOps.supabaseRunSql)
