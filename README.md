@@ -1,63 +1,73 @@
 # Causly Server
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
+[![License: PolyForm Noncommercial](https://img.shields.io/badge/License-PolyForm%20Noncommercial-blue.svg)](./LICENSE)
 [![CI](https://github.com/KNIHAL/causly-server/actions/workflows/ci.yml/badge.svg)](https://github.com/KNIHAL/causly-server/actions/workflows/ci.yml)
 [![PRs welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](./CONTRIBUTING.md)
 
-A custom MCP (Model Context Protocol) server that gives Claude full, direct control over your local machine and your core dev stack — filesystem, git, shell, GitHub, Vercel, and Supabase — all from a single self-hosted server you fully own.
+An MCP (Model Context Protocol) server that turns Claude into an **autonomous AI DevOps operator** for solo founders and micro-agencies — not just a set of tools, but a controlled AI employee that can understand a project, execute real work, verify the result, and report back, while staying inside guardrails you define.
 
-Built for [Causly](#) as the core dev-automation layer behind our AI agency workflow, and open-sourced so other builders/founders can run their own instance.
+Runs entirely on your own machine, integrates with Claude Desktop, and talks directly to your filesystem, git, shell, GitHub, Vercel, and Supabase. No hosted middleman, no third-party server sees your code or your credentials.
 
 ## Why this exists
 
-Claude is great at writing code, but by default it can't touch your files, run your commands, or talk to the services you actually ship with. Most solutions bolt on a separate hosted connector for every service — which adds latency, extra hops, and confusion for the model. Causly Server takes the opposite approach: **one server, one process, full control**, running entirely on your own machine. Every tool call is logged locally, every credential lives in your own `.env`, and nothing routes through a third party.
+Most AI coding tools stop at "write the code." Causly Server goes further: it gives Claude the primitives to actually **ship** — branch, test, commit, push, open the PR, diagnose a failing CI run, fix it, and deploy — and the judgment layer (permission levels, approval gates, audit logs) to do all of that safely on a machine you fully control.
 
-## Features
+The target user is a solo founder or a small agency who doesn't have a DevOps team: you describe the task, Causly Server does the mechanical work end-to-end, and asks for your explicit confirmation before anything risky.
 
-**File operations**
-`read_file` · `read_multiple_files` · `create_file` · `write_file` · `edit_file` · `delete_file` · `move_file` · `copy_file` · `get_file_info`
+## What it can do
 
-**Directory operations**
-`list_directory` · `directory_tree` · `create_directory` · `delete_directory` · `search_files`
+**78 tools across 8 categories**, plus 3 MCP resources and 4 guided MCP prompts.
 
-**Git operations**
-`git_init` · `git_status` · `git_add` · `git_commit` · `git_push` · `git_pull` · `git_log` · `git_diff` · `git_branch`
+| Category | Tools | Examples |
+|---|---|---|
+| Files | 9 | read, write, edit, move, copy, delete |
+| Directory | 5 | list, tree, search, create, delete |
+| Git | 20 | full lifecycle — branch, merge, reset, stash, tag, diff, remote |
+| Shell | 1 | `run_command` — arbitrary shell execution, risk-classified |
+| GitHub | 27 | full PR lifecycle + Actions/CI (list runs, pull logs, rerun) |
+| Vercel | 11 | projects, deployments, logs, health checks |
+| Supabase | 6 | projects, raw SQL execution |
+| Project Intelligence | 7 | auto-detect stack, run tests/lint/typecheck/build |
 
-**Shell execution**
-`run_command` — run any shell command (npm install, tests, builds, etc.) in a given directory. A short list of destructive patterns (drive wipes, `format`, `shutdown`) is hard-blocked; everything else runs with full permissions, since this is designed for trusted, single-user local use.
+**Workflow tools** — the actual "AI employee" layer, chaining the primitives above into one call:
+- `ship_change` — inspects your changes, branches, runs checks, commits, pushes, opens the PR
+- `fix_ci` + `verify_ci_fix` — finds a failing GitHub Actions run, pulls the logs, and after you fix the code, commits/pushes/polls until CI is green
+- `deploy_project` — checks project health, runs tests + build, deploys, polls, and HTTP-verifies the live URL is actually healthy — not just "deployment triggered"
 
-**GitHub**
-`github_get_authenticated_user` · `github_create_repo` · `github_delete_repo` · `github_list_repos` · `github_create_issue` · `github_list_issues` · `github_create_pull_request` · `github_list_pull_requests` · `github_add_comment`
+**MCP Resources** — direct context reads without a tool call round-trip: `causly://project/{path}/health`, `/info`, `/git`
 
-**Vercel**
-`vercel_get_authenticated_user` · `vercel_list_projects` · `vercel_get_project` · `vercel_list_deployments` · `vercel_get_deployment` · `vercel_create_deployment` · `vercel_delete_project`
+**MCP Prompts** — reusable guided workflows: `ship-feature`, `fix-ci`, `deploy-project`, `review-changes`
 
-**Supabase**
-`supabase_list_organizations` · `supabase_list_projects` · `supabase_get_project` · `supabase_create_project` · `supabase_delete_project` · `supabase_run_sql`
+## Security model
 
-**Logging**
-Every tool call — success or failure — is appended to `logs/activity.log` for auditability.
+This server can genuinely change your machine and your production systems, so every tool call goes through a classification and audit layer before it runs:
+
+- **Permission levels** — every tool is classified `READ` / `LOW` / `MEDIUM` / `HIGH` / `DESTRUCTIVE`. `HIGH` and `DESTRUCTIVE` actions (deploys, merges, `run_command`, deletes, raw SQL) are blocked unless the caller explicitly passes `confirm: true` — this is the approval gate.
+- **Secret redaction** — tokens, passwords, API keys, and similar fields are stripped before anything is written to a log, regardless of where they appear in the input.
+- **Command risk classification** — beyond the hard-blocked destructive patterns (drive wipes, `format`, `shutdown`), commands are scanned for elevated-risk signals (force-push, `DROP TABLE`, curl-pipe-bash, `sudo`) and the result is surfaced for auditability, not just silently allowed.
+- **Path security** — writes and deletes are blocked outright if the target path falls inside a protected system directory (`C:\Windows`, `Program Files`, `ProgramData`, etc.).
+- **Structured audit log** — every tool call is appended to `logs/activity.log` as one JSON object per line: timestamp, operation ID, risk level, status, redacted input, and duration.
+
+This is designed for a **trusted single-user local machine**, not a shared or multi-tenant deployment. If you're exposing this beyond yourself, tighten the approval policy and add real authentication first.
 
 ## The workflow this enables
 
 ```mermaid
 flowchart TD
-    A["💬 You describe a task in Claude"] --> B["📝 Claude edits/creates files\n(read_file, edit_file, write_file)"]
-    B --> C["🖥️ Claude runs commands\n(run_command: install, build, test)"]
-    C --> D["🔀 Claude commits & pushes\n(git_add, git_commit, git_push)"]
-    D --> E["🐙 Claude manages GitHub\n(issues, PRs, repos)"]
-    D --> F["🗄️ Claude manages Supabase\n(create tables, run SQL)"]
-    E --> G["🚀 Claude triggers Vercel deploy\n(vercel_create_deployment)"]
-    F --> G
-    G --> H["✅ Live app, DB, and repo —\nall driven from one chat"]
+    A["💬 You describe a task in Claude"] --> B["📝 Claude edits files\n(read_file, edit_file, write_file)"]
+    B --> C["🧪 ship_change runs checks\n(tests, lint, typecheck, build)"]
+    C --> D["🔀 Commits, pushes, opens PR\n(automatically)"]
+    D --> E{"CI passes?"}
+    E -- "No" --> F["🩹 fix_ci pulls the failure logs\nClaude fixes the code\nverify_ci_fix pushes + confirms green"]
+    F --> E
+    E -- "Yes" --> G["🚀 deploy_project deploys\nand HTTP-verifies it's live"]
+    G --> H["✅ Shipped — with a real audit trail"]
 ```
-
-In short: you talk, Claude codes, tests, commits, provisions the database, opens the PR, and ships the deploy — all through one local server, without you ever leaving the conversation.
 
 ## Requirements
 
 - Node.js 18+
-- Claude Desktop
+- Claude Desktop (MCP client)
 
 ## Setup
 
@@ -66,11 +76,11 @@ In short: you talk, Claude codes, tests, commits, provisions the database, opens
    ```bash
    npm install
    ```
-3. Run the setup wizard — it asks for each token (skip any you don't need) and automatically writes your `.env` file **and** updates your Claude Desktop config:
+3. Run the setup wizard — it asks for each token (skip any you don't need) and writes your `.env` **and** updates your Claude Desktop config automatically:
    ```bash
    npm run setup
    ```
-   Prefer to do it by hand? Copy `.env.example` to `.env` and fill in what you need, then add the `mcpServers` entry to your Claude Desktop config yourself (`%APPDATA%\Claude\claude_desktop_config.json` on Windows):
+   Or do it by hand: copy `.env.example` to `.env`, fill in what you need, then add this to your Claude Desktop config (`%APPDATA%\Claude\claude_desktop_config.json` on Windows):
    ```json
    {
      "mcpServers": {
@@ -81,59 +91,65 @@ In short: you talk, Claude codes, tests, commits, provisions the database, opens
      }
    }
    ```
-4. Restart Claude Desktop. Claude will now have direct access to every tool above.
+4. Restart Claude Desktop. Claude now has direct access to every tool above.
 
 ## Known limitations
 
-- **`supabase_run_sql`** uses Supabase's Management API, which restricts direct SQL execution for personal access tokens by default (`403: insufficient privileges`). Workaround: connect directly via Postgres (using the project's database password) or use the project's own PostgREST API instead — not yet implemented here, tracked as a future improvement.
-- **Vercel preview deployments** created via `vercel_create_deployment` may be served behind Vercel's own Deployment Protection (SSO wall) rather than your app directly, depending on your account's settings. Production deployments/custom domains are unaffected.
-- **`npm install` on some packages with native postinstall scripts** can fail with `'node' is not recognized` on Windows. This happens because npm always runs lifecycle scripts (`postinstall`, etc.) through `cmd.exe` regardless of what shell invoked npm, and that nested `cmd.exe` process doesn't always inherit a working `node` on PATH in Claude Desktop's spawned environment. Workaround: run `npm install --ignore-scripts`, then run the specific package's postinstall manually if needed, or run `npm install` for that one dependency from a normal terminal instead of through `run_command`. Tracked as an open issue.
-
-## Security note
-
-This server runs with **full, unrestricted access** to whatever machine it's installed on — there are no path restrictions, and API tokens are used with whatever scope you grant them. That's an intentional design choice for personal/trusted single-user setups, not a general-purpose deployment. If you plan to expose this to other users or run it in a shared environment, add path allow-listing and stricter permission scoping before doing so.
+- **`vercel_create_deployment` / `deploy_project`** require the Vercel project to already be git-linked; they don't create that link for you.
+- **`supabase_run_sql`** uses Supabase's Management API — some personal access tokens restrict this by default. If you hit a `403`, check your token's SQL execution permission in Supabase's dashboard.
+- **This is single-user, local-trust software.** There is no multi-tenant isolation, no separate human-approval UI beyond the `confirm: true` flag, and no path allow-listing beyond the system-directory denylist. Don't run this on a shared machine or expose it over a network without adding real auth.
 
 ## Project structure
 
 ```
 causly-server/
-├── index.js              # Server entry point, tool registration
-├── setup.js               # Interactive setup wizard (npm run setup)
+├── index.js                # Server entry point, tool/resource/prompt registration
+├── setup.js                 # Interactive setup wizard (npm run setup)
 ├── package.json
-├── .env                   # Your local tokens (never committed)
-├── .env.example           # Template of tokens you can configure
+├── .env                     # Your local tokens (never committed)
+├── .env.example
+├── BUILD_LOG.md              # What was built, in what order, and why
+├── ROADMAP.md                 # What's planned next
 ├── CONTRIBUTING.md
+├── CODE_OF_CONDUCT.md
 ├── CHANGELOG.md
 ├── .github/
-│   ├── workflows/ci.yml    # Syntax check + boot check on push/PR
+│   ├── workflows/ci.yml
 │   ├── ISSUE_TEMPLATE/
 │   └── PULL_REQUEST_TEMPLATE.md
 ├── tools/
-│   ├── fileOps.js         # File read/write/edit/move/copy
-│   ├── directoryOps.js    # Directory listing, tree, search
-│   ├── gitOps.js          # Git operations via simple-git
-│   ├── commandOps.js      # Shell command execution
-│   ├── githubOps.js       # GitHub REST API
-│   ├── vercelOps.js       # Vercel REST API
-│   ├── supabaseOps.js     # Supabase Management API
-│   ├── envLoader.js       # Dependency-free .env parser
-│   └── logger.js          # Activity logging
+│   ├── fileOps.js           # File read/write/edit/move/copy
+│   ├── directoryOps.js      # Directory listing, tree, search
+│   ├── gitOps.js            # Git operations via simple-git
+│   ├── commandOps.js        # Shell command execution
+│   ├── githubOps.js         # GitHub REST API — repos, issues, PRs, Actions
+│   ├── vercelOps.js         # Vercel REST API — projects, deployments
+│   ├── supabaseOps.js       # Supabase Management API
+│   ├── projectOps.js        # Stack detection, test/lint/build runners
+│   ├── workflowOps.js       # ship_change, fix_ci, verify_ci_fix, deploy_project
+│   ├── security.js          # Redaction, permission levels, risk classification
+│   ├── envLoader.js         # Dependency-free .env parser
+│   └── logger.js            # Structured JSONL activity logging
 └── logs/
-    └── activity.log        # Auto-generated
+    └── activity.log          # Auto-generated
 ```
 
 ## Roadmap
 
-Planned additions, following the same self-contained pattern: Slack, Gmail, Figma.
+See [ROADMAP.md](./ROADMAP.md) for what's planned — Slack, Gmail, and Azure are next.
 
 ## Contributing
 
-See [CONTRIBUTING.md](./CONTRIBUTING.md) for how to add a new tool module and the manual testing checklist.
+See [CONTRIBUTING.md](./CONTRIBUTING.md) for how to add a new tool module and the manual testing checklist. Please also read the [Code of Conduct](./CODE_OF_CONDUCT.md).
 
 ## Changelog
 
 See [CHANGELOG.md](./CHANGELOG.md) for release history.
 
+## Build history
+
+See [BUILD_LOG.md](./BUILD_LOG.md) for a full account of what was built, in what order, and the bugs found and fixed along the way.
+
 ## License
 
-MIT — see [LICENSE](./LICENSE) for details.
+[PolyForm Noncommercial 1.0.0](./LICENSE) — free for personal, educational, and noncommercial use. For commercial licensing, contact nihal@causly.in.
