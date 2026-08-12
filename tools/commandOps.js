@@ -1,6 +1,7 @@
 import { exec, execFile } from "child_process";
 import { promisify } from "util";
 import os from "os";
+import { classifyCommandRisk } from "./security.js";
 
 const execAsync = promisify(exec);
 const execFileAsync = promisify(execFile);
@@ -128,6 +129,8 @@ export async function runCommand({ command, cwd, timeout_ms = DEFAULT_TIMEOUT_MS
     }
   }
 
+  const riskInfo = classifyCommandRisk(command);
+
   const runOpts = {
     cwd,
     timeout: timeout_ms,
@@ -177,6 +180,7 @@ export async function runCommand({ command, cwd, timeout_ms = DEFAULT_TIMEOUT_MS
       stdout: truncate(stdout),
       stderr: truncate(stderr),
       exit_code: 0,
+      risk: riskInfo,
     };
   } catch (err) {
     // exec/execFile reject on non-zero exit code — surface it as data, not
@@ -188,6 +192,7 @@ export async function runCommand({ command, cwd, timeout_ms = DEFAULT_TIMEOUT_MS
       stderr: truncate(err.stderr || err.message),
       exit_code: err.code ?? 1,
       timed_out: err.killed && err.signal === "SIGTERM",
+      risk: riskInfo,
     };
   }
 }
