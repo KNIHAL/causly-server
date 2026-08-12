@@ -185,12 +185,21 @@ export async function shipChange({
     return fail("inspect_changes", "No changes detected in the working tree — nothing to ship.");
   }
 
-  // 2. Create + checkout branch
+  // 2. Create + checkout branch (fall back to checkout if it already exists)
   try {
     const branchResult = await gitOps.gitCreateBranch({ repo_path, branch_name, checkout: true });
     steps.push({ step: "create_branch", ...branchResult });
   } catch (err) {
-    return fail("create_branch", err.message);
+    if (/already exists/i.test(err.message)) {
+      try {
+        const checkoutResult = await gitOps.gitCheckout({ repo_path, branch: branch_name });
+        steps.push({ step: "checkout_existing_branch", ...checkoutResult });
+      } catch (checkoutErr) {
+        return fail("create_branch", checkoutErr.message);
+      }
+    } else {
+      return fail("create_branch", err.message);
+    }
   }
 
   // 3. Run checks (tests/lint/typecheck/build) — best-effort, non-fatal per check
