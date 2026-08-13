@@ -7,7 +7,14 @@ levels, approval gates, path protection, structured audit logs). See
 
 ## Next up
 
-### Azure — cloud infrastructure
+### Deferred: Azure — cloud infrastructure
+
+**Deferred until hosted MCP server launch.** Adding Azure now means
+burning the $200 Azure credit during dev/test instead of at launch —
+testing it properly requires a live subscription, and that trial clock
+starts the moment a key is generated. Building and testing this
+alongside the hosted server (open-source + hosted release together)
+means the credit gets used once, right before launch, not wasted early.
 
 - Account/subscription/resource-group listing
 - App Service: list, get, deploy, restart
@@ -19,6 +26,12 @@ This becomes the foundation for the eventual **managed/continuous cloud
 monitoring layer** — the open-source core stays request/response only (no
 background watching); continuous monitoring is the paid product built on
 top of these primitives.
+
+### Hosted MCP server — current focus
+
+Open-source local server is feature-complete for now (106 tools, 10
+categories). Focus shifts to building the hosted version — Azure gets
+added and tested as part of that build, timed to launch together.
 
 ## After that
 
