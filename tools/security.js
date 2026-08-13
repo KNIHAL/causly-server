@@ -197,6 +197,16 @@ export const PERMISSION_LEVELS = {
   slack_reply_thread: "HIGH",
   slack_create_channel: "HIGH",
 
+  // Gmail
+  gmail_get_profile: "READ",
+  gmail_search: "READ",
+  gmail_list_messages: "READ",
+  gmail_get_message: "READ",
+  gmail_get_thread: "READ",
+  gmail_send: "HIGH",
+  gmail_reply: "HIGH",
+  gmail_forward: "HIGH",
+
   // Supabase
   supabase_list_organizations: "READ",
   supabase_list_projects: "READ",
