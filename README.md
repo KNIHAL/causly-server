@@ -16,7 +16,7 @@ The target user is a solo founder or a small agency who doesn't have a DevOps te
 
 ## What it can do
 
-**78 tools across 8 categories**, plus 3 MCP resources and 4 guided MCP prompts.
+**86 tools across 9 categories**, plus 3 MCP resources and 4 guided MCP prompts.
 
 | Category | Tools | Examples |
 |---|---|---|
@@ -27,6 +27,7 @@ The target user is a solo founder or a small agency who doesn't have a DevOps te
 | GitHub | 27 | full PR lifecycle + Actions/CI (list runs, pull logs, rerun) |
 | Vercel | 11 | projects, deployments, logs, health checks |
 | Supabase | 6 | projects, raw SQL execution |
+| Slack | 8 | channels, messages, threads, search |
 | Project Intelligence | 7 | auto-detect stack, run tests/lint/typecheck/build |
 
 **Workflow tools** — the actual "AI employee" layer, chaining the primitives above into one call:
@@ -97,6 +98,7 @@ flowchart TD
 
 - **`vercel_create_deployment` / `deploy_project`** require the Vercel project to already be git-linked; they don't create that link for you.
 - **`supabase_run_sql`** uses Supabase's Management API — some personal access tokens restrict this by default. If you hit a `403`, check your token's SQL execution permission in Supabase's dashboard.
+- **`slack_search_messages`** requires a Slack **user token** (`search:read` scope) — bot tokens (`xoxb-...`) cannot search and will return `not_allowed_token_type`. All other Slack tools work fine with a bot token.
 
 ## Project structure
 
@@ -124,6 +126,7 @@ causly-server/
 │   ├── githubOps.js         # GitHub REST API — repos, issues, PRs, Actions
 │   ├── vercelOps.js         # Vercel REST API — projects, deployments
 │   ├── supabaseOps.js       # Supabase Management API
+│   ├── slackOps.js          # Slack Web API — channels, messages, threads
 │   ├── projectOps.js        # Stack detection, test/lint/build runners
 │   ├── workflowOps.js       # ship_change, fix_ci, verify_ci_fix, deploy_project
 │   ├── security.js          # Redaction, permission levels, risk classification
@@ -135,7 +138,7 @@ causly-server/
 
 ## Roadmap
 
-See [ROADMAP.md](./ROADMAP.md) for what's planned — Slack, Gmail, and Azure are next.
+See [ROADMAP.md](./ROADMAP.md) for what's planned — Gmail and Azure are next.
 
 ## Contributing
 

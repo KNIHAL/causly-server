@@ -152,6 +152,13 @@ async function main() {
   );
   if (supabase) env.SUPABASE_ACCESS_TOKEN = supabase;
 
+  const slack = await askToken(
+    "Slack (channels, messages)",
+    "SLACK_BOT_TOKEN",
+    "api.slack.com/apps"
+  );
+  if (slack) env.SLACK_BOT_TOKEN = slack;
+
   saveEnv(env);
   log(`\n✅ Saved tokens to ${ENV_PATH}`);
 

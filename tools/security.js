@@ -187,6 +187,16 @@ export const PERMISSION_LEVELS = {
   verify_ci_fix: "HIGH",
   deploy_project: "HIGH",
 
+  // Slack
+  slack_get_user: "READ",
+  slack_list_channels: "READ",
+  slack_get_channel: "READ",
+  slack_read_messages: "READ",
+  slack_search_messages: "READ",
+  slack_send_message: "HIGH",
+  slack_reply_thread: "HIGH",
+  slack_create_channel: "HIGH",
+
   // Supabase
   supabase_list_organizations: "READ",
   supabase_list_projects: "READ",
