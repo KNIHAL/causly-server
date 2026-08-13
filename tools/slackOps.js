@@ -57,11 +57,22 @@ export async function slackGetUser({ user_id }) {
   };
 }
 
-/** List channels in the workspace. */
+/** List channels in the workspace. Paginates automatically up to `limit` total channels. */
 export async function slackListChannels({ limit = 100, types = "public_channel,private_channel" }) {
-  const data = await slackFetch("conversations.list", { limit, types }, true);
+  const channels = [];
+  let cursor;
+  do {
+    const data = await slackFetch(
+      "conversations.list",
+      { limit: Math.min(200, limit - channels.length), types, cursor },
+      true
+    );
+    channels.push(...data.channels);
+    cursor = data.response_metadata?.next_cursor || undefined;
+  } while (cursor && channels.length < limit);
+
   return {
-    channels: data.channels.map((c) => ({
+    channels: channels.slice(0, limit).map((c) => ({
       id: c.id,
       name: c.name,
       is_private: c.is_private,

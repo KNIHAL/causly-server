@@ -1,19 +1,11 @@
 # Roadmap
 
-Current state: **86 tools**, 9 categories, 3 workflow tools, 3 MCP
+Current state: **106 tools**, 10 categories, 4 workflow tools, 3 MCP
 resources, 4 MCP prompts, full security layer (redaction, permission
 levels, approval gates, path protection, structured audit logs). See
 [BUILD_LOG.md](./BUILD_LOG.md) for how we got here.
 
 ## Next up
-
-### Gmail — business communication
-
-- `gmail_get_profile`, `gmail_search`, `gmail_get_message`,
-  `gmail_get_thread`, `gmail_list_messages`
-- `gmail_send`, `gmail_reply`, `gmail_forward`
-
-Sending external email is `HIGH` risk by default — requires `confirm: true`.
 
 ### Azure — cloud infrastructure
 

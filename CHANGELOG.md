@@ -2,6 +2,19 @@
 
 All notable changes to this project are documented here.
 
+## [1.4.0]
+
+### Added
+- **Gmail — new category, 8 tools** (OAuth2 refresh-token based): `gmail_get_profile`, `gmail_search`, `gmail_list_messages`, `gmail_get_message`, `gmail_get_thread`, `gmail_send`, `gmail_reply`, `gmail_forward`. Send/reply/forward classified `HIGH` risk (require `confirm: true`); reads classified `READ`.
+- Setup wizard and `.env.example` now document the Gmail OAuth2 flow (Google Cloud Console + OAuth Playground) and prompt for `GMAIL_CLIENT_ID` / `GMAIL_CLIENT_SECRET` / `GMAIL_REFRESH_TOKEN`
+
+### Fixed
+- `slack_list_channels` silently returning only the first page in large workspaces — now paginates via `response_metadata.next_cursor` up to the requested `limit`
+- `.env.example` Slack scope list was missing `groups:write`, required for `slack_create_channel` with `is_private: true`
+
+### Known limitation
+- Gmail tools require OAuth2 credentials (not a simple API key) — one-time setup via Google Cloud Console. All 8 tools tested working live against a real Gmail account.
+
 ## [1.3.0]
 
 ### Added
