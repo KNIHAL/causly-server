@@ -1,6 +1,6 @@
 # Roadmap
 
-Current state: **94 tools**, 10 categories, 3 workflow tools, 3 MCP
+Current state: **106 tools**, 10 categories, 4 workflow tools, 3 MCP
 resources, 4 MCP prompts, full security layer (redaction, permission
 levels, approval gates, path protection, structured audit logs). See
 [BUILD_LOG.md](./BUILD_LOG.md) for how we got here.

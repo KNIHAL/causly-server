@@ -16,7 +16,7 @@ The target user is a solo founder or a small agency who doesn't have a DevOps te
 
 ## What it can do
 
-**94 tools across 10 categories**, plus 3 MCP resources and 4 guided MCP prompts.
+**106 tools across 10 categories**, plus 3 MCP resources and 4 guided MCP prompts.
 
 | Category | Tools | Examples |
 |---|---|---|
@@ -25,7 +25,7 @@ The target user is a solo founder or a small agency who doesn't have a DevOps te
 | Git | 20 | full lifecycle — branch, merge, reset, stash, tag, diff, remote |
 | Shell | 1 | `run_command` — arbitrary shell execution, risk-classified |
 | GitHub | 27 | full PR lifecycle + Actions/CI (list runs, pull logs, rerun) |
-| Vercel | 11 | projects, deployments, logs, health checks |
+| Vercel | 10 | projects, deployments, logs, health checks |
 | Supabase | 6 | projects, raw SQL execution |
 | Slack | 8 | channels, messages, threads, search |
 | Gmail | 8 | search, read, send, reply, forward |
