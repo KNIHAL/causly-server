@@ -2,6 +2,18 @@
 
 All notable changes to this project are documented here.
 
+## [1.3.0]
+
+### Added
+- **Slack — new category, 8 tools** (Web API, bot-token based): `slack_get_user`, `slack_list_channels`, `slack_get_channel`, `slack_read_messages`, `slack_search_messages`, `slack_send_message`, `slack_reply_thread`, `slack_create_channel`. Send/reply/create-channel classified `HIGH` risk (require `confirm: true`); reads classified `READ`.
+- Setup wizard and `.env.example` now prompt for `SLACK_BOT_TOKEN`
+
+### Fixed
+- `slack_get_user` failing with `missing_scope` — Slack app was missing the `users:read` bot scope; documented required scopes in `.env.example`
+
+### Known limitation
+- `slack_search_messages` requires a Slack **user token**, not a bot token — bot tokens return `not_allowed_token_type`. All other Slack tools tested working with a bot token against a live workspace.
+
 ## [1.2.0]
 
 ### Added

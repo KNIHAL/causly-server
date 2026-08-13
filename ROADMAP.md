@@ -1,22 +1,11 @@
 # Roadmap
 
-Current state: **78 tools**, 8 categories, 3 workflow tools, 3 MCP
+Current state: **86 tools**, 9 categories, 3 workflow tools, 3 MCP
 resources, 4 MCP prompts, full security layer (redaction, permission
 levels, approval gates, path protection, structured audit logs). See
 [BUILD_LOG.md](./BUILD_LOG.md) for how we got here.
 
 ## Next up
-
-### Slack — business communication
-
-- `slack_get_user`, `slack_list_channels`, `slack_get_channel`
-- `slack_read_messages`, `slack_search_messages`
-- `slack_send_message`, `slack_reply_thread`, `slack_create_channel`
-
-Use cases: "what happened with the deployment?", "tell the team CI is
-fixed," "post the release update in #engineering." Sending messages goes
-through the same `HIGH`-risk approval gate as any other external-facing
-action.
 
 ### Gmail — business communication
 
