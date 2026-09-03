@@ -177,9 +177,99 @@ was left behind. Results:
   updating the token's fine-grained permissions — all 27 GitHub tools
   passed afterward.
 
-## Documentation pass
+## Phase 13 — Full-stack builder expansion: Notion, Terraform, Docker, databases, secrets, monitoring
 
-License changed from MIT to **PolyForm Noncommercial 1.0.0**. Added
-`CODE_OF_CONDUCT.md`, rewrote `README.md` to reflect the current 78-tool /
-8-category surface, the security model, and the workflow tools. Added
-this file and `ROADMAP.md`.
+Vision shift: from a pure DevOps operator toward a full **build + run +
+deploy + manage** tool for solo founders and micro-agency full-stack
+developers, not just DevOps-specific workflows. Six new tool modules added
+in one pass, each in its own branch-tested file, verified live against
+real (throwaway) resources before merging:
+
+- **Notion — new category, 15 tools** (`notionOps.js`): search,
+  page/database CRUD, block append/read/update/delete, comments, users.
+  Verified live against a real shared Notion page (search, create_page,
+  append_block_children, get_page, list_users all confirmed).
+- **Terraform — new category, 20 tools** (`terraformOps.js`): full
+  lifecycle (init/validate/fmt/plan/apply/destroy/show/output/workspace)
+  plus advanced state management (state_list/show/mv/rm/pull, import,
+  taint/untaint, graph, providers) plus a CI/CD hook
+  (`terraform_plan_comment` — runs a plan and posts the Markdown summary
+  as a GitHub PR comment via the existing `githubOps.githubAddComment`).
+  17/20 tools live-tested against a real local `null_resource` config
+  (init through destroy, state ops, workspace lifecycle, taint/untaint).
+- **Docker — new category, 18 tools** (`dockerOps.js`): ps/images/build/
+  run/stop/start/restart/rm/rmi/logs/inspect/exec/stats/push/pull/compose
+  up-down. Built cross-platform: tries plain `docker` first (covers
+  macOS/Linux/Windows-with-Docker-Desktop), falls back to `wsl docker` on
+  Windows when Docker only exists inside WSL. 17/18 tools live-tested
+  (`docker_push` untested — needs real registry auth).
+- **Generic Postgres/MySQL — new category, 8 tools** (`dbOps.js`): query,
+  list_tables, describe_table, test_connection for each engine, using
+  connection-string auth (`pg` / `mysql2`). All 8 live-tested against
+  throwaway `postgres:16-alpine` and `mysql:8` Docker containers.
+- **Local encrypted secrets manager — new category, 6 tools**
+  (`secretsOps.js`): set/get/list/delete/rotate_key/generate_key.
+  AES-256-GCM, secrets stored in a local `.causly-secrets.enc` file
+  (gitignored) keyed by a `SECRETS_MASTER_KEY` env var — no external
+  service (Vault/AWS Secrets Manager) required, so it works identically
+  regardless of hosting target. All 6 tools live-tested, including a full
+  key-rotation cycle (generate new key, rotate, verify decrypt post-
+  rotation).
+- **Sentry monitoring — new category, 8 tools** (`sentryOps.js`):
+  list_projects, list_issues, search_issues, get_issue, resolve_issue,
+  ignore_issue, get_project_stats, add_comment. 5/8 live-tested
+  (resolve/ignore/comment are code-complete but untested — the test
+  token lacked `event:write` scope).
+
+Total: **181 tools**, up from 106.
+
+### Bugs found and fixed during this phase
+
+- **Notion:** none — worked on first live test once the integration was
+  shared with the target page (an expected Notion API requirement, not a
+  bug).
+- **Terraform:** none — CLI wrapper worked correctly once the `terraform`
+  binary was installed.
+- **Docker — Windows path translation:** `docker_build` (context_dir,
+  dockerfile) and `docker_run` (volumes) failed when the WSL fallback path
+  was taken, because Windows-style paths (`D:\...`) aren't valid inside
+  WSL. Added `toWslPath`/`toWslVolume` helpers to auto-convert to
+  `/mnt/d/...` form. `docker_compose_up`/`down` had a related issue —
+  a Windows-side `cwd` doesn't carry into the `wsl` subprocess — fixed by
+  running compose via `wsl bash -lc "cd '<wsl-path>' && docker compose ..."`
+  when the fallback path is used.
+- **Secrets manager — default store path:** originally anchored to
+  `process.cwd()`, which depends on the directory the server process was
+  *launched* from rather than the repo location — in practice this
+  produced an `EPERM` trying to write to `C:\WINDOWS\System32`. Fixed by
+  anchoring the default path to the repo root via `import.meta.url`
+  instead.
+- **Sentry — EU data-residency routing:** a bare `/issues/{id}/` lookup
+  404'd via the default `sentry.io` API host even though org- and
+  project-scoped endpoints (list, search) worked fine there — because the
+  organization's actual data lives on a regional host (`de.sentry.io` for
+  EU orgs). Fixed with an automatic fallback: on a 404, `sentryFetch`
+  retries the same request against the next known region host before
+  giving up.
+
+## Documentation pass — Phase 2
+
+- **License reverted: PolyForm Noncommercial → MIT.** Deliberate choice —
+  wider adoption and community trust matters more than restricting
+  commercial forks; the original stays the reference implementation
+  regardless.
+- Removed the `register/` folder (a temporary staging area used during
+  this session to hand off tool-registration code without re-reading all
+  of `index.js`) — now redundant once everything was pasted into
+  `index.js` directly.
+- Simplified `setup.js`: dropped the interactive token-prompting flow
+  (tokens are now documented and edited directly in `.env`/
+  `.env.example`, which needs less maintenance as new services are
+  added); kept the cross-platform Claude Desktop config auto-update,
+  since that part has no easy manual equivalent.
+- Updated `CONTRIBUTING.md` (setup steps, service list) and `ROADMAP.md`
+  (tool count, categories, Azure/GCP/AWS reframed as "deliberately
+  deferred, no fixed timeline" rather than tied to a hosted-server
+  launch date). `CODE_OF_CONDUCT.md` reviewed — no project-specific
+  content needed updating.
+

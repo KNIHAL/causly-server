@@ -2,6 +2,29 @@
 
 All notable changes to this project are documented here.
 
+## [1.5.0]
+
+### Added
+- **Notion — new category, 15 tools**: search, page/database CRUD, block append/read/update/delete, comments, users. All live-tested against a real shared Notion page.
+- **Terraform — new category, 20 tools**: full lifecycle (init/validate/fmt/plan/apply/destroy/show/output/workspace), state management (state_list/show/mv/rm/pull/import/taint/untaint), graph/providers, and a CI/CD hook (`terraform_plan_comment` — posts a plan summary as a GitHub PR comment). 17/20 live-tested.
+- **Docker — new category, 18 tools**: ps/images/build/run/stop/start/restart/rm/rmi/logs/inspect/exec/stats/push/pull/compose up-down. Cross-platform — tries `docker` directly first, falls back to `wsl docker` on Windows-only-WSL setups, with automatic Windows-path-to-WSL-path translation for build context, volumes, and compose working directory. 17/18 live-tested.
+- **Generic Postgres/MySQL — new category, 8 tools**: query/list_tables/describe_table/test_connection for each engine, connection-string based. All 8 live-tested against throwaway Docker containers.
+- **Local encrypted secrets manager — new category, 6 tools**: set/get/list/delete/rotate_key/generate_key. AES-256-GCM, local file store, no external service required. All 6 live-tested including a full key-rotation cycle.
+- **Sentry monitoring — new category, 8 tools**: list_projects/list_issues/search_issues/get_issue/resolve_issue/ignore_issue/get_project_stats/add_comment. 5/8 live-tested.
+
+Total: 181 tools, up from 106.
+
+### Changed
+- **License: PolyForm Noncommercial 1.0.0 → MIT.** Added `"license": "MIT"` to `package.json`.
+- Removed the temporary `register/` staging folder now that all tool registrations live directly in `index.js`.
+- Simplified `setup.js` — dropped interactive token prompting (tokens are documented/edited directly in `.env`), kept the cross-platform Claude Desktop config auto-update.
+- Updated `CONTRIBUTING.md` and `ROADMAP.md` to reflect the new tool categories and the current Azure/GCP/AWS-deferred stance.
+
+### Fixed
+- Docker: Windows-style paths (`D:\...`) passed to `docker_build`/`docker_run`/`docker_compose_*` broke when the WSL fallback path was used — added automatic path translation to WSL form (`/mnt/d/...`).
+- Secrets manager: default secrets-store path was anchored to `process.cwd()` (the server's launch directory) instead of the repo root, causing an `EPERM` in some launch configurations — now anchored via `import.meta.url`.
+- Sentry: bare `/issues/{id}/` lookups 404'd on the default API host for EU-region (data-residency) organizations even though org/project-scoped endpoints worked fine there — added automatic regional-host fallback on 404.
+
 ## [1.4.0]
 
 ### Added

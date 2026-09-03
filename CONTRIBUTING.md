@@ -6,13 +6,14 @@ Thanks for considering a contribution — this project grew out of a personal wo
 
 1. Fork and clone the repo
 2. `npm install`
-3. `npm run setup` to configure your own tokens locally
-4. Make your changes
-5. Test manually against a real Claude Desktop instance (see below)
+3. Copy `.env.example` to `.env` and add tokens for whichever services you're working on (see README for the full list)
+4. `npm run setup` to point your local Claude Desktop config at this repo
+5. Make your changes
+6. Test manually against a real Claude Desktop instance (see below)
 
 ## Adding a new tool module
 
-Each service (GitHub, Vercel, Supabase, etc.) lives in its own file under `tools/`, following the same shape:
+Each service (GitHub, Vercel, Supabase, Notion, Sentry, etc.) lives in its own file under `tools/`, following the same shape:
 
 1. A `getToken()` helper that reads the relevant env var and throws a clear error if it's missing
 2. A shared `xFetch()` helper that wraps `fetch` with auth headers and consistent error formatting

@@ -1,0 +1,253 @@
+.hero {
+  padding: 88px 32px 64px;
+  max-width: 1120px;
+  margin: 0 auto;
+}
+
+.heroInner {
+  display: grid;
+  grid-template-columns: 1.1fr 0.9fr;
+  gap: 56px;
+  align-items: center;
+}
+
+@media (max-width: 900px) {
+  .heroInner { grid-template-columns: 1fr; }
+  .hero { padding: 56px 20px 40px; }
+}
+
+.eyebrow {
+  font-family: var(--ifm-font-family-monospace);
+  font-size: 0.8rem;
+  color: #3FB8AF;
+  margin-bottom: 18px;
+}
+
+.h1 {
+  font-size: clamp(2.1rem, 4.2vw, 3.1rem);
+  font-weight: 600;
+  line-height: 1.12;
+  letter-spacing: -0.02em;
+  margin-bottom: 22px;
+}
+
+.lead {
+  font-size: 1.08rem;
+  color: var(--ifm-color-content-secondary, #8B95A1);
+  max-width: 52ch;
+  margin-bottom: 32px;
+}
+
+.ctaRow {
+  display: flex;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.btnPrimary, .btnSecondary {
+  display: inline-flex;
+  align-items: center;
+  padding: 12px 22px;
+  border-radius: 6px;
+  font-size: 0.92rem;
+  font-weight: 500;
+  border: 1px solid transparent;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.btnPrimary {
+  background: #F5A623;
+  color: #1A1204 !important;
+}
+.btnPrimary:hover { background: #FFB74E; text-decoration: none; }
+
+.btnSecondary {
+  border-color: #262E38;
+  color: var(--ifm-font-color-base) !important;
+}
+.btnSecondary:hover { border-color: #8B95A1; text-decoration: none; }
+
+.logPanel {
+  background: #171D24;
+  border: 1px solid #262E38;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.logPanelHead {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px;
+  border-bottom: 1px solid #262E38;
+}
+
+.logDot { width: 8px; height: 8px; border-radius: 50%; }
+
+.logLabel {
+  font-family: var(--ifm-font-family-monospace);
+  font-size: 0.75rem;
+  color: #5A6472;
+  margin-left: 4px;
+}
+
+.logBody {
+  padding: 16px 18px 20px;
+  font-family: var(--ifm-font-family-monospace);
+  font-size: 0.76rem;
+  line-height: 1.85;
+}
+
+.logLine {
+  display: flex;
+  gap: 10px;
+  color: #5A6472;
+  opacity: 0;
+  animation: logIn 0.4s ease forwards;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.logTool { color: #EDEEF0; }
+.riskRead { color: #3FB8AF; }
+.riskLow { color: #8FBF6B; }
+.riskMedium { color: #B98BF0; }
+.riskHigh { color: #F5A623; }
+.riskDestructive { color: #E5484D; }
+.logOk { color: #3FB8AF; }
+
+@keyframes logIn {
+  from { opacity: 0; transform: translateY(3px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .logLine { animation: none; opacity: 1; }
+}
+
+.section {
+  padding: 64px 0;
+  border-top: 1px solid #262E38;
+}
+
+.sectionInner {
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 0 32px;
+}
+
+@media (max-width: 640px) {
+  .sectionInner { padding: 0 20px; }
+}
+
+.sectionHead { max-width: 60ch; margin-bottom: 40px; }
+
+.sectionTag {
+  font-family: var(--ifm-font-family-monospace);
+  font-size: 0.78rem;
+  color: #5A6472;
+  margin-bottom: 10px;
+}
+
+.h2 {
+  font-size: clamp(1.5rem, 2.6vw, 1.9rem);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  margin-bottom: 14px;
+}
+
+.desc {
+  color: var(--ifm-color-content-secondary, #8B95A1);
+  font-size: 1rem;
+  max-width: 62ch;
+}
+
+.lifecycleGrid {
+  max-width: 1120px;
+  margin: 0 32px;
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  border-top: 1px solid #262E38;
+  border-left: 1px solid #262E38;
+}
+
+@media (min-width: 1184px) {
+  .lifecycleGrid { margin: 0 auto; }
+}
+
+@media (max-width: 900px) {
+  .lifecycleGrid { grid-template-columns: repeat(2, 1fr); margin: 0 20px; }
+}
+@media (max-width: 520px) {
+  .lifecycleGrid { grid-template-columns: 1fr; }
+}
+
+.lifeItem {
+  border-right: 1px solid #262E38;
+  border-bottom: 1px solid #262E38;
+  padding: 22px 20px;
+}
+
+.lifeNum {
+  font-family: var(--ifm-font-family-monospace);
+  font-size: 0.78rem;
+  color: #5A6472;
+  display: block;
+  margin-bottom: 10px;
+}
+
+.lifeTitle { font-weight: 600; font-size: 0.98rem; margin-bottom: 6px; }
+.lifeDesc { color: #8B95A1; font-size: 0.85rem; line-height: 1.5; }
+
+.chips { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 28px; }
+
+.chip {
+  font-family: var(--ifm-font-family-monospace);
+  font-size: 0.78rem;
+  padding: 7px 14px;
+  border-radius: 5px;
+  border: 1px solid;
+}
+
+.chipRead { color: #3FB8AF; border-color: rgba(63,184,175,0.35); background: rgba(63,184,175,0.07); }
+.chipLow { color: #8FBF6B; border-color: rgba(143,191,107,0.35); background: rgba(143,191,107,0.07); }
+.chipMedium { color: #B98BF0; border-color: rgba(185,139,240,0.35); background: rgba(185,139,240,0.07); }
+.chipHigh { color: #F5A623; border-color: rgba(245,166,35,0.4); background: rgba(245,166,35,0.08); }
+.chipDestructive { color: #E5484D; border-color: rgba(229,72,77,0.4); background: rgba(229,72,77,0.08); }
+
+.securityList {
+  margin-top: 32px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px 40px;
+}
+@media (max-width: 700px) { .securityList { grid-template-columns: 1fr; } }
+
+.securityItem { display: flex; gap: 12px; }
+.mark { color: #F5A623; font-family: var(--ifm-font-family-monospace); padding-top: 2px; }
+.securityItem h4 { font-size: 0.95rem; font-weight: 600; margin-bottom: 4px; }
+.securityItem p { color: #8B95A1; font-size: 0.87rem; margin: 0; }
+
+.tableWrap { overflow-x: auto; }
+
+.compareTable { width: 100%; border-collapse: collapse; margin-top: 8px; font-size: 0.9rem; }
+.compareTable th, .compareTable td { text-align: left; padding: 14px 16px; border-bottom: 1px solid #262E38; }
+.compareTable th { color: #5A6472; font-weight: 500; font-family: var(--ifm-font-family-monospace); font-size: 0.78rem; }
+.compareTable td:first-child, .compareTable th:first-child { color: #8B95A1; width: 26%; }
+.causly { color: #3FB8AF; }
+.other { color: #8B95A1; }
+
+.installBlock {
+  background: #171D24;
+  border: 1px solid #262E38;
+  border-radius: 8px;
+  padding: 22px 24px;
+  margin-top: 28px;
+  font-family: var(--ifm-font-family-monospace);
+  font-size: 0.85rem;
+  line-height: 2;
+  color: #8B95A1;
+}
+
+.prompt { color: #5A6472; margin-right: 8px; }
