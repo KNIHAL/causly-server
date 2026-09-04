@@ -66,7 +66,7 @@ flowchart TD
     G --> H["✅ Shipped — with a real audit trail"]
 ```
 
-A more detailed, per-category architecture breakdown lives in [`docs/`](./docs).
+A more detailed, per-category architecture breakdown lives in [docs/](https://knihal.github.io/causly-server/)
 
 ## Security model
 
