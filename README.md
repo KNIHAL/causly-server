@@ -172,6 +172,14 @@ causly-server/
 
 If you need a custom MCP server, a specific integration, or a related service built for your own product or team — reach out: **nihal@causly.in**
 
+## Causly Hosted
+
+Don't want to run Causly Server on your own machine?
+
+Causly Hosted is a managed version of Causly Server currently in development. Join the early-access waitlist to be notified when it's ready.
+
+[→ Join the Causly Hosted waitlist](https://tally.so/r/NpZkpW)
+
 ## Roadmap
 
 See [ROADMAP.md](./ROADMAP.md) for what's planned next.
@@ -191,3 +199,5 @@ See [BUILD_LOG.md](./BUILD_LOG.md) for a full account of what was built, in what
 ## License
 
 [MIT](./LICENSE) — free to use, modify, and distribute, including commercially.
+
+
