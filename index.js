@@ -18,6 +18,12 @@ import * as projectOps from "./tools/projectOps.js";
 import * as workflowOps from "./tools/workflowOps.js";
 import { logActivity } from "./tools/logger.js";
 import { checkApproval } from "./tools/security.js";
+import * as notionOps from "./tools/notionOps.js";
+import * as terraformOps from "./tools/terraformOps.js";
+import * as dockerOps from "./tools/dockerOps.js";
+import * as dbOps from "./tools/dbOps.js";
+import * as secretsOps from "./tools/secretsOps.js";
+import * as sentryOps from "./tools/sentryOps.js";
 
 const server = new McpServer({
   name: "causly-server",
@@ -54,6 +60,94 @@ function wrap(toolName, handler) {
     }
   };
 }
+
+//---------------- Database tools ----------------
+server.registerTool(
+  "postgres_query",
+  {
+    description: "Run a read or write SQL query against a Postgres database.",
+    inputSchema: {
+      connection_string: z.string().describe("postgres://user:pass@host:5432/dbname"),
+      sql: z.string(),
+      params: z.array(z.any()).optional().describe("Positional params for $1, $2, ..."),
+    },
+  },
+  wrap("postgres_query", dbOps.postgresQuery)
+);
+
+server.registerTool(
+  "postgres_list_tables",
+  {
+    description: "List all tables in a Postgres database (public schema by default).",
+    inputSchema: {
+      connection_string: z.string(),
+      schema: z.string().optional().describe("Defaults to 'public'"),
+    },
+  },
+  wrap("postgres_list_tables", dbOps.postgresListTables)
+);
+
+server.registerTool(
+  "postgres_describe_table",
+  {
+    description: "Get column names, types, and nullability for a Postgres table.",
+    inputSchema: {
+      connection_string: z.string(),
+      table: z.string(),
+      schema: z.string().optional().describe("Defaults to 'public'"),
+    },
+  },
+  wrap("postgres_describe_table", dbOps.postgresDescribeTable)
+);
+
+server.registerTool(
+  "postgres_test_connection",
+  {
+    description: "Test a Postgres connection string — returns server version on success.",
+    inputSchema: { connection_string: z.string() },
+  },
+  wrap("postgres_test_connection", dbOps.postgresTestConnection)
+);
+
+server.registerTool(
+  "mysql_query",
+  {
+    description: "Run a read or write SQL query against a MySQL database.",
+    inputSchema: {
+      connection_string: z.string().describe("mysql://user:pass@host:3306/dbname"),
+      sql: z.string(),
+      params: z.array(z.any()).optional().describe("Positional params for ? placeholders"),
+    },
+  },
+  wrap("mysql_query", dbOps.mysqlQuery)
+);
+
+server.registerTool(
+  "mysql_list_tables",
+  {
+    description: "List all tables in a MySQL database.",
+    inputSchema: { connection_string: z.string() },
+  },
+  wrap("mysql_list_tables", dbOps.mysqlListTables)
+);
+
+server.registerTool(
+  "mysql_describe_table",
+  {
+    description: "Get column names, types, and nullability for a MySQL table.",
+    inputSchema: { connection_string: z.string(), table: z.string() },
+  },
+  wrap("mysql_describe_table", dbOps.mysqlDescribeTable)
+);
+
+server.registerTool(
+  "mysql_test_connection",
+  {
+    description: "Test a MySQL connection string — returns server version on success.",
+    inputSchema: { connection_string: z.string() },
+  },
+  wrap("mysql_test_connection", dbOps.mysqlTestConnection)
+);
 
 // ---------------- File tools ----------------
 
@@ -212,6 +306,171 @@ server.registerTool(
     },
   },
   wrap("search_files", dirOps.searchFiles)
+);
+
+//----------------Sceret management tools----------------
+
+server.registerTool(
+  "secrets_set",
+  {
+    description: "Store an encrypted secret by name. HIGH risk — requires confirm: true.",
+    inputSchema: {
+      name: z.string(),
+      value: z.string(),
+      store_path: z.string().optional().describe("Defaults to .causly-secrets.enc in the server's working directory"),
+      confirm: z.boolean().optional().describe("Must be true to proceed"),
+    },
+  },
+  wrap("secrets_set", secretsOps.secretsSet)
+);
+
+server.registerTool(
+  "secrets_get",
+  {
+    description: "Retrieve and decrypt a secret by name.",
+    inputSchema: {
+      name: z.string(),
+      store_path: z.string().optional(),
+    },
+  },
+  wrap("secrets_get", secretsOps.secretsGet)
+);
+
+server.registerTool(
+  "secrets_list",
+  {
+    description: "List secret names in the store (never returns values).",
+    inputSchema: { store_path: z.string().optional() },
+  },
+  wrap("secrets_list", secretsOps.secretsList)
+);
+
+server.registerTool(
+  "secrets_delete",
+  {
+    description: "Delete a secret by name. DESTRUCTIVE — requires confirm: true.",
+    inputSchema: {
+      name: z.string(),
+      store_path: z.string().optional(),
+      confirm: z.boolean().optional().describe("Must be true to proceed"),
+    },
+  },
+  wrap("secrets_delete", secretsOps.secretsDelete)
+);
+
+server.registerTool(
+  "secrets_rotate_key",
+  {
+    description:
+      "Re-encrypt every secret in the store under a new master key. Call this AFTER setting SECRETS_MASTER_KEY_NEW in your environment. HIGH risk — requires confirm: true.",
+    inputSchema: {
+      store_path: z.string().optional(),
+      confirm: z.boolean().optional().describe("Must be true to proceed"),
+    },
+  },
+  wrap("secrets_rotate_key", secretsOps.secretsRotateKey)
+);
+
+server.registerTool(
+  "secrets_generate_key",
+  {
+    description: "Generate a new random 32-byte master key (hex-encoded) — use to initialize SECRETS_MASTER_KEY or for rotation.",
+    inputSchema: {},
+  },
+  wrap("secrets_generate_key", secretsOps.secretsGenerateKey)
+);
+
+
+// --------------Sentry tools----------------
+server.registerTool(
+  "sentry_list_projects",
+  {
+    description: "List projects in the organization.",
+    inputSchema: { org_slug: z.string().describe("Sentry organization slug") },
+  },
+  wrap("sentry_list_projects", sentryOps.sentryListProjects)
+);
+
+server.registerTool(
+  "sentry_list_issues",
+  {
+    description: "List recent issues (errors) for a project.",
+    inputSchema: {
+      org_slug: z.string(),
+      project_slug: z.string(),
+      query: z.string().optional().describe("Sentry search syntax, e.g. 'is:unresolved'"),
+      limit: z.number().optional().describe("Defaults to 25"),
+    },
+  },
+  wrap("sentry_list_issues", sentryOps.sentryListIssues)
+);
+
+server.registerTool(
+  "sentry_search_issues",
+  {
+    description: "Search issues with a Sentry query string (e.g. 'is:unresolved level:error').",
+    inputSchema: {
+      org_slug: z.string(),
+      project_slug: z.string(),
+      query: z.string(),
+      limit: z.number().optional().describe("Defaults to 25"),
+    },
+  },
+  wrap("sentry_search_issues", sentryOps.sentrySearchIssues)
+);
+
+server.registerTool(
+  "sentry_get_issue",
+  {
+    description: "Get a single issue's full detail (stack trace context, occurrence counts).",
+    inputSchema: { issue_id: z.string() },
+  },
+  wrap("sentry_get_issue", sentryOps.sentryGetIssue)
+);
+
+server.registerTool(
+  "sentry_resolve_issue",
+  {
+    description: "Mark an issue as resolved. HIGH risk — requires confirm: true.",
+    inputSchema: { issue_id: z.string(), confirm: z.boolean().optional().describe("Must be true to proceed") },
+  },
+  wrap("sentry_resolve_issue", sentryOps.sentryResolveIssue)
+);
+
+server.registerTool(
+  "sentry_ignore_issue",
+  {
+    description: "Mute/ignore an issue so it stops notifying. HIGH risk — requires confirm: true.",
+    inputSchema: { issue_id: z.string(), confirm: z.boolean().optional().describe("Must be true to proceed") },
+  },
+  wrap("sentry_ignore_issue", sentryOps.sentryIgnoreIssue)
+);
+
+server.registerTool(
+  "sentry_get_project_stats",
+  {
+    description: "Get error-count stats/trends for a project over a time period.",
+    inputSchema: {
+      org_slug: z.string(),
+      project_slug: z.string(),
+      stat: z.string().optional().describe("Defaults to 'received'"),
+      period: z.string().optional().describe("Defaults to '24h' (informational label only)"),
+    },
+  },
+  wrap("sentry_get_project_stats", sentryOps.sentryGetProjectStats)
+);
+
+server.registerTool(
+  "sentry_add_comment",
+  {
+    description: "Add a comment/note to an issue. HIGH risk — requires confirm: true.",
+    inputSchema: {
+      issue_id: z.string(),
+      text: z.string(),
+      confirm: z.boolean().optional().describe("Must be true to proceed"),
+    },
+  },
+  wrap("sentry_add_comment", sentryOps.sentryAddComment)
 );
 
 // ---------------- Git tools ----------------
@@ -1257,6 +1516,626 @@ server.registerTool(
   wrap("gmail_forward", gmailOps.gmailForward)
 );
 
+// ----------------NOtion tools ----------------
+server.registerTool(
+  "notion_search",
+  {
+    description: "Search pages and databases across the workspace.",
+    inputSchema: {
+      query: z.string().optional(),
+      filter_type: z.string().optional().describe("'page' or 'database' to restrict results"),
+      page_size: z.number().optional().describe("Defaults to 20"),
+    },
+  },
+  wrap("notion_search", notionOps.notionSearch)
+);
+
+server.registerTool(
+  "notion_get_page",
+  {
+    description: "Get a single page's properties and metadata by page ID.",
+    inputSchema: { page_id: z.string() },
+  },
+  wrap("notion_get_page", notionOps.notionGetPage)
+);
+
+server.registerTool(
+  "notion_create_page",
+  {
+    description: "Create a new page under a parent page or database. HIGH risk — requires confirm: true.",
+    inputSchema: {
+      parent_id: z.string(),
+      parent_type: z.string().optional().describe("'page_id' or 'database_id', defaults to page_id"),
+      properties: z.record(z.any()),
+      children: z.array(z.any()).optional(),
+      confirm: z.boolean().optional().describe("Must be true to proceed"),
+    },
+  },
+  wrap("notion_create_page", notionOps.notionCreatePage)
+);
+
+server.registerTool(
+  "notion_update_page",
+  {
+    description: "Update an existing page's properties, or archive/restore it. HIGH risk — requires confirm: true.",
+    inputSchema: {
+      page_id: z.string(),
+      properties: z.record(z.any()).optional(),
+      archived: z.boolean().optional(),
+      confirm: z.boolean().optional().describe("Must be true to proceed"),
+    },
+  },
+  wrap("notion_update_page", notionOps.notionUpdatePage)
+);
+
+server.registerTool(
+  "notion_get_database",
+  {
+    description: "Get a database's schema and metadata by database ID.",
+    inputSchema: { database_id: z.string() },
+  },
+  wrap("notion_get_database", notionOps.notionGetDatabase)
+);
+
+server.registerTool(
+  "notion_query_database",
+  {
+    description: "Query a database's rows with optional filter and sort.",
+    inputSchema: {
+      database_id: z.string(),
+      filter: z.record(z.any()).optional(),
+      sorts: z.array(z.any()).optional(),
+      page_size: z.number().optional().describe("Defaults to 20"),
+    },
+  },
+  wrap("notion_query_database", notionOps.notionQueryDatabase)
+);
+
+server.registerTool(
+  "notion_create_database",
+  {
+    description: "Create a new database under a parent page. HIGH risk — requires confirm: true.",
+    inputSchema: {
+      parent_page_id: z.string(),
+      title: z.string(),
+      properties: z.record(z.any()),
+      confirm: z.boolean().optional().describe("Must be true to proceed"),
+    },
+  },
+  wrap("notion_create_database", notionOps.notionCreateDatabase)
+);
+
+server.registerTool(
+  "notion_append_block_children",
+  {
+    description: "Append content blocks (text, lists, tables, etc.) to a page or block. HIGH risk — requires confirm: true.",
+    inputSchema: {
+      block_id: z.string(),
+      children: z.array(z.any()),
+      confirm: z.boolean().optional().describe("Must be true to proceed"),
+    },
+  },
+  wrap("notion_append_block_children", notionOps.notionAppendBlockChildren)
+);
+
+server.registerTool(
+  "notion_get_block_children",
+  {
+    description: "Get the child blocks of a page or block.",
+    inputSchema: {
+      block_id: z.string(),
+      page_size: z.number().optional().describe("Defaults to 50"),
+    },
+  },
+  wrap("notion_get_block_children", notionOps.notionGetBlockChildren)
+);
+
+server.registerTool(
+  "notion_update_block",
+  {
+    description: "Update an existing block's content. HIGH risk — requires confirm: true.",
+    inputSchema: {
+      block_id: z.string(),
+      block_data: z.record(z.any()),
+      confirm: z.boolean().optional().describe("Must be true to proceed"),
+    },
+  },
+  wrap("notion_update_block", notionOps.notionUpdateBlock)
+);
+
+server.registerTool(
+  "notion_delete_block",
+  {
+    description: "Delete (archive) a block. HIGH risk — requires confirm: true.",
+    inputSchema: {
+      block_id: z.string(),
+      confirm: z.boolean().optional().describe("Must be true to proceed"),
+    },
+  },
+  wrap("notion_delete_block", notionOps.notionDeleteBlock)
+);
+
+server.registerTool(
+  "notion_get_comments",
+  {
+    description: "Get comments on a page or block.",
+    inputSchema: { block_id: z.string() },
+  },
+  wrap("notion_get_comments", notionOps.notionGetComments)
+);
+
+server.registerTool(
+  "notion_add_comment",
+  {
+    description: "Add a comment to a page, or reply in an existing discussion thread. HIGH risk — requires confirm: true.",
+    inputSchema: {
+      page_id: z.string().optional(),
+      discussion_id: z.string().optional(),
+      text: z.string(),
+      confirm: z.boolean().optional().describe("Must be true to proceed"),
+    },
+  },
+  wrap("notion_add_comment", notionOps.notionAddComment)
+);
+
+server.registerTool(
+  "notion_list_users",
+  {
+    description: "List all users in the workspace.",
+    inputSchema: { page_size: z.number().optional().describe("Defaults to 50") },
+  },
+  wrap("notion_list_users", notionOps.notionListUsers)
+);
+
+server.registerTool(
+  "notion_get_user",
+  {
+    description: "Get a single workspace user's info by user ID.",
+    inputSchema: { user_id: z.string() },
+  },
+  wrap("notion_get_user", notionOps.notionGetUser)
+);
+
+// ----------------Terraform Cloud tools ----------------
+
+
+server.registerTool(
+  "terraform_init",
+  {
+    description: "Initialize a Terraform working directory (downloads providers/modules).",
+    inputSchema: {
+      dir: z.string().describe("Path to the Terraform config directory"),
+      upgrade: z.boolean().optional().describe("Upgrade providers/modules to latest allowed version"),
+    },
+  },
+  wrap("terraform_init", terraformOps.terraformInit)
+);
+
+server.registerTool(
+  "terraform_validate",
+  {
+    description: "Validate the configuration's syntax and internal consistency.",
+    inputSchema: { dir: z.string() },
+  },
+  wrap("terraform_validate", terraformOps.terraformValidate)
+);
+
+server.registerTool(
+  "terraform_fmt",
+  {
+    description: "Format .tf files to canonical style.",
+    inputSchema: {
+      dir: z.string(),
+      check: z.boolean().optional().describe("Only check formatting, don't rewrite files"),
+    },
+  },
+  wrap("terraform_fmt", terraformOps.terraformFmt)
+);
+
+server.registerTool(
+  "terraform_plan",
+  {
+    description: "Show an execution plan: what Terraform would change.",
+    inputSchema: {
+      dir: z.string(),
+      var_file: z.string().optional().describe("Path to a .tfvars file"),
+      out: z.string().optional().describe("Save the plan to this file for later apply"),
+    },
+  },
+  wrap("terraform_plan", terraformOps.terraformPlan)
+);
+
+server.registerTool(
+  "terraform_apply",
+  {
+    description: "Apply changes to reach the desired state. HIGH risk — requires confirm: true.",
+    inputSchema: {
+      dir: z.string(),
+      var_file: z.string().optional().describe("Path to a .tfvars file"),
+      plan_file: z.string().optional().describe("Apply a previously saved plan file instead of a fresh plan"),
+      confirm: z.boolean().optional().describe("Must be true to proceed"),
+    },
+  },
+  wrap("terraform_apply", terraformOps.terraformApply)
+);
+
+server.registerTool(
+  "terraform_destroy",
+  {
+    description: "Destroy all resources managed by this configuration. HIGH risk — requires confirm: true.",
+    inputSchema: {
+      dir: z.string(),
+      var_file: z.string().optional().describe("Path to a .tfvars file"),
+      confirm: z.boolean().optional().describe("Must be true to proceed"),
+    },
+  },
+  wrap("terraform_destroy", terraformOps.terraformDestroy)
+);
+
+server.registerTool(
+  "terraform_show",
+  {
+    description: "Show the current state or a saved plan, human-readable or as JSON.",
+    inputSchema: {
+      dir: z.string(),
+      target: z.string().optional().describe("A saved plan file to show instead of current state"),
+      json: z.boolean().optional().describe("Output as JSON"),
+    },
+  },
+  wrap("terraform_show", terraformOps.terraformShow)
+);
+
+server.registerTool(
+  "terraform_output",
+  {
+    description: "Read output values from the root module's state.",
+    inputSchema: {
+      dir: z.string(),
+      name: z.string().optional().describe("A single output name to read; omit for all outputs"),
+      json: z.boolean().optional().describe("Defaults to true"),
+    },
+  },
+  wrap("terraform_output", terraformOps.terraformOutput)
+);
+
+server.registerTool(
+  "terraform_workspace",
+  {
+    description: "Manage Terraform workspaces (environments like dev/staging/prod). action: 'list' | 'new' | 'select' | 'delete' (defaults to list).",
+    inputSchema: {
+      dir: z.string(),
+      action: z.string().optional().describe("list, new, select, or delete"),
+      name: z.string().optional().describe("Workspace name, required for new/select/delete"),
+    },
+  },
+  wrap("terraform_workspace", terraformOps.terraformWorkspace)
+);
+
+server.registerTool(
+  "terraform_state_list",
+  {
+    description: "List all resources tracked in the current state.",
+    inputSchema: { dir: z.string(), filter: z.string().optional().describe("Filter by resource address pattern") },
+  },
+  wrap("terraform_state_list", terraformOps.terraformStateList)
+);
+
+server.registerTool(
+  "terraform_state_show",
+  {
+    description: "Show detailed attributes of a single resource in the state.",
+    inputSchema: { dir: z.string(), address: z.string().describe("Resource address, e.g. azurerm_resource_group.main") },
+  },
+  wrap("terraform_state_show", terraformOps.terraformStateShow)
+);
+
+server.registerTool(
+  "terraform_state_mv",
+  {
+    description: "Move a resource to a new address within the state (rename/refactor without destroy+recreate). HIGH risk — requires confirm: true.",
+    inputSchema: {
+      dir: z.string(),
+      source: z.string(),
+      destination: z.string(),
+      confirm: z.boolean().optional().describe("Must be true to proceed"),
+    },
+  },
+  wrap("terraform_state_mv", terraformOps.terraformStateMv)
+);
+
+server.registerTool(
+  "terraform_state_rm",
+  {
+    description: "Remove a resource from the state without destroying the real infrastructure (stops Terraform managing it). HIGH risk — requires confirm: true.",
+    inputSchema: {
+      dir: z.string(),
+      address: z.string(),
+      confirm: z.boolean().optional().describe("Must be true to proceed"),
+    },
+  },
+  wrap("terraform_state_rm", terraformOps.terraformStateRm)
+);
+
+server.registerTool(
+  "terraform_state_pull",
+  {
+    description: "Download and print the raw remote state as JSON — useful for backend/state-drift inspection.",
+    inputSchema: { dir: z.string() },
+  },
+  wrap("terraform_state_pull", terraformOps.terraformStatePull)
+);
+
+server.registerTool(
+  "terraform_import",
+  {
+    description: "Import an existing real-world resource into Terraform state, so it becomes managed by this config. HIGH risk — requires confirm: true.",
+    inputSchema: {
+      dir: z.string(),
+      address: z.string().describe("Terraform resource address to import into, e.g. azurerm_resource_group.main"),
+      resource_id: z.string().describe("The real-world resource ID (e.g. Azure resource ID)"),
+      var_file: z.string().optional(),
+      confirm: z.boolean().optional().describe("Must be true to proceed"),
+    },
+  },
+  wrap("terraform_import", terraformOps.terraformImport)
+);
+
+server.registerTool(
+  "terraform_taint",
+  {
+    description: "Mark a resource as tainted, forcing it to be destroyed and recreated on the next apply. HIGH risk — requires confirm: true.",
+    inputSchema: {
+      dir: z.string(),
+      address: z.string(),
+      confirm: z.boolean().optional().describe("Must be true to proceed"),
+    },
+  },
+  wrap("terraform_taint", terraformOps.terraformTaint)
+);
+
+server.registerTool(
+  "terraform_untaint",
+  {
+    description: "Remove the tainted mark from a resource, so it will not be forcibly recreated.",
+    inputSchema: { dir: z.string(), address: z.string() },
+  },
+  wrap("terraform_untaint", terraformOps.terraformUntaint)
+);
+
+server.registerTool(
+  "terraform_graph",
+  {
+    description: "Generate a visual dependency graph of resources in DOT format.",
+    inputSchema: { dir: z.string() },
+  },
+  wrap("terraform_graph", terraformOps.terraformGraph)
+);
+
+server.registerTool(
+  "terraform_providers",
+  {
+    description: "List the providers required by the configuration and their resolved versions.",
+    inputSchema: { dir: z.string() },
+  },
+  wrap("terraform_providers", terraformOps.terraformProviders)
+);
+
+server.registerTool(
+  "terraform_plan_comment",
+  {
+    description:
+      "CI/CD hook: run `terraform plan`, format a concise Markdown summary, and post it as a comment on a GitHub pull request — so reviewers see the infra diff before approving. HIGH risk — requires confirm: true.",
+    inputSchema: {
+      dir: z.string(),
+      var_file: z.string().optional(),
+      owner: z.string().describe("GitHub repo owner"),
+      repo: z.string().describe("GitHub repo name"),
+      pull_number: z.number().describe("PR number to comment on"),
+      confirm: z.boolean().optional().describe("Must be true to proceed"),
+    },
+  },
+  wrap("terraform_plan_comment", terraformOps.terraformPlanComment)
+);
+
+// ---------------Docker tools ----------------
+server.registerTool(
+  "docker_version",
+  {
+    description: "Get Docker client/server version info — connectivity check.",
+    inputSchema: {},
+  },
+  wrap("docker_version", dockerOps.dockerVersion)
+);
+
+server.registerTool(
+  "docker_ps",
+  {
+    description: "List containers. Set all=true to include stopped ones (defaults to running only).",
+    inputSchema: { all: z.boolean().optional().describe("Defaults to false (running only)") },
+  },
+  wrap("docker_ps", dockerOps.dockerPs)
+);
+
+server.registerTool(
+  "docker_images",
+  {
+    description: "List images.",
+    inputSchema: {},
+  },
+  wrap("docker_images", dockerOps.dockerImages)
+);
+
+server.registerTool(
+  "docker_build",
+  {
+    description: "Build an image from a Dockerfile. HIGH risk — requires confirm: true.",
+    inputSchema: {
+      context_dir: z.string().describe("Build context directory"),
+      tag: z.string().describe("Image tag, e.g. myapp:latest"),
+      dockerfile: z.string().optional().describe("Path to Dockerfile, defaults to context_dir/Dockerfile"),
+      build_args: z.record(z.string()).optional(),
+      confirm: z.boolean().optional().describe("Must be true to proceed"),
+    },
+  },
+  wrap("docker_build", dockerOps.dockerBuild)
+);
+
+server.registerTool(
+  "docker_run",
+  {
+    description: "Run a new container from an image. HIGH risk — requires confirm: true.",
+    inputSchema: {
+      image: z.string(),
+      name: z.string().optional(),
+      ports: z.array(z.string()).optional().describe("e.g. ['8080:80']"),
+      env: z.record(z.string()).optional(),
+      volumes: z.array(z.string()).optional().describe("e.g. ['/host/path:/container/path']"),
+      detach: z.boolean().optional().describe("Defaults to true"),
+      command: z.string().optional().describe("Override command to run in the container"),
+      confirm: z.boolean().optional().describe("Must be true to proceed"),
+    },
+  },
+  wrap("docker_run", dockerOps.dockerRun)
+);
+
+server.registerTool(
+  "docker_stop",
+  {
+    description: "Stop a running container. HIGH risk — requires confirm: true.",
+    inputSchema: { container: z.string(), confirm: z.boolean().optional().describe("Must be true to proceed") },
+  },
+  wrap("docker_stop", dockerOps.dockerStop)
+);
+
+server.registerTool(
+  "docker_start",
+  {
+    description: "Start a stopped container.",
+    inputSchema: { container: z.string() },
+  },
+  wrap("docker_start", dockerOps.dockerStart)
+);
+
+server.registerTool(
+  "docker_restart",
+  {
+    description: "Restart a container. HIGH risk — requires confirm: true.",
+    inputSchema: { container: z.string(), confirm: z.boolean().optional().describe("Must be true to proceed") },
+  },
+  wrap("docker_restart", dockerOps.dockerRestart)
+);
+
+server.registerTool(
+  "docker_remove",
+  {
+    description: "Remove a container. DESTRUCTIVE — requires confirm: true.",
+    inputSchema: {
+      container: z.string(),
+      force: z.boolean().optional().describe("Force-remove even if running"),
+      confirm: z.boolean().optional().describe("Must be true to proceed"),
+    },
+  },
+  wrap("docker_remove", dockerOps.dockerRemove)
+);
+
+server.registerTool(
+  "docker_remove_image",
+  {
+    description: "Remove an image. DESTRUCTIVE — requires confirm: true.",
+    inputSchema: {
+      image: z.string(),
+      force: z.boolean().optional(),
+      confirm: z.boolean().optional().describe("Must be true to proceed"),
+    },
+  },
+  wrap("docker_remove_image", dockerOps.dockerRemoveImage)
+);
+
+server.registerTool(
+  "docker_logs",
+  {
+    description: "Get logs from a container.",
+    inputSchema: {
+      container: z.string(),
+      tail: z.number().optional().describe("Number of lines from the end, defaults to 100"),
+      since: z.string().optional().describe("e.g. '10m', '2026-09-01T00:00:00'"),
+    },
+  },
+  wrap("docker_logs", dockerOps.dockerLogs)
+);
+
+server.registerTool(
+  "docker_inspect",
+  {
+    description: "Inspect a container or image — full JSON metadata.",
+    inputSchema: { target: z.string().describe("Container or image name/ID") },
+  },
+  wrap("docker_inspect", dockerOps.dockerInspect)
+);
+
+server.registerTool(
+  "docker_exec",
+  {
+    description: "Execute a command inside a running container.",
+    inputSchema: { container: z.string(), command: z.string().describe("e.g. 'ls -la'") },
+  },
+  wrap("docker_exec", dockerOps.dockerExec)
+);
+
+server.registerTool(
+  "docker_stats",
+  {
+    description: "Show live resource usage stats (CPU, memory) for running containers — one-shot snapshot, not streaming.",
+    inputSchema: {},
+  },
+  wrap("docker_stats", dockerOps.dockerStats)
+);
+
+server.registerTool(
+  "docker_push",
+  {
+    description: "Push an image to a registry. HIGH risk — requires confirm: true.",
+    inputSchema: { image: z.string(), confirm: z.boolean().optional().describe("Must be true to proceed") },
+  },
+  wrap("docker_push", dockerOps.dockerPush)
+);
+
+server.registerTool(
+  "docker_pull",
+  {
+    description: "Pull an image from a registry.",
+    inputSchema: { image: z.string() },
+  },
+  wrap("docker_pull", dockerOps.dockerPull)
+);
+
+server.registerTool(
+  "docker_compose_up",
+  {
+    description: "Run docker compose up for a project directory. HIGH risk — requires confirm: true.",
+    inputSchema: {
+      project_dir: z.string().describe("Directory containing docker-compose.yml"),
+      detach: z.boolean().optional().describe("Defaults to true"),
+      confirm: z.boolean().optional().describe("Must be true to proceed"),
+    },
+  },
+  wrap("docker_compose_up", dockerOps.dockerComposeUp)
+);
+
+server.registerTool(
+  "docker_compose_down",
+  {
+    description: "Run docker compose down for a project directory. HIGH risk — requires confirm: true.",
+    inputSchema: {
+      project_dir: z.string().describe("Directory containing docker-compose.yml"),
+      confirm: z.boolean().optional().describe("Must be true to proceed"),
+    },
+  },
+  wrap("docker_compose_down", dockerOps.dockerComposeDown)
+);
+
+
+
 // ---------------- MCP Resources ----------------
 //
 // Give the AI project context without forcing it to reconstruct
@@ -1313,6 +2192,7 @@ server.registerResource(
     return { contents: [{ uri: uri.href, mimeType: "application/json", text: JSON.stringify(data, null, 2) }] };
   }
 );
+
 
 // ---------------- MCP Prompts ----------------
 //

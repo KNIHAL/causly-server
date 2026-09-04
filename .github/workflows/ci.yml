@@ -22,7 +22,11 @@ jobs:
 
       - name: Check syntax of all JS files
         run: |
-          find . -name "*.js" -not -path "./node_modules/*" -print0 | \
+          find . -name "*.js" \
+            -not -path "./node_modules/*" \
+            -not -path "./website/*" \
+            -not -path "./docs/*" \
+            -print0 | \
             xargs -0 -n1 node --check
 
       - name: Verify server boots without crashing

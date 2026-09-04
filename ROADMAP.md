@@ -1,37 +1,37 @@
 # Roadmap
 
-Current state: **106 tools**, 10 categories, 4 workflow tools, 3 MCP
-resources, 4 MCP prompts, full security layer (redaction, permission
-levels, approval gates, path protection, structured audit logs). See
-[BUILD_LOG.md](./BUILD_LOG.md) for how we got here.
+Current state: **181 tools** across 16 categories — filesystem, git, shell,
+GitHub, Vercel, Supabase, Slack, Gmail, Notion, Terraform, Docker,
+Postgres/MySQL, a local encrypted secrets manager, Sentry, plus project
+intelligence, workflow automation, and a full security layer (redaction,
+permission levels, approval gates, path protection, structured audit logs).
+See [BUILD_LOG.md](./BUILD_LOG.md) for how we got here.
 
 ## Next up
 
-### Deferred: Azure — cloud infrastructure
+### Deferred: Azure / GCP / AWS — direct cloud infrastructure
 
-**Deferred until hosted MCP server launch.** Adding Azure now means
-burning the $200 Azure credit during dev/test instead of at launch —
-testing it properly requires a live subscription, and that trial clock
-starts the moment a key is generated. Building and testing this
-alongside the hosted server (open-source + hosted release together)
-means the credit gets used once, right before launch, not wasted early.
+**Deliberately out of scope for now.** Testing any of these properly
+requires a live cloud subscription and burns real credit/cost the moment
+a key is generated — not worth it until there's an actual need driving it.
+Revisit if/when that need shows up, not on a fixed timeline.
 
 - Account/subscription/resource-group listing
-- App Service: list, get, deploy, restart
-- Storage accounts, databases
+- Compute: list, get, deploy, restart
+- Storage accounts, managed databases
 - Monitoring: metrics, logs, health
 - Deployment: deploy, get status, get logs
 
-This becomes the foundation for the eventual **managed/continuous cloud
-monitoring layer** — the open-source core stays request/response only (no
-background watching); continuous monitoring is the paid product built on
-top of these primitives.
+Note: Terraform tools (already shipped) cover a good chunk of this
+indirectly — provisioning and destroying cloud resources via `plan`/
+`apply`/`destroy` works today, independent of any direct-SDK cloud
+integration. Direct cloud tools would add runtime introspection/debugging
+that Terraform alone doesn't give you.
 
-### Hosted MCP server — current focus
+### Hosted MCP server
 
-Open-source local server is feature-complete for now (106 tools, 10
-categories). Focus shifts to building the hosted version — Azure gets
-added and tested as part of that build, timed to launch together.
+Open-source local server is feature-complete for the current tool set.
+Focus shifts to building the hosted version.
 
 ## After that
 
@@ -39,21 +39,24 @@ added and tested as part of that build, timed to launch together.
   guided MCP prompt; could become a proper workflow tool once there's a
   clear "what does a good review look like" spec.
 - **`investigate-production` / `rollback_deployment` workflow tools** —
-  incident-response primitives, once Azure/monitoring tools exist to
-  support them.
-- **MCP Resources for GitHub/Vercel state** (`causly://repo/{path}/prs`,
-  `causly://deployment/{id}/status`) — same pattern as the existing
-  project resources, extended to the services we already talk to.
-- **Automated test suite** — mocked GitHub/Vercel/Supabase/Azure API
-  tests, plus unit tests for the security layer (redaction,
-  classification, path denial) and the workflow tools. Currently verified
-  by hand against a disposable real GitHub repo (see BUILD_LOG.md) —
-  good enough to ship, not good enough to stay unmonitored as the surface
-  grows.
+  incident-response primitives, now that Sentry (monitoring) tools exist
+  to support them.
+- **MCP Resources for GitHub/Vercel/Sentry state** (`causly://repo/{path}/prs`,
+  `causly://deployment/{id}/status`, `causly://sentry/{project}/issues`) —
+  same pattern as the existing project resources, extended to the services
+  we already talk to.
+- **Automated test suite** — mocked API tests for every service module,
+  plus unit tests for the security layer (redaction, classification, path
+  denial) and the workflow tools. Currently verified by hand against real
+  disposable resources (a throwaway GitHub repo, Docker containers, DB
+  instances, a Sentry project — see BUILD_LOG.md) — good enough to ship,
+  not good enough to stay unmonitored as the surface grows.
 - **`npx -y causly-server`** installer — currently `git clone` + `npm
-  install` + `npm run setup`. Roadmap goal is a single command that
-  detects the environment, configures Claude Desktop, and verifies the
-  connection.
+  install` + `.env` setup + `npm run setup`. Roadmap goal is a single
+  command that detects the environment, configures Claude Desktop, and
+  verifies the connection.
+- **Jira/Linear tools** — only if real demand shows up; not planned by
+  default.
 
 ## Explicitly not now
 
