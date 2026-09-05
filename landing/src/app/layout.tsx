@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Space_Grotesk, IBM_Plex_Mono } from "next/font/google";
+import BackgroundGrid from "@/components/background-grid";
 import "./globals.css";
 
 const spaceGrotesk = Space_Grotesk({
@@ -76,7 +77,8 @@ export default function RootLayout({
       lang="en"
       className={`${spaceGrotesk.variable} ${ibmPlexMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col bg-background text-foreground">
+      <body className="relative min-h-full flex flex-col bg-background text-foreground">
+        <BackgroundGrid className="fixed inset-0 -z-10" />
         {children}
       </body>
     </html>
