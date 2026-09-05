@@ -4,6 +4,10 @@ A running account of what was built, in what order, and why — including
 bugs found and fixed along the way. See [ROADMAP.md](./ROADMAP.md) for
 what's planned next.
 
+## BoundaryAttest server receipt POC
+
+Added an opt-in evidence export at the existing wrapper/audit boundary for three high-value workflows: `ship_change`, `verify_ci_fix`, and `deploy_project`. The wrapper now creates the operation ID shared by the ordinary audit entry and optional receipt. Receipts sign only small Interop Profile v0.1 claims containing hashes of Causly-redacted canonical representations. Signing/persistence failures are surfaced separately and never rewrite the real workflow outcome. This is a narrow local proof of concept, not production key management or a replacement for Causly's approval/security model.
+
 ## Vision shift
 
 Causly Server started as a general-purpose MCP toolset (filesystem, git,
@@ -272,4 +276,3 @@ Total: **181 tools**, up from 106.
   deferred, no fixed timeline" rather than tied to a hosted-server
   launch date). `CODE_OF_CONDUCT.md` reviewed — no project-specific
   content needed updating.
-

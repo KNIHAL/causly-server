@@ -8,7 +8,8 @@
   "scripts": {
     "start": "node index.js",
     "setup": "node setup.js",
-    "test": "vitest run"
+    "test": "vitest run",
+    "verify:boundaryattest": "node tools/verifyBoundaryAttest.js"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.29.0",

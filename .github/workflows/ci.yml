@@ -29,6 +29,9 @@ jobs:
             -print0 | \
             xargs -0 -n1 node --check
 
+      - name: Run focused tests
+        run: npm test
+
       - name: Verify server boots without crashing
         run: |
           timeout 5 node index.js < /dev/null; code=$?

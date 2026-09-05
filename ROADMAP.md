@@ -9,6 +9,10 @@ See [BUILD_LOG.md](./BUILD_LOG.md) for how we got here.
 
 ## Next up
 
+### BoundaryAttest server receipts — first POC
+
+An opt-in, local `server_attested` receipt adapter now covers only `ship_change`, `verify_ci_fix`, and `deploy_project`. Before treating it as production infrastructure, key custody, rotation/revocation, multi-process persistence, and operational deployment policy still need explicit designs. The receipt layer remains evidence only and does not participate in Causly authorization.
+
 ### Deferred: Azure / GCP / AWS — direct cloud infrastructure
 
 **Deliberately out of scope for now.** Testing any of these properly
