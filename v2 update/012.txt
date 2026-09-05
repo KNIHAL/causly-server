@@ -1,0 +1,19 @@
+#25 Community / Discussions
+
+Verdict: 🟡 Pending
+
+Karna hai:
+
+GitHub Discussions enable karna
+Categories:
+💬 General
+💡 Ideas
+🙋 Q&A / Help
+📢 Announcements
+🛠️ Show & Tell
+Community guidelines/pinned welcome post
+Discussions ko Issues se clearly separate rakhna
+
+Goal: users ka feedback, questions aur community interaction GitHub par naturally build ho.
+
+👉 #25 — Pending.

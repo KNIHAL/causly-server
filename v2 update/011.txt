@@ -1,0 +1,13 @@
+#24 GitHub Pages / Docs Site
+
+Verdict: 🟡 Pending decision
+
+Karna hai:
+
+Decide: GitHub repo docs vs dedicated docs website
+OSS + Hosted docs ko proper navigation dena
+Custom domain / branding
+Search + versioning later if needed
+README se docs site ke clear links
+
+Important: GitHub Pages khud mandatory nahi hai. Agar docs.causly.in ya koi proper docs platform use karna hai, woh better ho sakta hai.

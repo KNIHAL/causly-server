@@ -1,0 +1,16 @@
+#28 Security & Vulnerability Reporting
+
+Verdict: 🟡 Pending
+
+Karna hai:
+
+SECURITY.md add karna
+Vulnerability report karne ka private channel define karna
+Supported versions mention karna
+Responsible disclosure process
+Security issue ko public GitHub Issue mein report na karne ki guidance
+Security response/handling expectations
+
+Goal: security researcher ko clear ho ki vulnerability safely kaise report karni hai.
+
+👉 #28 — Pending.

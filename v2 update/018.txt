@@ -1,0 +1,17 @@
+Local mein total 11 branches hain:
+
+Branch	Kaam
+master	main/protected, latest merges
+v2	OSS-readiness integration branch (yahi tera current base)
+main	old, "gone" — stale/deprecated
+feature/mcp-landing-page	landing page ka kaam yahin hua
+update-hosted-cta	hosted CTA readme mein add
+feature/notion-terraform-azure-readme	Notion tools + README/docs overhaul
+merge/notion-terraform-azure-readme	usi ka merge/CI-fix branch
+feat/slack-tools	Slack 8 tools
+feat/gmail-tools	Gmail 8 tools
+docs/defer-azure-hosted-focus	Azure/hosted focus deferral docs
+KNIHAL-patch-1	README update (remote-only, local nahi hai)
+test/vitest-setup	abhi wala — tera testing kaam (current)
+
+Landing page feature/mcp-landing-page branch mein hai — already master mein merge ho chuka hai (PR #9 ke through).

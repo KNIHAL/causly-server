@@ -1,0 +1,17 @@
+#29 Release / Distribution Strategy
+
+Verdict: 🟡 Pending
+
+Karna hai:
+
+npm package / distribution strategy finalize
+Versioning & release process
+Installation methods clearly define
+Stable vs pre-release versions
+Release automation where useful
+MCP client compatibility/version support
+Future Hosted ↔ OSS relationship clearly define
+
+Goal: developer ko clear ho ki Causly Server kahan se milega, kaise install hoga, aur updates kaise milenge.
+
+👉 #29 — Pending.

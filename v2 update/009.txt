@@ -1,0 +1,18 @@
+Next → #22 GitHub Repository Settings
+
+Isme check karna hai:
+
+Branch protection
+Default branch
+Issues enabled
+Discussions
+Wiki
+PR settings
+Merge strategy
+Security features
+Actions permissions
+Dependabot
+Secret scanning / push protection
+Repository visibility & permissions
+
+#22 — Review/Update Required.
