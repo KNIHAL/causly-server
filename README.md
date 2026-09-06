@@ -78,6 +78,7 @@ This server can genuinely change your machine, your infrastructure, and your pro
 - **Path security** — writes and deletes are blocked outright if the target path falls inside a protected system directory.
 - **Local secrets, encrypted at rest** — the built-in secrets manager uses AES-256-GCM with a key you control; nothing touches an external vault service by default.
 - **Structured audit log** — every tool call is appended to `logs/activity.log` as one JSON object per line: timestamp, operation ID, risk level, status, redacted input, and duration.
+- **Optional BoundaryAttest receipt POC** — when explicitly enabled, Causly emits separate `server_attested` Interop Profile v0.2 receipts for `ship_change`, `verify_ci_fix`, and `deploy_project`. v0.2 uses RFC 8785/JCS for language-neutral canonicalization; BoundaryAttest v0.1 remains a legacy profile. This evidence layer does not replace or change approval/security behavior; see [docs/boundaryattest.md](./docs/boundaryattest.md).
 
 Fork it, self-host it, adapt it — the classification and approval layer travels with the code no matter where you run it.
 
@@ -161,6 +162,7 @@ causly-server/
 │   ├── sentryOps.js         # Sentry API — issues, projects, stats
 │   ├── projectOps.js        # Stack detection, test/lint/build runners
 │   ├── workflowOps.js       # ship_change, fix_ci, verify_ci_fix, deploy_project
+│   ├── boundaryAttest.js    # Optional signed workflow-receipt POC
 │   ├── security.js          # Redaction, permission levels, risk classification
 │   ├── envLoader.js         # Dependency-free .env parser
 │   └── logger.js            # Structured JSONL activity logging
@@ -199,5 +201,3 @@ See [BUILD_LOG.md](./BUILD_LOG.md) for a full account of what was built, in what
 ## License
 
 [MIT](./LICENSE) — free to use, modify, and distribute, including commercially.
-
-

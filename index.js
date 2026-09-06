@@ -16,8 +16,7 @@ import * as slackOps from "./tools/slackOps.js";
 import * as gmailOps from "./tools/gmailOps.js";
 import * as projectOps from "./tools/projectOps.js";
 import * as workflowOps from "./tools/workflowOps.js";
-import { logActivity } from "./tools/logger.js";
-import { checkApproval } from "./tools/security.js";
+import { wrap } from "./tools/toolWrapper.js";
 import * as notionOps from "./tools/notionOps.js";
 import * as terraformOps from "./tools/terraformOps.js";
 import * as dockerOps from "./tools/dockerOps.js";
@@ -29,37 +28,6 @@ const server = new McpServer({
   name: "causly-server",
   version: "1.1.0",
 });
-
-/**
- * Wraps a tool handler with consistent logging + error handling so every
- * tool call is recorded to logs/activity.log, success or failure.
- */
-function wrap(toolName, handler) {
-  return async (input) => {
-    const approval = checkApproval(toolName, input);
-    if (!approval.allowed) {
-      logActivity(toolName, input, "BLOCKED", approval.reason);
-      return {
-        content: [{ type: "text", text: `Blocked: ${approval.reason}` }],
-        isError: true,
-      };
-    }
-    const startedAt = Date.now();
-    try {
-      const result = await handler(input);
-      logActivity(toolName, input, "SUCCESS", "", Date.now() - startedAt);
-      return {
-        content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
-      };
-    } catch (err) {
-      logActivity(toolName, input, "ERROR", err.message, Date.now() - startedAt);
-      return {
-        content: [{ type: "text", text: `Error: ${err.message}` }],
-        isError: true,
-      };
-    }
-  };
-}
 
 //---------------- Database tools ----------------
 server.registerTool(
