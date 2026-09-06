@@ -1,52 +1,250 @@
 @import "tailwindcss";
 
+/* =========================================================
+   CAUSLY — AGENT ENVIRONMENT
+   Global Design System
+   ========================================================= */
+
 :root {
-  --background: #0F1419;
-  --surface: #171D24;
-  --surface-hover: #1D242D;
-  --border: #262E38;
+  /* ---------- Core Background ---------- */
+  --background: #02090b;
+  --background-soft: #061114;
 
-  --foreground: #E6E9ED;
-  --muted: #8B95A1;
+  /* ---------- Surfaces ---------- */
+  --surface: #0a171a;
+  --surface-raised: #0d1d20;
+  --surface-hover: #102326;
 
-  --accent: #F5A623;
-  --accent-dim: rgba(245, 166, 35, 0.12);
+  /* ---------- Borders ---------- */
+  --border: rgba(148, 226, 222, 0.14);
+  --border-strong: rgba(148, 226, 222, 0.24);
 
-  --status-green: #4ADE80;
+  /* ---------- Text ---------- */
+  --foreground: #f4f8f8;
+  --text-primary: #f4f8f8;
+  --text-secondary: #a8b7b9;
+  --text-muted: #708184;
+  --text-dim: #526265;
+
+  /* ---------- Brand ---------- */
+  --accent: #29d8c5;
+  --accent-bright: #42e5d3;
+  --accent-soft: rgba(41, 216, 197, 0.12);
+  --accent-glow: rgba(41, 216, 197, 0.24);
+
+  /* ---------- Brand Orange ---------- */
+  --brand-orange: #ff8618;
+  --brand-orange-soft: rgba(255, 134, 24, 0.14);
+
+  /* ---------- Status ---------- */
+  --status-green: #36d9ad;
+  --status-green-soft: rgba(54, 217, 173, 0.12);
+
+  /* ---------- Utility ---------- */
+  --ice-blue: #9eeaf1;
+
+  /* ---------- Code ---------- */
+  --code-background: #041013;
+  --code-text: #7de4c9;
+
+  /* ---------- Typography ---------- */
+  --font-display: var(--font-space-grotesk);
+  --font-mono: var(--font-ibm-plex-mono);
 }
+
+
+/* =========================================================
+   TAILWIND THEME
+   ========================================================= */
 
 @theme inline {
   --color-background: var(--background);
+  --color-background-soft: var(--background-soft);
+
   --color-surface: var(--surface);
+  --color-surface-raised: var(--surface-raised);
   --color-surface-hover: var(--surface-hover);
+
   --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
+
   --color-foreground: var(--foreground);
-  --color-muted: var(--muted);
+  --color-text-primary: var(--text-primary);
+  --color-text-secondary: var(--text-secondary);
+  --color-text-muted: var(--text-muted);
+  --color-text-dim: var(--text-dim);
+
   --color-accent: var(--accent);
-  --color-accent-dim: var(--accent-dim);
+  --color-accent-bright: var(--accent-bright);
+  --color-accent-soft: var(--accent-soft);
+  --color-accent-glow: var(--accent-glow);
+
+  --color-brand-orange: var(--brand-orange);
+  --color-brand-orange-soft: var(--brand-orange-soft);
+
   --color-status-green: var(--status-green);
+  --color-status-green-soft: var(--status-green-soft);
+
+  --color-ice: var(--ice-blue);
+
+  --color-code-background: var(--code-background);
+  --color-code-text: var(--code-text);
 
   --font-display: var(--font-space-grotesk);
   --font-mono: var(--font-ibm-plex-mono);
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: var(--font-display), sans-serif;
+
+/* =========================================================
+   RESET
+   ========================================================= */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
 }
+
+html {
+  scroll-behavior: smooth;
+  background: var(--background);
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+
+  background:
+    radial-gradient(
+      circle at 75% 15%,
+      rgba(41, 216, 197, 0.035),
+      transparent 30%
+    ),
+    var(--background);
+
+  color: var(--foreground);
+
+  font-family: var(--font-display), sans-serif;
+
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+
+  overflow-x: hidden;
+}
+
+
+/* =========================================================
+   TYPOGRAPHY
+   ========================================================= */
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
+}
+
+button,
+a {
+  -webkit-tap-highlight-color: transparent;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+
+/* =========================================================
+   TEXT SELECTION
+   ========================================================= */
 
 ::selection {
-  background: var(--accent-dim);
-  color: var(--accent);
+  background: rgba(41, 216, 197, 0.22);
+  color: #ffffff;
 }
 
+
+/* =========================================================
+   SCROLLBAR
+   ========================================================= */
+
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--background);
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(148, 226, 222, 0.18);
+  border-radius: 999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(41, 216, 197, 0.35);
+}
+
+
+/* =========================================================
+   CAUSLY UTILITIES
+   ========================================================= */
+
+/* Subtle cyan glow */
+.causly-glow {
+  box-shadow:
+    0 0 40px rgba(41, 216, 197, 0.08),
+    0 0 100px rgba(41, 216, 197, 0.04);
+}
+
+/* Glass surface */
+.causly-glass {
+  background: rgba(8, 22, 25, 0.72);
+  border: 1px solid rgba(148, 226, 222, 0.13);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+}
+
+/* Fine technical grid */
+.causly-grid {
+  background-image:
+    linear-gradient(
+      rgba(41, 216, 197, 0.035) 1px,
+      transparent 1px
+    ),
+    linear-gradient(
+      90deg,
+      rgba(41, 216, 197, 0.035) 1px,
+      transparent 1px
+    );
+
+  background-size: 48px 48px;
+}
+
+
+/* =========================================================
+   TERMINAL / CODE
+   ========================================================= */
+
+code,
+pre {
+  font-family: var(--font-mono), monospace;
+}
+
+
+/* =========================================================
+   CURSOR BLINK
+   ========================================================= */
+
 @keyframes blink {
-  0%, 49% {
+  0%,
+  49% {
     opacity: 1;
   }
 
-  50%, 100% {
+  50%,
+  100% {
     opacity: 0;
   }
 }
@@ -55,7 +253,16 @@ body {
   animation: blink 1s step-end infinite;
 }
 
+
+/* =========================================================
+   REDUCED MOTION
+   ========================================================= */
+
 @media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
   .cursor-blink {
     animation: none;
     opacity: 1;
@@ -66,5 +273,7 @@ body {
   *::after {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
   }
 }
