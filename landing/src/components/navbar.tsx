@@ -49,7 +49,7 @@ export default function Navbar() {
             href="https://tally.so/r/NpZkpW"
             target="_blank"
             rel="noopener noreferrer"
-            className="hidden items-center gap-2 rounded-xl bg-[#35d6c5] px-6 py-3 text-[15px] font-semibold text-[#031012] transition-all duration-200 hover:-translate-y-0.5 hover:bg-[#45e0d0] hover:shadow-[0_8px_30px_rgba(53,214,197,0.2)] lg:flex"
+            className="hidden items-center gap-2 rounded-xl bg-[#35d6c5] px-4.5 py-2.5 text-[12.5px] font-semibold text-[#031012] transition-all duration-200 hover:-translate-y-0.5 hover:bg-[#45e0d0] hover:shadow-[0_8px_30px_rgba(53,214,197,0.2)] lg:flex"
           >
             Use Hosted
             <span className="text-lg leading-none">→</span>
@@ -80,8 +80,8 @@ export default function Navbar() {
       <div
         onClick={() => setIsOpen(false)}
         className={`fixed inset-0 z-[60] bg-black/50 backdrop-blur-[2px] transition-opacity duration-300 lg:hidden ${isOpen
-            ? "pointer-events-auto opacity-100"
-            : "pointer-events-none opacity-0"
+          ? "pointer-events-auto opacity-100"
+          : "pointer-events-none opacity-0"
           }`}
       />
 
