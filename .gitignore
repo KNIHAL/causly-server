@@ -4,3 +4,4 @@ logs/*.log
 .causly-secrets.enc
 .next/
 next-env.d.ts
+v2 update/
