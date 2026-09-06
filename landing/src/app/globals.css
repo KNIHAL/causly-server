@@ -1,0 +1,70 @@
+@import "tailwindcss";
+
+:root {
+  --background: #0F1419;
+  --surface: #171D24;
+  --surface-hover: #1D242D;
+  --border: #262E38;
+
+  --foreground: #E6E9ED;
+  --muted: #8B95A1;
+
+  --accent: #F5A623;
+  --accent-dim: rgba(245, 166, 35, 0.12);
+
+  --status-green: #4ADE80;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-surface: var(--surface);
+  --color-surface-hover: var(--surface-hover);
+  --color-border: var(--border);
+  --color-foreground: var(--foreground);
+  --color-muted: var(--muted);
+  --color-accent: var(--accent);
+  --color-accent-dim: var(--accent-dim);
+  --color-status-green: var(--status-green);
+
+  --font-display: var(--font-space-grotesk);
+  --font-mono: var(--font-ibm-plex-mono);
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-display), sans-serif;
+}
+
+::selection {
+  background: var(--accent-dim);
+  color: var(--accent);
+}
+
+@keyframes blink {
+  0%, 49% {
+    opacity: 1;
+  }
+
+  50%, 100% {
+    opacity: 0;
+  }
+}
+
+.cursor-blink {
+  animation: blink 1s step-end infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cursor-blink {
+    animation: none;
+    opacity: 1;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}
