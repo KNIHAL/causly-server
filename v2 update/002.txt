@@ -1,9 +1,0 @@
-Haan bhai, bilkul. #4 Repository Structure mein ye bhi cover hoga:
-
-docs/ ka structure
-Documentation kahan/kis format mein rahegi
-Website/docs site ka relation
-Examples/demos kahan rahenge
-Tests ka structure
-Root directory cleanup
-tools/ organization

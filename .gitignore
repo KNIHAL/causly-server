@@ -4,3 +4,6 @@ logs/*.log
 .causly-secrets.enc
 landing/.next/
 landing/node_modules/
+.next/
+next-env.d.ts
+v2 update/
