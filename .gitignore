@@ -2,3 +2,5 @@ node_modules/
 logs/*.log
 .env
 .causly-secrets.enc
+landing/.next/
+landing/node_modules/
