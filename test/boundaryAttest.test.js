@@ -3,8 +3,8 @@ import crypto from "node:crypto";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import test from "node:test";
-import { emitBoundaryAttestReceipt, getBoundaryAttestConfig, hashRedacted, verifyBoundaryAttestReceipt } from "../tools/boundaryAttest.js";
+import { test } from "vitest";
+import { emitBoundaryAttestReceipt, getBoundaryAttestConfig, hashRedacted, jcsCanonicalize, verifyBoundaryAttestReceipt } from "../tools/boundaryAttest.js";
 import { createToolWrapper } from "../tools/toolWrapper.js";
 
 function fixture() {
@@ -115,4 +115,32 @@ test("verifier rejects unexpected envelope fields and malformed hashes", () => {
   assert.deepEqual(verifyBoundaryAttestReceipt(JSON.stringify({ ...receipt, extra: true }), f.publicKeyPem), { ok: false, reason: "unexpected_top_level_field:extra" });
   receipt.claim.input_hash = "sha256:nope";
   assert.deepEqual(verifyBoundaryAttestReceipt(JSON.stringify(receipt), f.publicKeyPem), { ok: false, reason: "invalid_hash:input_hash" });
+});
+
+test("local JCS matches the BoundaryAttest v0.2 language-neutral vectors", () => {
+  const vectors = JSON.parse(fs.readFileSync(new URL("./fixtures/boundaryattest-v0.2/canonicalization-vectors.json", import.meta.url), "utf8"));
+  for (const vector of vectors) {
+    const canonical = jcsCanonicalize(JSON.parse(vector.input_json));
+    const bytes = Buffer.from(canonical, "utf8");
+    assert.equal(canonical, vector.canonical, vector.name);
+    assert.equal(bytes.toString("hex"), vector.utf8_hex, vector.name);
+    assert.equal(crypto.createHash("sha256").update(bytes).digest("hex"), vector.sha256, vector.name);
+  }
+});
+
+test("JCS rejects unsupported JavaScript values", () => {
+  for (const value of [undefined, 1n, NaN, Infinity, -Infinity, () => {}, Symbol("x"), "\ud800", "\udc00"])
+    assert.throws(() => jcsCanonicalize(value), TypeError);
+  assert.throws(() => jcsCanonicalize([, 1]), /sparse array/);
+  const cyclic = {}; cyclic.self = cyclic;
+  assert.throws(() => jcsCanonicalize(cyclic), /cyclic/);
+});
+
+test("emitted claims use only Interop Profile v0.2 and JCS representation labels", () => {
+  const f = fixture();
+  const { receipt } = emitBoundaryAttestReceipt({ toolName: "ship_change", input: { "2": "two", "10": "ten" }, result: { ok: true }, status: "SUCCESS", operationId: "op-v02", env: f.env });
+  assert.equal(receipt.claim.receipt_version, "0.2");
+  assert.equal(receipt.claim.input_representation, "causly.redacted.jcs.v1");
+  assert.equal(receipt.claim.output_representation, "causly.redacted.jcs.v1");
+  assert.deepEqual(verifyBoundaryAttestReceipt(JSON.stringify(receipt), f.publicKeyPem), { ok: true });
 });

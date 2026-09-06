@@ -31,12 +31,12 @@ BOUNDARYATTEST_TOOLS=ship_change,verify_ci_fix,deploy_project
 
 ## Receipt and evidence shape
 
-Each file is a BoundaryAttest Interop Profile v0.1 envelope with exactly three top-level fields:
+Each file is a BoundaryAttest Interop Profile v0.2 envelope with exactly three top-level fields. BoundaryAttest v0.1 remains a frozen legacy profile; Causly uses v0.2 for language-neutral RFC 8785 canonicalization:
 
 ```json
 {
   "claim": {
-    "receipt_version": "0.1",
+    "receipt_version": "0.2",
     "receipt_role": "server_attested",
     "event_id": "<Causly operation UUID>",
     "timestamp": "<receipt emission time>",
@@ -46,7 +46,7 @@ Each file is a BoundaryAttest Interop Profile v0.1 envelope with exactly three t
     "tool_name": "<tool name>",
     "risk_level": "HIGH",
     "input_hash": "sha256:<hex>",
-    "input_representation": "causly.redacted.stable_json.v1"
+    "input_representation": "causly.redacted.jcs.v1"
   },
   "signature": "<base64 Ed25519 signature>",
   "public_key_id": "sha256:<SPKI DER fingerprint>"
@@ -55,7 +55,7 @@ Each file is a BoundaryAttest Interop Profile v0.1 envelope with exactly three t
 
 Success claims add `output_hash` and `output_representation`. Error and blocked claims add `error_hash` and `error_representation`. Small workflow references such as a git ref, workflow run ID, deployment ID, project reference, or PR URL are included only when the normal input/result makes them clearly available.
 
-Inputs and successful results are first processed by Causly's existing structured `redactSecrets()` function, then canonicalized with BoundaryAttest v0.1 stable JSON (recursively locale-sorted object keys, preserved array order, compact JSON), UTF-8 encoded, and SHA-256 hashed. This binds the exact canonical **redacted** representation—not the raw request or result. Errors and approval reasons use Causly's string redaction before the same canonicalization and hashing process. Raw requests, results, errors, and secrets are not embedded in receipts.
+Inputs and successful results are first processed by Causly's existing structured `redactSecrets()` function, then canonicalized with RFC 8785/JCS (raw UTF-16 object-name ordering, preserved array order, ECMAScript number serialization, compact JSON), UTF-8 encoded, and SHA-256 hashed. This binds the exact canonical **redacted** representation—not the raw request or result. Errors and approval reasons use Causly's string redaction before the same canonicalization and hashing process. Raw requests, results, errors, and secrets are not embedded in receipts.
 
 ## Audit correlation and persistence
 
@@ -73,6 +73,6 @@ Supply a trusted expected Ed25519 SPKI public key; never trust a key merely beca
 npm run verify:boundaryattest -- /path/to/receipt.json /path/to/expected-public-key.pem
 ```
 
-The verifier checks JSON parsing, the exact three-field envelope, required claim fields, version `0.1`, role `server_attested`, known SHA-256 field syntax, the expected SPKI-derived key ID, and the Ed25519 signature over the v0.1 canonical claim.
+The verifier checks JSON parsing, the exact three-field envelope, required claim fields, version `0.2`, role `server_attested`, known SHA-256 field syntax, the expected SPKI-derived key ID, and the Ed25519 signature over the RFC 8785/JCS canonical claim.
 
 A passing result establishes only structural compatibility, a matching expected key fingerprint, and an unchanged claim signed by that key. It does not establish correct authorization, truthful workflow results, real-world deployment success, runtime integrity, wise approval, secure production key custody, legality, or compliance.

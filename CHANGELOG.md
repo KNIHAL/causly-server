@@ -5,7 +5,7 @@ All notable changes to this project are documented here.
 ## [Unreleased]
 
 ### Added
-- Opt-in BoundaryAttest Interop Profile v0.1 `server_attested` receipts for the `ship_change`, `verify_ci_fix`, and `deploy_project` workflow boundary, with redacted evidence hashes, independent expected-key verification, and focused Node tests.
+- Opt-in BoundaryAttest Interop Profile v0.2 `server_attested` receipts for the `ship_change`, `verify_ci_fix`, and `deploy_project` workflow boundary, with RFC 8785/JCS redacted evidence hashes, independent expected-key verification, and focused tests. BoundaryAttest v0.1 remains legacy-only.
 
 ### Changed
 - The central wrapper now owns each operation ID and supplies it to the existing audit logger so an optional receipt and normal audit event share one correlation identity. Approval and security semantics are unchanged.

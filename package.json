@@ -9,6 +9,7 @@
     "start": "node index.js",
     "setup": "node setup.js",
     "test": "vitest run",
+    "test:boundaryattest": "vitest run test/boundaryAttest.test.js",
     "verify:boundaryattest": "node tools/verifyBoundaryAttest.js"
   },
   "dependencies": {

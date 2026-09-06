@@ -9,20 +9,69 @@ const TOP_LEVEL_FIELDS = ["claim", "signature", "public_key_id"];
 const HASH_FIELDS = ["input_hash", "output_hash", "error_hash"];
 const HASH_PATTERN = /^sha256:[0-9a-f]{64}$/;
 
-export function stableJson(value) {
-  if (Array.isArray(value)) return `[${value.map(stableJson).join(",")}]`;
-  if (value && typeof value === "object") {
-    return `{${Object.keys(value)
-      .sort((a, b) => a.localeCompare(b))
-      .map((key) => `${JSON.stringify(key)}:${stableJson(value[key])}`)
-      .join(",")}}`;
+function assertUnicode(value, path) {
+  for (let index = 0; index < value.length; index += 1) {
+    const unit = value.charCodeAt(index);
+    if (unit >= 0xd800 && unit <= 0xdbff) {
+      const next = value.charCodeAt(index + 1);
+      if (!(next >= 0xdc00 && next <= 0xdfff)) throw new TypeError(`${path}: lone high surrogate is not I-JSON`);
+      index += 1;
+    } else if (unit >= 0xdc00 && unit <= 0xdfff) throw new TypeError(`${path}: lone low surrogate is not I-JSON`);
   }
-  return JSON.stringify(value);
+}
+
+export function compareUtf16(a, b) {
+  const shared = Math.min(a.length, b.length);
+  for (let index = 0; index < shared; index += 1) {
+    const difference = a.charCodeAt(index) - b.charCodeAt(index);
+    if (difference !== 0) return difference;
+  }
+  return a.length - b.length;
+}
+
+function canonicalize(value, path, ancestors) {
+  if (value === null) return "null";
+  if (typeof value === "string") { assertUnicode(value, path); return JSON.stringify(value); }
+  if (typeof value === "boolean") return value ? "true" : "false";
+  if (typeof value === "number") {
+    if (!Number.isFinite(value)) throw new TypeError(`${path}: non-finite number is not JSON`);
+    return JSON.stringify(value);
+  }
+  if (typeof value !== "object") throw new TypeError(`${path}: unsupported non-JSON value (${typeof value})`);
+  if (ancestors.has(value)) throw new TypeError(`${path}: cyclic value is not JSON`);
+  ancestors.add(value);
+  try {
+    if (Array.isArray(value)) {
+      const elements = [];
+      for (let index = 0; index < value.length; index += 1) {
+        if (!Object.prototype.hasOwnProperty.call(value, index)) throw new TypeError(`${path}[${index}]: sparse array holes are unsupported`);
+        elements.push(canonicalize(value[index], `${path}[${index}]`, ancestors));
+      }
+      const extra = Reflect.ownKeys(value).filter((key) => key !== "length" && !(typeof key === "string" && /^(0|[1-9]\d*)$/.test(key) && Number(key) < value.length));
+      if (extra.length) throw new TypeError(`${path}: arrays with extra properties are unsupported`);
+      return `[${elements.join(",")}]`;
+    }
+    const prototype = Object.getPrototypeOf(value);
+    if (prototype !== Object.prototype && prototype !== null) throw new TypeError(`${path}: unsupported non-JSON object type`);
+    const ownKeys = Reflect.ownKeys(value);
+    if (ownKeys.some((key) => typeof key === "symbol")) throw new TypeError(`${path}: symbol property keys are unsupported`);
+    const members = ownKeys.sort(compareUtf16).map((key) => {
+      assertUnicode(key, `${path} property name`);
+      const descriptor = Object.getOwnPropertyDescriptor(value, key);
+      if (!descriptor?.enumerable || !("value" in descriptor)) throw new TypeError(`${path}.${key}: accessors and non-enumerable properties are unsupported`);
+      return `${JSON.stringify(key)}:${canonicalize(descriptor.value, `${path}.${key}`, ancestors)}`;
+    });
+    return `{${members.join(",")}}`;
+  } finally { ancestors.delete(value); }
+}
+
+export function jcsCanonicalize(value) {
+  return canonicalize(value, "$", new Set());
 }
 
 export function hashRedacted(value, { error = false } = {}) {
   const redacted = error ? redactSecretsInString(String(value)) : redactSecrets(value);
-  return `sha256:${crypto.createHash("sha256").update(stableJson(redacted), "utf8").digest("hex")}`;
+  return `sha256:${crypto.createHash("sha256").update(jcsCanonicalize(redacted), "utf8").digest("hex")}`;
 }
 
 export function getBoundaryAttestConfig(env = process.env) {
@@ -81,7 +130,7 @@ export function emitBoundaryAttestReceipt({ toolName, input, result, error, stat
   if (privateKey.asymmetricKeyType !== "ed25519") throw new Error("BOUNDARYATTEST_PRIVATE_KEY must contain an Ed25519 PKCS #8 private key");
   const publicKey = crypto.createPublicKey(privateKey);
   const claim = {
-    receipt_version: "0.1",
+    receipt_version: "0.2",
     receipt_role: "server_attested",
     event_id: operationId,
     timestamp,
@@ -91,17 +140,17 @@ export function emitBoundaryAttestReceipt({ toolName, input, result, error, stat
     tool_name: toolName,
     risk_level: PERMISSION_LEVELS[toolName] || "MEDIUM",
     input_hash: hashRedacted(input),
-    input_representation: "causly.redacted.stable_json.v1",
+    input_representation: "causly.redacted.jcs.v1",
   };
   if (status === "SUCCESS") {
     claim.output_hash = hashRedacted(result);
-    claim.output_representation = "causly.redacted.stable_json.v1";
+    claim.output_representation = "causly.redacted.jcs.v1";
     addWorkflowReferences(claim, toolName, input, result);
   } else {
     claim.error_hash = hashRedacted(error, { error: true });
-    claim.error_representation = "causly.redacted_string.stable_json.v1";
+    claim.error_representation = "causly.redacted_string.jcs.v1";
   }
-  const signature = crypto.sign(null, Buffer.from(stableJson(claim), "utf8"), privateKey).toString("base64");
+  const signature = crypto.sign(null, Buffer.from(jcsCanonicalize(claim), "utf8"), privateKey).toString("base64");
   const receipt = { claim, signature, public_key_id: publicKeyId(publicKey) };
   return { receipt, receiptPath: persistReceipt(config.receiptDir, operationId, receipt) };
 }
@@ -117,7 +166,7 @@ export function verifyBoundaryAttestReceipt(receiptText, expectedPublicKeyPem) {
   if (!receipt.claim || typeof receipt.claim !== "object" || Array.isArray(receipt.claim)) return fail("claim_not_object");
   if (typeof receipt.signature !== "string" || typeof receipt.public_key_id !== "string") return fail("invalid_receipt");
   for (const field of REQUIRED_CLAIM_FIELDS) if (!(field in receipt.claim)) return fail(`missing_claim_field:${field}`);
-  if (receipt.claim.receipt_version !== "0.1") return fail("unsupported_version");
+  if (receipt.claim.receipt_version !== "0.2") return fail("unsupported_version");
   if (receipt.claim.receipt_role !== "server_attested") return fail("unsupported_receipt_role");
   for (const field of HASH_FIELDS) {
     if (field in receipt.claim && receipt.claim[field] !== null && !HASH_PATTERN.test(receipt.claim[field])) return fail(`invalid_hash:${field}`);
@@ -129,7 +178,7 @@ export function verifyBoundaryAttestReceipt(receiptText, expectedPublicKeyPem) {
   } catch { return fail("public_key_id_mismatch"); }
   try {
     const signature = Buffer.from(receipt.signature, "base64");
-    if (signature.toString("base64") !== receipt.signature || !crypto.verify(null, Buffer.from(stableJson(receipt.claim), "utf8"), publicKey, signature)) return fail("invalid_signature");
+    if (signature.toString("base64") !== receipt.signature || !crypto.verify(null, Buffer.from(jcsCanonicalize(receipt.claim), "utf8"), publicKey, signature)) return fail("invalid_signature");
   } catch { return fail("invalid_signature"); }
   return { ok: true };
 }
