@@ -8,8 +8,8 @@ const productLinks = [
 ];
 
 const resourceLinks = [
-    { label: "Documentation", href: "https://knihal.github.io/causly-server/docs/architecture" },
-    { label: "GitHub", href: "https://github.com/knihal/causly-server" },
+    { label: "Documentation", href: "https://github.com/KNIHAL/causly-server/tree/master/website/docs" },
+    { label: "GitHub", href: "https://github.com/KNIHAL/causly-server" },
     { label: "Hosted", href: "https://tally.so/r/NpZkpW" },
 ];
 
@@ -56,11 +56,11 @@ export default function Footer() {
 
                 {/* Bottom */}
                 <div className="mt-14 flex flex-col gap-4 border-t border-white/[0.06] pt-6 sm:flex-row sm:items-center sm:justify-between">
-                    <p className="text-xs text-white/25">
+                    <p className="text-xs text-white/55">
                         © {new Date().getFullYear()} Causly. All rights reserved.
                     </p>
 
-                    <p className="text-xs text-white/20">
+                    <p className="text-xs text-white/50">
                         Built for agents that do more than talk.
                     </p>
                 </div>
