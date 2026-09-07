@@ -14,7 +14,7 @@ const ibmPlexMono = IBM_Plex_Mono({
   weight: ["400", "500", "600"],
 });
 
-const siteUrl = "https://environment.causly.in";
+const siteUrl = "https://agenv.causly.in";
 
 const description =
   "Causly Agent Environment gives AI agents a secure execution environment to build, test, deploy, and operate real software and infrastructure.";
