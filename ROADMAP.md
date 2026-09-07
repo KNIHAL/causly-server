@@ -39,12 +39,13 @@ Open-source local server is feature-complete for the current tool set.
 A managed, hosted version — run for you instead of on your own machine — is in active
 development, with an early-access waitlist open today. Focus shifts here next.
 
-### Planned: Local runtime installer
+### Planned: Local AI runtime environment
 
-A single-command local runtime provider (`npx -y causly-server`) that detects the environment,
-configures Claude Desktop, and verifies the connection — replacing today's `git clone` + `npm
-install` + `.env` setup + `npm run setup` flow. See "After that" below for current detail; this
-is confirmed future work, not just an idea.
+A dedicated, lightweight execution environment for the AI to run in locally — not a VM, not
+Docker. Purpose-built, scales up and down with load automatically, and isn't tied to a specific
+language runtime (the server itself is Node today, but this environment is independent of that
+choice). Design and build not yet started; this is a confirmed future direction, distinct from
+the `npx -y causly-server` setup installer under "After that" below.
 
 ## After that
 
