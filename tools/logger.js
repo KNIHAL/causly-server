@@ -26,11 +26,11 @@ if (!fs.existsSync(LOG_DIR)) {
  * tool, risk_level, status, input (redacted), details (redacted),
  * duration_ms.
  */
-export function logActivity(toolName, input, status, details = "", durationMs = null) {
+export function logActivity(toolName, input, status, details = "", durationMs = null, operationId = crypto.randomUUID()) {
   try {
     const entry = {
       timestamp: new Date().toISOString(),
-      operation_id: crypto.randomUUID(),
+      operation_id: operationId,
       tool: toolName,
       risk_level: PERMISSION_LEVELS[toolName] || "MEDIUM",
       status,
@@ -39,8 +39,10 @@ export function logActivity(toolName, input, status, details = "", durationMs = 
       duration_ms: durationMs,
     };
     fs.appendFileSync(LOG_FILE, JSON.stringify(entry) + "\n", "utf8");
+    return entry;
   } catch (err) {
     // Swallow logging errors — never let logging break the actual tool call.
     console.error("Logger error:", err.message);
+    return null;
   }
 }
