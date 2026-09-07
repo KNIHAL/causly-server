@@ -24,6 +24,6 @@ alphabetical dump. 181 tools total.
 | [Project intelligence](./workflow-tools#project-intelligence) | 7 | Stack detection, test/lint/build runners |
 | [Workflow tools](./workflow-tools) | 4 | `ship_change`, `fix_ci`, `verify_ci_fix`, `deploy_project` |
 
-Every tool call passes through the same [security layer](../architecture#the-security-layer) —
+Every tool call passes through the same [security layer](../security) —
 classified by risk, redacted before logging, and gated behind `confirm: true` for anything `HIGH`
 or `DESTRUCTIVE`.
