@@ -9,7 +9,7 @@ Thanks for considering a contribution — this project grew out of a personal wo
 3. Copy `.env.example` to `.env` and add tokens for whichever services you're working on (see README for the full list)
 4. `npm run setup` to point your local Claude Desktop config at this repo
 5. Make your changes
-6. Test manually against a real Claude Desktop instance (see below)
+6. Test your changes (see below)
 
 ## Adding a new tool module
 
@@ -24,7 +24,13 @@ Keep functions small and single-purpose — one API call in, one plain-object re
 
 ## Testing your changes
 
-There's no automated test suite yet (see the roadmap in the README), so please test manually:
+An automated test suite (`vitest`) covers every tool module under `tests/`:
+
+```bash
+npm test
+```
+
+Run it before opening a PR. On top of that, please also test manually against a real Claude Desktop instance:
 
 1. Point your local Claude Desktop config at your working copy
 2. Restart Claude Desktop
