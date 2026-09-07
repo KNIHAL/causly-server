@@ -5,6 +5,8 @@ GitHub, Vercel, Supabase, Slack, Gmail, Notion, Terraform, Docker,
 Postgres/MySQL, a local encrypted secrets manager, Sentry, plus project
 intelligence, workflow automation, and a full security layer (redaction,
 permission levels, approval gates, path protection, structured audit logs).
+An automated `vitest` test suite now covers every tool module (`npm test`),
+on top of manual verification against real disposable resources.
 See [BUILD_LOG.md](./BUILD_LOG.md) for how we got here.
 
 ## Next up
@@ -13,12 +15,11 @@ See [BUILD_LOG.md](./BUILD_LOG.md) for how we got here.
 
 An opt-in, local `server_attested` receipt adapter now covers only `ship_change`, `verify_ci_fix`, and `deploy_project`. Before treating it as production infrastructure, key custody, rotation/revocation, multi-process persistence, and operational deployment policy still need explicit designs. The receipt layer remains evidence only and does not participate in Causly authorization.
 
-### Deferred: Azure / GCP / AWS — direct cloud infrastructure
+### Planned: Azure / GCP / AWS — direct cloud infrastructure
 
-**Deliberately out of scope for now.** Testing any of these properly
-requires a live cloud subscription and burns real credit/cost the moment
-a key is generated — not worth it until there's an actual need driving it.
-Revisit if/when that need shows up, not on a fixed timeline.
+Direct cloud-provider tools are on the roadmap and will be built — they're sequenced after the
+hosted server (below) rather than immediately, since testing them properly requires a live cloud
+subscription and real cost the moment a key is generated.
 
 - Account/subscription/resource-group listing
 - Compute: list, get, deploy, restart
@@ -29,13 +30,22 @@ Revisit if/when that need shows up, not on a fixed timeline.
 Note: Terraform tools (already shipped) cover a good chunk of this
 indirectly — provisioning and destroying cloud resources via `plan`/
 `apply`/`destroy` works today, independent of any direct-SDK cloud
-integration. Direct cloud tools would add runtime introspection/debugging
+integration. Direct cloud tools will add runtime introspection/debugging
 that Terraform alone doesn't give you.
 
-### Hosted MCP server
+### Planned: Hosted MCP server (Causly Hosted)
 
 Open-source local server is feature-complete for the current tool set.
-Focus shifts to building the hosted version.
+A managed, hosted version — run for you instead of on your own machine — is in active
+development, with an early-access waitlist open today. Focus shifts here next.
+
+### Planned: Local AI runtime environment
+
+A dedicated, lightweight execution environment for the AI to run in locally — not a VM, not
+Docker. Purpose-built, scales up and down with load automatically, and isn't tied to a specific
+language runtime (the server itself is Node today, but this environment is independent of that
+choice). Design and build not yet started; this is a confirmed future direction, distinct from
+the `npx -y causly-server` setup installer under "After that" below.
 
 ## After that
 
@@ -49,12 +59,6 @@ Focus shifts to building the hosted version.
   `causly://deployment/{id}/status`, `causly://sentry/{project}/issues`) —
   same pattern as the existing project resources, extended to the services
   we already talk to.
-- **Automated test suite** — mocked API tests for every service module,
-  plus unit tests for the security layer (redaction, classification, path
-  denial) and the workflow tools. Currently verified by hand against real
-  disposable resources (a throwaway GitHub repo, Docker containers, DB
-  instances, a Sentry project — see BUILD_LOG.md) — good enough to ship,
-  not good enough to stay unmonitored as the surface grows.
 - **`npx -y causly-server`** installer — currently `git clone` + `npm
   install` + `.env` setup + `npm run setup`. Roadmap goal is a single
   command that detects the environment, configures Claude Desktop, and
