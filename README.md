@@ -4,11 +4,13 @@
 [![CI](https://github.com/KNIHAL/causly-server/actions/workflows/ci.yml/badge.svg)](https://github.com/KNIHAL/causly-server/actions/workflows/ci.yml)
 [![PRs welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](./CONTRIBUTING.md)
 
-**The MCP (Model Context Protocol) server that turns Claude into a full end-to-end product builder** — build, host, deploy, containerize, and manage a real project from a single chat, without switching between a dozen dashboards.
+**An open-source MCP (Model Context Protocol) server for MCP-compatible AI agents** — giving your agent direct access to your code, tools, infrastructure, and services so it can build, deploy, and manage real projects from a single conversation.
 
-Runs entirely on your own machine, connects directly to Claude Desktop (or any MCP client), and talks straight to your filesystem, databases, containers, infrastructure, and every service in your stack. No hosted middleman — your code, your credentials, and your data never pass through anyone else's server.
+Causly Server runs locally on your machine and connects directly to your development environment, databases, containers, infrastructure, and connected services. There is no hosted Causly middleman by default — your code, credentials, and data stay on your machine and with the services you explicitly connect.
 
-<!-- Demo GIF / screenshot goes here -->
+## See It In Action
+
+![Causly Server](./assets/screenshot.png)
 
 ## Why Causly Server
 
