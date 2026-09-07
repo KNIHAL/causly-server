@@ -3,6 +3,8 @@
 /** @type {import('@docusaurus/plugin-content-docs').SidebarsConfig} */
 const sidebars = {
   docsSidebar: [
+    'intro',
+    'getting-started',
     'architecture',
     {
       type: 'category',
@@ -21,9 +23,15 @@ const sidebars = {
         'tools/database',
         'tools/secrets',
         'tools/sentry',
+        'tools/boundaryattest',
         'tools/workflow-tools',
       ],
     },
+    'security',
+    'deployment',
+    'development',
+    'troubleshooting',
+    'limitations',
   ],
 };
 
