@@ -1,5 +1,5 @@
 ---
-sidebar_position: 1
+sidebar_position: 3
 ---
 
 # Architecture
@@ -81,57 +81,19 @@ for a common task, rather than relying on Claude to reconstruct the right steps 
 ## The security layer
 
 Every tool call is genuinely capable of changing your filesystem, your infrastructure, or your
-production systems — so nothing runs unexamined. Four things happen before (and around) every
-call, implemented in `tools/security.js`:
+production systems — so nothing runs unexamined. Before (and around) every call,
+`tools/security.js` classifies its risk level, gates `HIGH`/`DESTRUCTIVE` calls behind explicit
+confirmation, redacts secrets before anything is logged, scans commands and paths for risk, and
+appends a structured entry to `logs/activity.log`.
 
-### 1. Permission classification
-
-Every registered tool carries a fixed risk level:
-
-| Level | Meaning | Example |
-|---|---|---|
-| `READ` | Reads data, changes nothing | `git_status`, `docker_ps`, `sentry_list_issues` |
-| `LOW` | Small, easily reversible changes | `git_add`, `notion_get_comments` |
-| `MEDIUM` | Meaningful but recoverable changes | `git_commit`, `ship_change` |
-| `HIGH` | Real-world side effects, needs explicit confirmation | `docker_build`, `deploy_project`, `slack_send_message` |
-| `DESTRUCTIVE` | Hard or impossible to undo, needs explicit confirmation | `terraform_destroy`, `docker_rm`, `secrets_delete` |
-
-### 2. The approval gate
-
-Any `HIGH` or `DESTRUCTIVE` tool is rejected unless the caller passes `confirm: true` in its
-input. This means Claude has to explicitly decide "yes, actually do this" — it can't be
-accidentally triggered by a model just following a chain of reasoning.
-
-### 3. Secret redaction
-
-Before anything is written to `logs/activity.log`, every input is scanned and known-sensitive
-fields (tokens, passwords, keys, connection strings, anything matching common credential
-patterns) are replaced with a redacted placeholder — regardless of which tool or field they
-appear in.
-
-### 4. Command and path risk scanning
-
-- `run_command` inputs are scanned for genuinely destructive patterns (drive wipes, `format`,
-  `shutdown`) which are hard-blocked outright, and for elevated-risk-but-sometimes-legitimate
-  patterns (force-push, `DROP TABLE`, `curl | bash`, `sudo`) which are flagged in the audit log
-  rather than silently allowed.
-- File and directory tools reject any target path that resolves inside a protected system
-  directory (e.g. `C:\Windows`, `/etc`), regardless of how the path was constructed.
-
-### Structured audit log
-
-Every tool call — regardless of outcome — appends one JSON object to `logs/activity.log`:
-
-```json
-{"timestamp":"2026-09-02T11:29:08Z","operation_id":"a1b2c3","tool":"docker_build","risk":"HIGH","status":"ok","duration_ms":4210,"input":{"context_dir":"...","tag":"...","confirm":true}}
-```
-
-This is what makes the server auditable after the fact — not just "trust the model," but a real
-trail of what ran, when, at what risk level, and how long it took.
+The full permission table, the approval-gate behavior, redaction, command/path risk scanning, the
+audit-log format, and the optional BoundaryAttest evidence layer are documented on the dedicated
+[Security](./security) page.
 
 ## Where to go next
 
 - [Tool categories overview](./tools/overview) — every service this server talks to
+- [Security](./security) — the detailed security and audit model
 - [CONTRIBUTING.md](https://github.com/KNIHAL/causly-server/blob/main/CONTRIBUTING.md) — how to
   add a new tool module
 - [BUILD_LOG.md](https://github.com/KNIHAL/causly-server/blob/main/BUILD_LOG.md) — the full

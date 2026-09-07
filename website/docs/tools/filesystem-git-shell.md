@@ -64,7 +64,7 @@ re-paying tokens for) an entire large file.
 ## Shell
 
 **`run_command`** (risk varies by content) — executes an arbitrary shell command, scanned by the
-[security layer](../architecture#4-command-and-path-risk-scanning) for both hard-blocked
+[security layer](../security#4-command-and-path-risk-scanning) for both hard-blocked
 destructive patterns (drive wipes, `format`, `shutdown`) and elevated-risk-but-flaggable ones
 (force-push, `DROP TABLE`, `curl | bash`, `sudo`) before running.
 
