@@ -1,16 +1,14 @@
 {
   "name": "causly-server",
   "version": "1.5.0",
-  "description": "Causly MCP server — an AI DevOps operator for solo founders and micro-agencies. Filesystem, git, shell, GitHub, Vercel, Supabase, project intelligence, workflow automation, and a security/approval layer, all in one.",
+  "description": "Causly MCP server — an open-source MCP server that gives AI agents the tools to build, ship, deploy, and operate real software end-to-end.",
   "license": "MIT",
   "main": "index.js",
   "type": "module",
   "scripts": {
     "start": "node index.js",
     "setup": "node setup.js",
-    "test": "vitest run",
-    "test:boundaryattest": "vitest run tests/boundaryAttest.test.js",
-    "verify:boundaryattest": "node tools/verifyBoundaryAttest.js"
+    "test": "vitest run"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.29.0",
