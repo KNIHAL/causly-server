@@ -4,135 +4,214 @@
 [![CI](https://github.com/KNIHAL/causly-server/actions/workflows/ci.yml/badge.svg)](https://github.com/KNIHAL/causly-server/actions/workflows/ci.yml)
 [![PRs welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](./CONTRIBUTING.md)
 
-**An open-source MCP (Model Context Protocol) server for MCP-compatible AI agents** — giving your agent direct access to your code, tools, infrastructure, and services so it can build, deploy, and manage real projects from a single conversation.
+**An open-source MCP server that gives MCP-compatible AI agents direct access to your development environment and the tools around it.**
 
-Causly Server runs locally on your machine and connects directly to your development environment, databases, containers, infrastructure, and connected services. There is no hosted Causly middleman by default — your code, credentials, and data stay on your machine and with the services you explicitly connect.
+Causly Server connects an AI agent to your filesystem, Git, GitHub, databases, Docker, Terraform, Vercel, Supabase, monitoring, communication tools, and more — with built-in permissions, approval gates, secret redaction, and activity logging.
+
+Run it locally, connect it to your MCP-compatible client, and let your agent work across your project and infrastructure from a single conversation.
 
 ## See It In Action
 
-![Causly Server](./assets/screenshot.png)
+
+[Working Demo](https://github.com/user-attachments/assets/7f4f33e8-2cd4-4c99-ada0-35653bbaa4c4)
+
+[Screenshort]<img width="1920" height="1020" alt="screenshort" src="https://github.com/user-attachments/assets/e9fb7c22-0a0b-4109-a44d-d2106912389f" />
+
 
 ## Why Causly Server
 
-Building and shipping a real product means constantly switching context — write code, open a terminal, check Docker, log into Notion, check Sentry, SSH into a database, run Terraform, check Slack. Causly Server puts all of that inside one conversation with Claude: you describe what you want, Claude does the actual work — end to end — and reports back with a verified result, not just a guess.
+Building and shipping a real product usually means moving between code editors, terminals, GitHub, databases, containers, cloud dashboards, monitoring tools, and communication platforms.
 
-It's built for solo founders and small teams who don't have a dedicated DevOps person or a platform team — the AI *is* your platform team, running locally, under guardrails you control.
+Causly Server brings these capabilities into the MCP layer so an AI agent can work across the same environment instead of being limited to generating text or isolated actions.
 
-## Causly Server vs. Zapier / Composio / generic integration platforms
+The goal is simple: give an agent the tools it needs to **inspect, build, change, verify, and deploy real projects** while keeping execution local and under controls you can inspect.
 
-| | Causly Server | Zapier / Composio-style platforms |
-|---|---|---|
-| **Setup** | Fill in a token, the workflow is already built | You wire up the automation yourself, every time |
-| **Where your data lives** | Local-first — never leaves your machine | Cloud-hosted — your data and credentials pass through their servers |
-| **Depth** | Expert-level, product-lifecycle-aware tools (build → deploy → manage) | Generic, one-action-at-a-time integrations |
-| **Limits** | None — it's free and open-source (MIT) | Usage tiers, task limits, seat-based pricing |
-| **Safety** | Built-in permission levels + approval gates on risky actions | Varies by platform, rarely this granular |
+## What It Can Do
 
-## What it can do
+Causly Server currently provides tools across the main stages of a software project's lifecycle.
 
-Think of an actual product's lifecycle — this covers it, end to end, from inside one Claude conversation:
+| Area                     | Capabilities                                                               |
+| ------------------------ | -------------------------------------------------------------------------- |
+| **Filesystem**           | Read, write, edit, move, copy, search files and directories                |
+| **Git**                  | Branch, commit, merge, stash, tag, diff, and other Git operations          |
+| **GitHub**               | Repositories, issues, pull requests, Actions and CI workflows              |
+| **Databases**            | PostgreSQL and MySQL queries and schema inspection                         |
+| **Supabase**             | Supabase Management API operations                                         |
+| **Docker**               | Build, run, manage, inspect, and compose containers                        |
+| **Terraform**            | Plan, apply, destroy, state management, and CI/CD integration              |
+| **Vercel**               | Deployments, verification, rollbacks, logs, and health checks              |
+| **Sentry**               | Search, inspect, and triage issues                                         |
+| **Notion**               | Pages, databases, blocks, and comments                                     |
+| **Slack**                | Channels, messages, and threads                                            |
+| **Gmail**                | Search, read, send, reply, and forward                                     |
+| **Secrets**              | Local encrypted secrets storage                                            |
+| **Project intelligence** | Detects the project stack and runs relevant test, lint, and build commands |
 
-| Stage | What's covered |
-|---|---|
-| **Code** | Read, write, edit, move, and search files and directories |
-| **Version control** | Full git lifecycle — branch, commit, merge, stash, tag, diff — plus the complete GitHub PR and Actions/CI lifecycle |
-| **Databases** | Generic Postgres and MySQL (query, schema inspection) plus Supabase |
-| **Containers** | Docker — build, run, manage, inspect, compose up/down — works with Docker Desktop or WSL-only setups |
-| **Infrastructure** | Terraform — full lifecycle (plan/apply/destroy), state management, and a CI/CD hook that posts plan summaries to your PRs |
-| **Secrets** | A built-in local encrypted secrets manager — no external vault service required |
-| **Monitoring** | Sentry — list, search, and triage errors from inside the same conversation |
-| **Docs & knowledge** | Notion — pages, databases, blocks, comments |
-| **Communication** | Slack and Gmail — read, search, send, reply |
-| **Deployment** | Vercel — deploy, verify, roll back, check logs and health |
-| **Project intelligence** | Auto-detects your stack and runs the right test/lint/build commands — no guessing |
+The current server contains **181 tools across 16 categories**.
 
-181 tools in total, across every one of those stages — but the point isn't the count, it's that one Claude conversation can now carry a project from an empty repo to a running, monitored, deployed product.
+The goal isn't the number of tools. It's giving an AI agent a connected set of capabilities that can work together across an actual project lifecycle.
 
-## The AI-employee layer: workflow tools
+## Workflow Tools
 
-Individual tools are the primitives. These chain them into real, verified outcomes:
+Individual tools are the building blocks. Causly Server also includes higher-level workflow tools that combine them into verified outcomes.
 
-- **`ship_change`** — inspects your changes, branches, runs checks, commits, pushes, opens the PR
-- **`fix_ci` + `verify_ci_fix`** — finds a failing GitHub Actions run, pulls the real logs, and once you've fixed the code, commits/pushes/polls until CI is actually green
-- **`deploy_project`** — checks project health, runs tests + build, deploys, polls, and HTTP-verifies the live URL is actually up — not just "deployment triggered"
+### `ship_change`
+
+Inspects the current changes, creates a branch, runs project checks, commits the changes, pushes the branch, and opens a pull request.
+
+### `fix_ci`
+
+Finds a failing GitHub Actions run and retrieves the real failure information so the agent can work from the actual CI output.
+
+### `verify_ci_fix`
+
+After the code is fixed, commits and pushes the changes, polls the workflow, and verifies that CI is actually green.
+
+### `deploy_project`
+
+Checks project health, runs tests and build checks, deploys the project, polls the deployment, and HTTP-verifies that the deployed URL is actually responding.
 
 ```mermaid
 flowchart TD
-    A["💬 You describe a task in Claude"] --> B["📝 Claude edits files\n(read_file, edit_file, write_file)"]
-    B --> C["🧪 ship_change runs checks\n(tests, lint, typecheck, build)"]
-    C --> D["🔀 Commits, pushes, opens PR\n(automatically)"]
+    A["You describe a task to your AI agent"] --> B["Agent edits files"]
+    B --> C["ship_change runs checks"]
+    C --> D["Commit, push, open PR"]
     D --> E{"CI passes?"}
-    E -- "No" --> F["🩹 fix_ci pulls the failure logs\nClaude fixes the code\nverify_ci_fix pushes + confirms green"]
-    F --> E
-    E -- "Yes" --> G["🚀 deploy_project deploys\nand HTTP-verifies it's live"]
-    G --> H["✅ Shipped — with a real audit trail"]
+    E -- "No" --> F["fix_ci gets failure logs"]
+    F --> G["Agent fixes the code"]
+    G --> H["verify_ci_fix pushes and confirms CI"]
+    H --> E
+    E -- "Yes" --> I["deploy_project deploys"]
+    I --> J["HTTP verification"]
+    J --> K["Shipped"]
 ```
 
-A more detailed, per-category architecture breakdown lives in [docs/](https://knihal.github.io/causly-server/)
+A more detailed, per-category architecture breakdown lives in [docs/](https://github.com/KNIHAL/causly-server/tree/master/website/docs)
 
-## Security model
+## Security
 
-This server can genuinely change your machine, your infrastructure, and your production systems — so every tool call goes through a classification and audit layer before it runs:
+Causly Server can perform actions that affect your machine, repositories, infrastructure, and production systems. Security controls are therefore part of the server itself.
 
-- **Permission levels** — every tool is classified `READ` / `LOW` / `MEDIUM` / `HIGH` / `DESTRUCTIVE`. `HIGH` and `DESTRUCTIVE` actions (deploys, merges, `run_command`, deletes, raw SQL, `terraform apply/destroy`, `docker rm`) are blocked unless the caller explicitly passes `confirm: true` — this is the approval gate.
-- **Secret redaction** — tokens, passwords, API keys, and similar fields are stripped before anything is written to a log, regardless of where they appear in the input.
-- **Command risk classification** — beyond hard-blocked destructive patterns (drive wipes, `format`, `shutdown`), commands are scanned for elevated-risk signals (force-push, `DROP TABLE`, curl-pipe-bash, `sudo`) and surfaced for auditability, not just silently allowed.
-- **Path security** — writes and deletes are blocked outright if the target path falls inside a protected system directory.
-- **Local secrets, encrypted at rest** — the built-in secrets manager uses AES-256-GCM with a key you control; nothing touches an external vault service by default.
-- **Structured audit log** — every tool call is appended to `logs/activity.log` as one JSON object per line: timestamp, operation ID, risk level, status, redacted input, and duration.
-- **Optional BoundaryAttest receipt POC** — when explicitly enabled, Causly emits separate `server_attested` Interop Profile v0.2 receipts for `ship_change`, `verify_ci_fix`, and `deploy_project`. v0.2 uses RFC 8785/JCS for language-neutral canonicalization; BoundaryAttest v0.1 remains a legacy profile. This evidence layer does not replace or change approval/security behavior; see [docs/boundaryattest.md](./docs/boundaryattest.md).
+### Permission levels
 
-Fork it, self-host it, adapt it — the classification and approval layer travels with the code no matter where you run it.
+Every tool is classified as:
 
-## Requirements
+`READ` / `LOW` / `MEDIUM` / `HIGH` / `DESTRUCTIVE`
 
-- Node.js 18+
-- Claude Desktop (or any MCP-compatible client)
-- Optional, only if you're using the relevant tools: Docker, Terraform CLI, a Postgres/MySQL instance
+`HIGH` and `DESTRUCTIVE` operations require explicit `confirm: true` before execution. This includes actions such as deploys, merges, command execution, deletes, raw SQL, Terraform apply/destroy, and Docker removal.
 
-## Setup
+### Secret redaction
 
-1. Clone this repo anywhere on your machine, e.g. `D:\causly-server`
-2. Install dependencies:
-   ```bash
-   npm install
-   ```
-3. Copy `.env.example` to `.env` and fill in tokens for whichever services you plan to use — skip anything you don't need, add more anytime:
-   ```bash
-   cp .env.example .env
-   ```
-4. Point Claude Desktop at this server — either run the helper, which finds your Claude Desktop config automatically and adds the entry:
-   ```bash
-   npm run setup
-   ```
-   or do it by hand, adding this to your Claude Desktop config (`%APPDATA%\Claude\claude_desktop_config.json` on Windows):
-   ```json
-   {
-     "mcpServers": {
-       "causly-server": {
-         "command": "node",
-         "args": ["D:\\causly-server\\index.js"]
-       }
-     }
-   }
-   ```
-5. Restart Claude Desktop. Claude now has direct access to every tool above.
+Tokens, passwords, API keys, and similar sensitive fields are redacted before being written to logs.
 
-## Known limitations
+### Command risk classification
 
-- **`vercel_create_deployment` / `deploy_project`** require the Vercel project to already be git-linked; they don't create that link for you.
-- **`supabase_run_sql`** uses Supabase's Management API — some personal access tokens restrict this by default. If you hit a `403`, check your token's SQL execution permission.
-- **`slack_search_messages`** requires a Slack **user token** (`search:read` scope) — bot tokens (`xoxb-...`) cannot search. All other Slack tools work fine with a bot token.
-- **Gmail tools** use OAuth2 (client ID/secret + refresh token), not a simple API key — see `.env.example` for the setup flow via Google Cloud Console + OAuth Playground.
-- **`docker_push`** needs real registry authentication configured on the host.
-- **Sentry `resolve_issue` / `ignore_issue` / `add_comment`** need an auth token with `event:write` scope, in addition to the read scopes used by the rest of the Sentry tools.
+Commands are checked for dangerous patterns such as drive wipes, formatting, and shutdown operations. Elevated-risk signals such as force-pushes, `DROP TABLE`, `curl | bash`, and `sudo` are also classified and surfaced for auditability.
 
-## Project structure
+### Path protection
 
+Writes and deletes are blocked when the target path falls inside a protected system directory.
+
+### Local encrypted secrets
+
+The built-in secrets manager stores secrets locally using **AES-256-GCM** with a key you control. It does not require an external vault service.
+
+### Activity log
+
+Tool calls are recorded in `logs/activity.log` as structured JSONL entries containing the timestamp, operation ID, risk level, status, redacted input, and duration.
+
+### Optional BoundaryAttest receipts
+
+When explicitly enabled, Causly emits separate `server_attested` Interop Profile v0.2 receipts for `ship_change`, `verify_ci_fix`, and `deploy_project`.
+
+Interop Profile v0.2 uses RFC 8785/JCS for language-neutral canonicalization. BoundaryAttest v0.1 remains a legacy profile.
+
+This evidence layer does **not** replace or change Causly's approval or security behavior.
+
+See [docs/boundaryattest.md](https://github.com/KNIHAL/causly-server/tree/master/website/docs/tools/boundaryattest.md)
+
+## Getting Started
+
+The current setup flow is:
+
+**Fork → Clone → Install → Configure → Run → Connect your MCP client**
+
+### 1. Fork
+
+Fork this repository to your own GitHub account.
+
+### 2. Clone
+
+Clone your fork locally:
+
+```bash
+git clone https://github.com/KNIHAL/causly-server.git
+cd causly-server
 ```
+
+### 3. Install dependencies
+
+```bash
+npm install
+```
+
+### 4. Configure your environment
+
+Copy the example environment file:
+
+```bash
+cp .env.example .env
+```
+
+Open `.env` and add the API keys and credentials for the services you want to use.
+
+You only need to configure the integrations you plan to use.
+
+### 5. Connect Causly Server to your MCP client
+
+Add Causly Server to your MCP client's configuration using the local `index.js` entry point.
+
+For example, in Claude Desktop:
+
+**Windows:** `%APPDATA%\Claude\claude_desktop_config.json`
+
+```json
+{
+  "mcpServers": {
+    "causly-server": {
+      "command": "node",
+      "args": ["D:\\causly-server\\index.js"]
+    }
+  }
+}
+```
+
+Use the equivalent MCP server configuration for your MCP-compatible client.
+
+### 6. Restart your MCP client
+
+After saving the configuration, restart your MCP client.
+
+Causly Server will then be available to the client with the tools enabled by your configuration.
+
+> `setup.js` is currently kept as a helper/demo for configuring Claude Desktop. It is not the project's package installation mechanism.
+
+
+## Known Limitations
+
+* `vercel_create_deployment` and `deploy_project` require the Vercel project to already be Git-linked.
+* `supabase_run_sql` uses the Supabase Management API. Some personal access tokens may restrict SQL execution and return `403`.
+* `slack_search_messages` requires a Slack user token with the `search:read` scope. Other Slack tools can work with a bot token.
+* Gmail tools use OAuth2 with a client ID, client secret, and refresh token rather than a simple API key.
+* `docker_push` requires registry authentication to already be configured on the host.
+* Sentry `resolve_issue`, `ignore_issue`, and `add_comment` require an authentication token with the `event:write` scope.
+
+## Project Structure
+
+```text
 causly-server/
 ├── index.js                # Server entry point, tool/resource/prompt registration
-├── setup.js                 # Configures your Claude Desktop config automatically
+├── setup.js                 # Helper/demo for configuring your Claude Desktop config automatically
 ├── package.json
 ├── .env                     # Your local tokens (never committed)
 ├── .env.example
@@ -172,18 +251,6 @@ causly-server/
     └── activity.log          # Auto-generated
 ```
 
-## Want something custom built on this?
-
-If you need a custom MCP server, a specific integration, or a related service built for your own product or team — reach out: **nihal@causly.in**
-
-## Causly Hosted
-
-Don't want to run Causly Server on your own machine?
-
-Causly Hosted is a managed version of Causly Server currently in development. Join the early-access waitlist to be notified when it's ready.
-
-[→ Join the Causly Hosted waitlist](https://tally.so/r/NpZkpW)
-
 ## Roadmap
 
 See [ROADMAP.md](./ROADMAP.md) for what's planned next.
@@ -203,3 +270,17 @@ See [BUILD_LOG.md](./BUILD_LOG.md) for a full account of what was built, in what
 ## License
 
 [MIT](./LICENSE) — free to use, modify, and distribute, including commercially.
+
+## Want something custom built on this?
+
+If you need a custom MCP server, a specific integration, or a related service built for your own product or team — reach out: **nihal@causly.in**
+
+## Causly Hosted
+
+Don't want to run Causly Server on your own machine?
+
+Causly Hosted is a managed version of Causly Server currently in development. Join the early-access waitlist to be notified when it's ready.
+
+[→ Join the Causly Hosted waitlist](https://tally.so/r/NpZkpW)
+
+
