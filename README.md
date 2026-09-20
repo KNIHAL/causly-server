@@ -1,14 +1,14 @@
-# Causly Server
+# Causly Server — What If Your AI Agent Had Hands?
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](./LICENSE)
 [![CI](https://github.com/KNIHAL/causly-server/actions/workflows/ci.yml/badge.svg)](https://github.com/KNIHAL/causly-server/actions/workflows/ci.yml)
 [![PRs welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](./CONTRIBUTING.md)
 
-**An open-source MCP server that gives MCP-compatible AI agents direct access to your development environment and the tools around it.**
+**An open-source MCP server that gives your AI agent everything it needs to run the SDLC end-to-end — without leaving the conversation.**
 
-Causly Server connects an AI agent to your filesystem, Git, GitHub, databases, Docker, Terraform, Vercel, Supabase, monitoring, communication tools, and more — with built-in permissions, approval gates, secret redaction, and activity logging.
+Causly Server connects your AI agent directly to the systems your software development lifecycle actually runs on — version control, CI/CD, infrastructure, and monitoring — so it can inspect, build, verify, and ship real projects without you switching between a dozen tools yourself.
 
-Run it locally, connect it to your MCP-compatible client, and let your agent work across your project and infrastructure from a single conversation.
+Run it locally, connect it to your MCP-compatible client, and let your agent own the SDLC from a single conversation.
 
 ## See It In Action
 
@@ -86,7 +86,7 @@ flowchart TD
     J --> K["Shipped"]
 ```
 
-A more detailed, per-category architecture breakdown lives in [docs/](https://github.com/KNIHAL/causly-server/tree/master/website/docs)
+A more detailed, per-category architecture breakdown lives in [docs/](https://agenv.causly.in/docs/server/intro)
 
 ## Security
 
@@ -128,7 +128,7 @@ Interop Profile v0.2 uses RFC 8785/JCS for language-neutral canonicalization. Bo
 
 This evidence layer does **not** replace or change Causly's approval or security behavior.
 
-See [docs/boundaryattest.md](https://github.com/KNIHAL/causly-server/tree/master/website/docs/tools/boundaryattest.md)
+See [docs/boundaryattest.md](https://agenv.causly.in/docs/server/tools/boundaryattest)
 
 ## Getting Started
 
