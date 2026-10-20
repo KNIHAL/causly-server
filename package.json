@@ -8,6 +8,7 @@
   "scripts": {
     "start": "node index.js",
     "setup": "node setup.js",
+    "build:manifest": "node scripts/build-manifest.mjs",
     "test": "vitest run",
     "test:boundaryattest": "vitest run tests/boundaryAttest.test.js",
     "verify:boundaryattest": "node tools/verifyBoundaryAttest.js"

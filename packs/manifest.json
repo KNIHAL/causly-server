@@ -1,0 +1,830 @@
+{
+  "packs": {
+    "files": {
+      "description": "Read, write, edit, copy, move and inspect files",
+      "core": true,
+      "tools": [
+        {
+          "name": "read_file",
+          "description": "Read the full text content of a single file."
+        },
+        {
+          "name": "read_multiple_files",
+          "description": "Read multiple files in a single call. Failures on individual files do not stop the batch."
+        },
+        {
+          "name": "create_file",
+          "description": "Create a brand-new file. Fails if the file already exists (use write_file to overwrite)."
+        },
+        {
+          "name": "write_file",
+          "description": "Create or completely overwrite a file with new content. Creates parent directories if needed."
+        },
+        {
+          "name": "edit_file",
+          "description": "Edit a file via exact string find-and-replace, without rewriting the whole file. old_str must match exactly and be unique unless replace_all is set."
+        },
+        {
+          "name": "delete_file",
+          "description": "Delete a single file. DESTRUCTIVE — requires confirm: true."
+        },
+        {
+          "name": "move_file",
+          "description": "Move or rename a file or directory."
+        },
+        {
+          "name": "copy_file",
+          "description": "Copy a single file to a new location."
+        },
+        {
+          "name": "get_file_info",
+          "description": "Get metadata about a file or directory: size, type, created/modified timestamps."
+        }
+      ]
+    },
+    "directory": {
+      "description": "List, create and delete directories; search file names",
+      "core": true,
+      "tools": [
+        {
+          "name": "list_directory",
+          "description": "List the immediate files and subfolders inside a directory."
+        },
+        {
+          "name": "directory_tree",
+          "description": "Recursively build a tree view of a directory's contents (skips node_modules and .git)."
+        },
+        {
+          "name": "create_directory",
+          "description": "Create a new directory, including any missing parent directories."
+        },
+        {
+          "name": "delete_directory",
+          "description": "Delete a directory. Recursive by default so it removes nested contents too. DESTRUCTIVE — requires confirm: true."
+        },
+        {
+          "name": "search_files",
+          "description": "Recursively search for files/folders whose name contains a given pattern (case-insensitive)."
+        }
+      ]
+    },
+    "command": {
+      "description": "Run shell commands with safety checks",
+      "core": true,
+      "tools": [
+        {
+          "name": "run_command",
+          "description": "Run a shell command in a given working directory (npm install, npm run build, pip install, tests, etc.). A short list of catastrophic patterns (drive wipes, format, shutdown) is blocked; everything else executes with full permissions. HIGH risk — requires confirm: true."
+        }
+      ]
+    },
+    "project": {
+      "description": "Detect project type and health; run build, tests, lint and typecheck",
+      "core": true,
+      "tools": [
+        {
+          "name": "project_detect",
+          "description": "Detect a project's language, framework, and package manager by inspecting its manifest files."
+        },
+        {
+          "name": "project_info",
+          "description": "Get structured project info: language, framework, package manager, resolved test/lint/typecheck/build commands, and current git branch/remotes."
+        },
+        {
+          "name": "project_health",
+          "description": "Get a health snapshot of a project: git cleanliness/ahead-behind, whether dependencies are installed, and which env files are present."
+        },
+        {
+          "name": "run_tests",
+          "description": "Detect and run the project's test command, returning stdout/stderr/exit_code."
+        },
+        {
+          "name": "run_lint",
+          "description": "Detect and run the project's lint command, returning stdout/stderr/exit_code."
+        },
+        {
+          "name": "run_typecheck",
+          "description": "Detect and run the project's typecheck command, returning stdout/stderr/exit_code."
+        },
+        {
+          "name": "run_build",
+          "description": "Detect and run the project's build command, returning stdout/stderr/exit_code."
+        }
+      ]
+    },
+    "git": {
+      "description": "Local git: status, diff, commit, branch, merge, stash, tags, remotes",
+      "core": false,
+      "tools": [
+        {
+          "name": "git_init",
+          "description": "Initialize a new git repository in the given directory."
+        },
+        {
+          "name": "git_status",
+          "description": "Show the working tree status of a git repository."
+        },
+        {
+          "name": "git_add",
+          "description": "Stage files for commit. Defaults to staging everything ('.')."
+        },
+        {
+          "name": "git_commit",
+          "description": "Commit staged changes with a message."
+        },
+        {
+          "name": "git_push",
+          "description": "Push commits to a remote."
+        },
+        {
+          "name": "git_pull",
+          "description": "Pull changes from a remote."
+        },
+        {
+          "name": "git_log",
+          "description": "Show recent commit history."
+        },
+        {
+          "name": "git_diff",
+          "description": "Show uncommitted changes, optionally scoped to one file."
+        },
+        {
+          "name": "git_branch",
+          "description": "List local branches and show the current branch."
+        },
+        {
+          "name": "git_create_branch",
+          "description": "Create a new local branch, optionally checking it out immediately (default: yes)."
+        },
+        {
+          "name": "git_checkout",
+          "description": "Checkout an existing local branch."
+        },
+        {
+          "name": "git_merge",
+          "description": "Merge the given branch into the current branch."
+        },
+        {
+          "name": "git_reset",
+          "description": "Reset the current branch to a ref. mode: 'soft' | 'mixed' | 'hard' (defaults to mixed). HIGH risk (can lose uncommitted work with --hard) — requires confirm: true."
+        },
+        {
+          "name": "git_stash",
+          "description": "Stash working changes. action: 'save' | 'pop' | 'apply' | 'list' | 'drop' (defaults to save)."
+        },
+        {
+          "name": "git_show",
+          "description": "Show details of a commit or object. Defaults to HEAD."
+        },
+        {
+          "name": "git_remote",
+          "description": "Manage git remotes. action: 'list' | 'add' | 'remove' (defaults to list)."
+        },
+        {
+          "name": "git_tag",
+          "description": "Manage git tags. action: 'list' | 'create' | 'delete' (defaults to list)."
+        },
+        {
+          "name": "git_changed_files",
+          "description": "List changed files in the working tree with their change type (modified/untracked/created/deleted/renamed)."
+        },
+        {
+          "name": "git_diff_stat",
+          "description": "Show a summary of changes (files changed, insertions, deletions) rather than the full diff."
+        },
+        {
+          "name": "git_check_clean",
+          "description": "Check whether the working tree is clean (no uncommitted changes)."
+        }
+      ]
+    },
+    "github": {
+      "description": "GitHub repos, issues, pull requests, reviews and Actions workflows",
+      "core": false,
+      "tools": [
+        {
+          "name": "github_get_authenticated_user",
+          "description": "Get the authenticated GitHub user's profile. Useful as a connectivity/auth check."
+        },
+        {
+          "name": "github_create_repo",
+          "description": "Create a new GitHub repository for the authenticated user."
+        },
+        {
+          "name": "github_delete_repo",
+          "description": "Delete a GitHub repository. Requires Administration: write on the token. DESTRUCTIVE — requires confirm: true."
+        },
+        {
+          "name": "github_list_repos",
+          "description": "List repositories for the authenticated user."
+        },
+        {
+          "name": "github_create_issue",
+          "description": "Create an issue on a GitHub repository."
+        },
+        {
+          "name": "github_list_issues",
+          "description": "List issues on a GitHub repository."
+        },
+        {
+          "name": "github_create_pull_request",
+          "description": "Create a pull request on a GitHub repository."
+        },
+        {
+          "name": "github_list_pull_requests",
+          "description": "List pull requests on a GitHub repository."
+        },
+        {
+          "name": "github_add_comment",
+          "description": "Add a comment to a GitHub issue or pull request."
+        },
+        {
+          "name": "github_get_repo",
+          "description": "Get a repository's details (default branch, visibility, open issues, language, etc)."
+        },
+        {
+          "name": "github_get_issue",
+          "description": "Get a single issue's details."
+        },
+        {
+          "name": "github_update_issue",
+          "description": "Update an issue's title, body, state, or labels."
+        },
+        {
+          "name": "github_get_pull_request",
+          "description": "Get a single pull request's details, including mergeable status."
+        },
+        {
+          "name": "github_update_pull_request",
+          "description": "Update a pull request's title, body, state, or base branch."
+        },
+        {
+          "name": "github_merge_pull_request",
+          "description": "Merge a pull request. HIGH risk — requires confirm: true."
+        },
+        {
+          "name": "github_get_pull_request_files",
+          "description": "List the files changed in a pull request, with additions/deletions per file."
+        },
+        {
+          "name": "github_get_pull_request_diff",
+          "description": "Get the full raw diff of a pull request."
+        },
+        {
+          "name": "github_get_pull_request_comments",
+          "description": "List conversation comments on a pull request."
+        },
+        {
+          "name": "github_get_pull_request_reviews",
+          "description": "List reviews (approved/changes-requested/commented) on a pull request."
+        },
+        {
+          "name": "github_get_branch",
+          "description": "Get details of a single branch, including protection status and latest commit SHA."
+        },
+        {
+          "name": "github_list_branches",
+          "description": "List branches on a repository."
+        },
+        {
+          "name": "github_list_workflows",
+          "description": "List workflows defined in a repository (from .github/workflows)."
+        },
+        {
+          "name": "github_list_workflow_runs",
+          "description": "List recent GitHub Actions workflow runs, optionally filtered by branch or status (e.g. 'failure', 'in_progress')."
+        },
+        {
+          "name": "github_get_workflow_run",
+          "description": "Get details of a single workflow run (status, conclusion, branch, timestamps)."
+        },
+        {
+          "name": "github_get_workflow_run_jobs",
+          "description": "List jobs in a workflow run, with per-job and per-step status/conclusion — use to find which job/step failed."
+        },
+        {
+          "name": "github_get_job_logs",
+          "description": "Get the raw log text for a specific job — use after finding a failed job via github_get_workflow_run_jobs."
+        },
+        {
+          "name": "github_rerun_workflow",
+          "description": "Re-run a workflow run. Set failed_only=true to re-run only the failed jobs instead of the whole run."
+        }
+      ]
+    },
+    "workflow": {
+      "description": "Ship pipeline: ship_change, deploy_project, fix_ci, verify_ci_fix",
+      "core": false,
+      "tools": [
+        {
+          "name": "ship_change",
+          "description": "WORKFLOW: take already-made file edits from working tree to an open pull request. Inspects changed files, creates a branch, runs tests/lint/typecheck/build (stopping early on failure), commits, pushes, and opens a PR. Does not edit files itself — make the code changes first with file tools, then call this. HIGH risk — requires confirm: true."
+        },
+        {
+          "name": "fix_ci",
+          "description": "WORKFLOW: investigate a failing GitHub Actions run — finds the latest failing run (or a given run_id), lists its jobs, pulls logs for every failed job, and returns a structured diagnosis. Does not write the fix itself. After reading the logs and fixing the code with file tools, call verify_ci_fix."
+        },
+        {
+          "name": "verify_ci_fix",
+          "description": "WORKFLOW: after fixing code found via fix_ci, commit and push the change, then poll GitHub Actions until the new run completes and report pass/fail. HIGH risk — requires confirm: true."
+        },
+        {
+          "name": "deploy_project",
+          "description": "WORKFLOW: safely deploy a project and verify it. Checks project health (working tree clean), runs tests + build (aborts if either fails), triggers a Vercel deployment, polls until ready, then HTTP health-checks the live URL. Returns a verified pass/fail result, not just a 'deployment triggered' status. HIGH risk — requires confirm: true."
+        }
+      ]
+    },
+    "vercel": {
+      "description": "Vercel projects and deployments, plus HTTP health checks",
+      "core": false,
+      "tools": [
+        {
+          "name": "vercel_get_authenticated_user",
+          "description": "Get the authenticated Vercel user/team. Useful as a connectivity/auth check."
+        },
+        {
+          "name": "vercel_list_projects",
+          "description": "List Vercel projects for the authenticated account."
+        },
+        {
+          "name": "vercel_get_project",
+          "description": "Get details of a single Vercel project by name or ID."
+        },
+        {
+          "name": "vercel_list_deployments",
+          "description": "List recent Vercel deployments, optionally scoped to a project."
+        },
+        {
+          "name": "vercel_get_deployment",
+          "description": "Get the status/details of a specific Vercel deployment."
+        },
+        {
+          "name": "vercel_create_deployment",
+          "description": "Trigger a new deployment for a git-connected Vercel project by deploying from a given git ref (branch/commit). The project must already be linked to a git repo in Vercel. HIGH risk — requires confirm: true."
+        },
+        {
+          "name": "vercel_delete_project",
+          "description": "Delete a Vercel project. DESTRUCTIVE — requires confirm: true."
+        },
+        {
+          "name": "vercel_get_deployment_logs",
+          "description": "Get build/runtime logs for a deployment."
+        },
+        {
+          "name": "vercel_get_deployment_events",
+          "description": "Get a deployment's build/progress state — ready state, checks state, and build error details if it failed."
+        },
+        {
+          "name": "vercel_cancel_deployment",
+          "description": "Cancel a currently building or queued deployment."
+        },
+        {
+          "name": "http_check",
+          "description": "Hit a URL and report status code, health, and response time — use to verify a deployment is actually live and healthy."
+        }
+      ]
+    },
+    "supabase": {
+      "description": "Supabase projects, organizations and SQL",
+      "core": false,
+      "tools": [
+        {
+          "name": "supabase_list_organizations",
+          "description": "List organizations the authenticated account belongs to. Needed to create a new project."
+        },
+        {
+          "name": "supabase_list_projects",
+          "description": "List Supabase projects for the authenticated account."
+        },
+        {
+          "name": "supabase_get_project",
+          "description": "Get details of a single Supabase project by its ref/ID."
+        },
+        {
+          "name": "supabase_create_project",
+          "description": "Create a new Supabase project. Requires an organization_id (use supabase_list_organizations to find it) and a database password."
+        },
+        {
+          "name": "supabase_delete_project",
+          "description": "Delete a Supabase project. DESTRUCTIVE — requires confirm: true."
+        },
+        {
+          "name": "supabase_run_sql",
+          "description": "Run raw SQL against a project's database — used for creating tables, altering schema, seeding data, or running queries. HIGH risk — requires confirm: true."
+        }
+      ]
+    },
+    "database": {
+      "description": "Postgres and MySQL queries and schema inspection",
+      "core": false,
+      "tools": [
+        {
+          "name": "postgres_query",
+          "description": "Run a read or write SQL query against a Postgres database."
+        },
+        {
+          "name": "postgres_list_tables",
+          "description": "List all tables in a Postgres database (public schema by default)."
+        },
+        {
+          "name": "postgres_describe_table",
+          "description": "Get column names, types, and nullability for a Postgres table."
+        },
+        {
+          "name": "postgres_test_connection",
+          "description": "Test a Postgres connection string — returns server version on success."
+        },
+        {
+          "name": "mysql_query",
+          "description": "Run a read or write SQL query against a MySQL database."
+        },
+        {
+          "name": "mysql_list_tables",
+          "description": "List all tables in a MySQL database."
+        },
+        {
+          "name": "mysql_describe_table",
+          "description": "Get column names, types, and nullability for a MySQL table."
+        },
+        {
+          "name": "mysql_test_connection",
+          "description": "Test a MySQL connection string — returns server version on success."
+        }
+      ]
+    },
+    "secrets": {
+      "description": "Encrypted local secrets store",
+      "core": false,
+      "tools": [
+        {
+          "name": "secrets_set",
+          "description": "Store an encrypted secret by name. HIGH risk — requires confirm: true."
+        },
+        {
+          "name": "secrets_get",
+          "description": "Retrieve and decrypt a secret by name."
+        },
+        {
+          "name": "secrets_list",
+          "description": "List secret names in the store (never returns values)."
+        },
+        {
+          "name": "secrets_delete",
+          "description": "Delete a secret by name. DESTRUCTIVE — requires confirm: true."
+        },
+        {
+          "name": "secrets_rotate_key",
+          "description": "Re-encrypt every secret in the store under a new master key. Call this AFTER setting SECRETS_MASTER_KEY_NEW in your environment. HIGH risk — requires confirm: true."
+        },
+        {
+          "name": "secrets_generate_key",
+          "description": "Generate a new random 32-byte master key (hex-encoded) — use to initialize SECRETS_MASTER_KEY or for rotation."
+        }
+      ]
+    },
+    "sentry": {
+      "description": "Sentry projects and issues",
+      "core": false,
+      "tools": [
+        {
+          "name": "sentry_list_projects",
+          "description": "List projects in the organization."
+        },
+        {
+          "name": "sentry_list_issues",
+          "description": "List recent issues (errors) for a project."
+        },
+        {
+          "name": "sentry_search_issues",
+          "description": "Search issues with a Sentry query string (e.g. 'is:unresolved level:error')."
+        },
+        {
+          "name": "sentry_get_issue",
+          "description": "Get a single issue's full detail (stack trace context, occurrence counts)."
+        },
+        {
+          "name": "sentry_resolve_issue",
+          "description": "Mark an issue as resolved. HIGH risk — requires confirm: true."
+        },
+        {
+          "name": "sentry_ignore_issue",
+          "description": "Mute/ignore an issue so it stops notifying. HIGH risk — requires confirm: true."
+        },
+        {
+          "name": "sentry_get_project_stats",
+          "description": "Get error-count stats/trends for a project over a time period."
+        },
+        {
+          "name": "sentry_add_comment",
+          "description": "Add a comment/note to an issue. HIGH risk — requires confirm: true."
+        }
+      ]
+    },
+    "slack": {
+      "description": "Slack channels, messages and threads",
+      "core": false,
+      "tools": [
+        {
+          "name": "slack_get_user",
+          "description": "Look up a Slack user's info by user ID."
+        },
+        {
+          "name": "slack_list_channels",
+          "description": "List channels in the workspace."
+        },
+        {
+          "name": "slack_get_channel",
+          "description": "Get details of a single channel."
+        },
+        {
+          "name": "slack_read_messages",
+          "description": "Read recent message history from a channel."
+        },
+        {
+          "name": "slack_search_messages",
+          "description": "Search messages across the workspace. Requires a user token with search:read scope."
+        },
+        {
+          "name": "slack_send_message",
+          "description": "Post a message to a channel. HIGH risk — requires confirm: true."
+        },
+        {
+          "name": "slack_reply_thread",
+          "description": "Reply in a thread. HIGH risk — requires confirm: true."
+        },
+        {
+          "name": "slack_create_channel",
+          "description": "Create a new channel. HIGH risk — requires confirm: true."
+        }
+      ]
+    },
+    "gmail": {
+      "description": "Gmail search, read, send, reply and forward",
+      "core": false,
+      "tools": [
+        {
+          "name": "gmail_get_profile",
+          "description": "Get the authenticated Gmail account's profile — connectivity/auth check."
+        },
+        {
+          "name": "gmail_search",
+          "description": "Search messages using Gmail search syntax (e.g. 'from:x@y.com is:unread')."
+        },
+        {
+          "name": "gmail_list_messages",
+          "description": "List recent messages, optionally scoped to a label."
+        },
+        {
+          "name": "gmail_get_message",
+          "description": "Get a single message's decoded content by message ID."
+        },
+        {
+          "name": "gmail_get_thread",
+          "description": "Get a full thread (all messages in it) by thread ID."
+        },
+        {
+          "name": "gmail_send",
+          "description": "Send a new email. HIGH risk — requires confirm: true."
+        },
+        {
+          "name": "gmail_reply",
+          "description": "Reply to an existing message in the same thread. HIGH risk — requires confirm: true."
+        },
+        {
+          "name": "gmail_forward",
+          "description": "Forward an existing message to a new recipient. HIGH risk — requires confirm: true."
+        }
+      ]
+    },
+    "notion": {
+      "description": "Notion pages, databases, blocks and comments",
+      "core": false,
+      "tools": [
+        {
+          "name": "notion_search",
+          "description": "Search pages and databases across the workspace."
+        },
+        {
+          "name": "notion_get_page",
+          "description": "Get a single page's properties and metadata by page ID."
+        },
+        {
+          "name": "notion_create_page",
+          "description": "Create a new page under a parent page or database. HIGH risk — requires confirm: true."
+        },
+        {
+          "name": "notion_update_page",
+          "description": "Update an existing page's properties, or archive/restore it. HIGH risk — requires confirm: true."
+        },
+        {
+          "name": "notion_get_database",
+          "description": "Get a database's schema and metadata by database ID."
+        },
+        {
+          "name": "notion_query_database",
+          "description": "Query a database's rows with optional filter and sort."
+        },
+        {
+          "name": "notion_create_database",
+          "description": "Create a new database under a parent page. HIGH risk — requires confirm: true."
+        },
+        {
+          "name": "notion_append_block_children",
+          "description": "Append content blocks (text, lists, tables, etc.) to a page or block. HIGH risk — requires confirm: true."
+        },
+        {
+          "name": "notion_get_block_children",
+          "description": "Get the child blocks of a page or block."
+        },
+        {
+          "name": "notion_update_block",
+          "description": "Update an existing block's content. HIGH risk — requires confirm: true."
+        },
+        {
+          "name": "notion_delete_block",
+          "description": "Delete (archive) a block. HIGH risk — requires confirm: true."
+        },
+        {
+          "name": "notion_get_comments",
+          "description": "Get comments on a page or block."
+        },
+        {
+          "name": "notion_add_comment",
+          "description": "Add a comment to a page, or reply in an existing discussion thread. HIGH risk — requires confirm: true."
+        },
+        {
+          "name": "notion_list_users",
+          "description": "List all users in the workspace."
+        },
+        {
+          "name": "notion_get_user",
+          "description": "Get a single workspace user's info by user ID."
+        }
+      ]
+    },
+    "terraform": {
+      "description": "Terraform init, plan, apply, state, workspaces and PR plan comments",
+      "core": false,
+      "tools": [
+        {
+          "name": "terraform_init",
+          "description": "Initialize a Terraform working directory (downloads providers/modules)."
+        },
+        {
+          "name": "terraform_validate",
+          "description": "Validate the configuration's syntax and internal consistency."
+        },
+        {
+          "name": "terraform_fmt",
+          "description": "Format .tf files to canonical style."
+        },
+        {
+          "name": "terraform_plan",
+          "description": "Show an execution plan: what Terraform would change."
+        },
+        {
+          "name": "terraform_apply",
+          "description": "Apply changes to reach the desired state. HIGH risk — requires confirm: true."
+        },
+        {
+          "name": "terraform_destroy",
+          "description": "Destroy all resources managed by this configuration. HIGH risk — requires confirm: true."
+        },
+        {
+          "name": "terraform_show",
+          "description": "Show the current state or a saved plan, human-readable or as JSON."
+        },
+        {
+          "name": "terraform_output",
+          "description": "Read output values from the root module's state."
+        },
+        {
+          "name": "terraform_workspace",
+          "description": "Manage Terraform workspaces (environments like dev/staging/prod). action: 'list' | 'new' | 'select' | 'delete' (defaults to list)."
+        },
+        {
+          "name": "terraform_state_list",
+          "description": "List all resources tracked in the current state."
+        },
+        {
+          "name": "terraform_state_show",
+          "description": "Show detailed attributes of a single resource in the state."
+        },
+        {
+          "name": "terraform_state_mv",
+          "description": "Move a resource to a new address within the state (rename/refactor without destroy+recreate). HIGH risk — requires confirm: true."
+        },
+        {
+          "name": "terraform_state_rm",
+          "description": "Remove a resource from the state without destroying the real infrastructure (stops Terraform managing it). HIGH risk — requires confirm: true."
+        },
+        {
+          "name": "terraform_state_pull",
+          "description": "Download and print the raw remote state as JSON — useful for backend/state-drift inspection."
+        },
+        {
+          "name": "terraform_import",
+          "description": "Import an existing real-world resource into Terraform state, so it becomes managed by this config. HIGH risk — requires confirm: true."
+        },
+        {
+          "name": "terraform_taint",
+          "description": "Mark a resource as tainted, forcing it to be destroyed and recreated on the next apply. HIGH risk — requires confirm: true."
+        },
+        {
+          "name": "terraform_untaint",
+          "description": "Remove the tainted mark from a resource, so it will not be forcibly recreated."
+        },
+        {
+          "name": "terraform_graph",
+          "description": "Generate a visual dependency graph of resources in DOT format."
+        },
+        {
+          "name": "terraform_providers",
+          "description": "List the providers required by the configuration and their resolved versions."
+        },
+        {
+          "name": "terraform_plan_comment",
+          "description": "CI/CD hook: run `terraform plan`, format a concise Markdown summary, and post it as a comment on a GitHub pull request — so reviewers see the infra diff before approving. HIGH risk — requires confirm: true."
+        }
+      ]
+    },
+    "docker": {
+      "description": "Docker and Docker Compose: build, run, logs, images, exec",
+      "core": false,
+      "tools": [
+        {
+          "name": "docker_version",
+          "description": "Get Docker client/server version info — connectivity check."
+        },
+        {
+          "name": "docker_ps",
+          "description": "List containers. Set all=true to include stopped ones (defaults to running only)."
+        },
+        {
+          "name": "docker_images",
+          "description": "List images."
+        },
+        {
+          "name": "docker_build",
+          "description": "Build an image from a Dockerfile. HIGH risk — requires confirm: true."
+        },
+        {
+          "name": "docker_run",
+          "description": "Run a new container from an image. HIGH risk — requires confirm: true."
+        },
+        {
+          "name": "docker_stop",
+          "description": "Stop a running container. HIGH risk — requires confirm: true."
+        },
+        {
+          "name": "docker_start",
+          "description": "Start a stopped container."
+        },
+        {
+          "name": "docker_restart",
+          "description": "Restart a container. HIGH risk — requires confirm: true."
+        },
+        {
+          "name": "docker_remove",
+          "description": "Remove a container. DESTRUCTIVE — requires confirm: true."
+        },
+        {
+          "name": "docker_remove_image",
+          "description": "Remove an image. DESTRUCTIVE — requires confirm: true."
+        },
+        {
+          "name": "docker_logs",
+          "description": "Get logs from a container."
+        },
+        {
+          "name": "docker_inspect",
+          "description": "Inspect a container or image — full JSON metadata."
+        },
+        {
+          "name": "docker_exec",
+          "description": "Execute a command inside a running container."
+        },
+        {
+          "name": "docker_stats",
+          "description": "Show live resource usage stats (CPU, memory) for running containers — one-shot snapshot, not streaming."
+        },
+        {
+          "name": "docker_push",
+          "description": "Push an image to a registry. HIGH risk — requires confirm: true."
+        },
+        {
+          "name": "docker_pull",
+          "description": "Pull an image from a registry."
+        },
+        {
+          "name": "docker_compose_up",
+          "description": "Run docker compose up for a project directory. HIGH risk — requires confirm: true."
+        },
+        {
+          "name": "docker_compose_down",
+          "description": "Run docker compose down for a project directory. HIGH risk — requires confirm: true."
+        }
+      ]
+    }
+  }
+}
