@@ -108,11 +108,12 @@ server.registerTool(
 server.registerTool(
   "terraform_workspace",
   {
-    description: "Manage Terraform workspaces (environments like dev/staging/prod). action: 'list' | 'new' | 'select' | 'delete' (defaults to list).",
+    description: "Manage Terraform workspaces (environments like dev/staging/prod). HIGH risk - requires confirm: true. action: 'list' | 'new' | 'select' | 'delete' (defaults to list).",
     inputSchema: {
       dir: z.string(),
       action: z.string().optional().describe("list, new, select, or delete"),
       name: z.string().optional().describe("Workspace name, required for new/select/delete"),
+      confirm: z.boolean().optional().describe("Must be true to proceed"),
     },
   },
   wrap("terraform_workspace", terraformOps.terraformWorkspace)

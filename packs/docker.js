@@ -142,8 +142,8 @@ server.registerTool(
 server.registerTool(
   "docker_exec",
   {
-    description: "Execute a command inside a running container.",
-    inputSchema: { container: z.string(), command: z.string().describe("e.g. 'ls -la'") },
+    description: "Execute a command inside a running container. HIGH risk - requires confirm: true.",
+    inputSchema: { container: z.string(), command: z.string().describe("e.g. 'ls -la'"), confirm: z.boolean().optional().describe("Must be true to proceed") },
   },
   wrap("docker_exec", dockerOps.dockerExec)
 );

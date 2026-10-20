@@ -7,11 +7,12 @@ export default function register(server) {
 server.registerTool(
   "postgres_query",
   {
-    description: "Run a read or write SQL query against a Postgres database.",
+    description: "Run a read or write SQL query against a Postgres database. HIGH risk - requires confirm: true.",
     inputSchema: {
       connection_string: z.string().describe("postgres://user:pass@host:5432/dbname"),
       sql: z.string(),
       params: z.array(z.any()).optional().describe("Positional params for $1, $2, ..."),
+      confirm: z.boolean().optional().describe("Must be true to proceed"),
     },
   },
   wrap("postgres_query", dbOps.postgresQuery)
@@ -54,11 +55,12 @@ server.registerTool(
 server.registerTool(
   "mysql_query",
   {
-    description: "Run a read or write SQL query against a MySQL database.",
+    description: "Run a read or write SQL query against a MySQL database. HIGH risk - requires confirm: true.",
     inputSchema: {
       connection_string: z.string().describe("mysql://user:pass@host:3306/dbname"),
       sql: z.string(),
       params: z.array(z.any()).optional().describe("Positional params for ? placeholders"),
+      confirm: z.boolean().optional().describe("Must be true to proceed"),
     },
   },
   wrap("mysql_query", dbOps.mysqlQuery)

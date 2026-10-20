@@ -420,7 +420,7 @@
       "tools": [
         {
           "name": "postgres_query",
-          "description": "Run a read or write SQL query against a Postgres database."
+          "description": "Run a read or write SQL query against a Postgres database. HIGH risk - requires confirm: true."
         },
         {
           "name": "postgres_list_tables",
@@ -436,7 +436,7 @@
         },
         {
           "name": "mysql_query",
-          "description": "Run a read or write SQL query against a MySQL database."
+          "description": "Run a read or write SQL query against a MySQL database. HIGH risk - requires confirm: true."
         },
         {
           "name": "mysql_list_tables",
@@ -700,7 +700,7 @@
         },
         {
           "name": "terraform_workspace",
-          "description": "Manage Terraform workspaces (environments like dev/staging/prod). action: 'list' | 'new' | 'select' | 'delete' (defaults to list)."
+          "description": "Manage Terraform workspaces (environments like dev/staging/prod). HIGH risk - requires confirm: true. action: 'list' | 'new' | 'select' | 'delete' (defaults to list)."
         },
         {
           "name": "terraform_state_list",
@@ -802,7 +802,7 @@
         },
         {
           "name": "docker_exec",
-          "description": "Execute a command inside a running container."
+          "description": "Execute a command inside a running container. HIGH risk - requires confirm: true."
         },
         {
           "name": "docker_stats",
