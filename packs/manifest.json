@@ -748,6 +748,24 @@
         }
       ]
     },
+    "reminders": {
+      "description": "Reminders and follow-ups saved locally; check what is due",
+      "core": false,
+      "tools": [
+        {
+          "name": "reminder_create",
+          "description": "Create a reminder or follow-up, saved locally so it survives restarts. Give due_at (ISO 8601) or in_hours."
+        },
+        {
+          "name": "reminder_list",
+          "description": "List reminders, soonest first. Use due_only: true to see what needs attention now. Status: pending (default), done, cancelled or all."
+        },
+        {
+          "name": "reminder_update",
+          "description": "Update a reminder: mark it done or cancelled, snooze it (new due_at or in_hours), or edit its title or note."
+        }
+      ]
+    },
     "docker": {
       "description": "Docker and Docker Compose: build, run, logs, images, exec",
       "core": false,

@@ -305,6 +305,11 @@ export const PERMISSION_LEVELS = {
   // Toolset management
   search_tools: "READ",
   load_toolset: "LOW",
+
+  // Reminders
+  reminder_create: "LOW",
+  reminder_list: "READ",
+  reminder_update: "LOW",
 };
 
 const APPROVAL_REQUIRED_LEVELS = new Set(["HIGH", "DESTRUCTIVE"]);

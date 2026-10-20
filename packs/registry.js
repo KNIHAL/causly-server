@@ -86,6 +86,11 @@ export const PACKS = {
     description: "Terraform init, plan, apply, state, workspaces and PR plan comments",
     load: () => import("./terraform.js"),
   },
+  reminders: {
+    core: false,
+    description: "Reminders and follow-ups saved locally; check what is due",
+    load: () => import("./reminders.js"),
+  },
   docker: {
     core: false,
     description: "Docker and Docker Compose: build, run, logs, images, exec",
