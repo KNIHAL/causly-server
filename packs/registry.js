@@ -86,6 +86,11 @@ export const PACKS = {
     description: "Terraform init, plan, apply, state, workspaces and PR plan comments",
     load: () => import("./terraform.js"),
   },
+  research: {
+    core: false,
+    description: "Web research: search the web and fetch readable page text",
+    load: () => import("./research.js"),
+  },
   reminders: {
     core: false,
     description: "Reminders and follow-ups saved locally; check what is due",

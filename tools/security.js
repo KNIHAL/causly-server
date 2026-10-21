@@ -310,6 +310,10 @@ export const PERMISSION_LEVELS = {
   reminder_create: "LOW",
   reminder_list: "READ",
   reminder_update: "LOW",
+
+  // Research
+  web_search: "READ",
+  web_fetch: "MEDIUM",
 };
 
 const APPROVAL_REQUIRED_LEVELS = new Set(["HIGH", "DESTRUCTIVE"]);
