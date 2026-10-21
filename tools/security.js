@@ -314,6 +314,11 @@ export const PERMISSION_LEVELS = {
   // Research
   web_search: "READ",
   web_fetch: "MEDIUM",
+
+  // Leads
+  lead_hn_hiring: "READ",
+  lead_remote_jobs: "READ",
+  lead_company_contacts: "MEDIUM",
 };
 
 const APPROVAL_REQUIRED_LEVELS = new Set(["HIGH", "DESTRUCTIVE"]);

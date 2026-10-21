@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import fs from "fs";
 import { PACKS } from "../packs/registry.js";
 import {
@@ -10,6 +10,9 @@ import {
   isLoaded,
 } from "../packs/loader.js";
 import { collectManifest } from "../scripts/build-manifest.mjs";
+
+// These tests import every pack, which is slow when the whole suite runs in parallel.
+vi.setConfig({ testTimeout: 30000 });
 
 function stubServer() {
   const tools = [];

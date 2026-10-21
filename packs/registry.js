@@ -91,6 +91,11 @@ export const PACKS = {
     description: "Web research: search the web and fetch readable page text",
     load: () => import("./research.js"),
   },
+  leads: {
+    core: false,
+    description: "Find leads: companies hiring (HN, remote job boards) and public company contact details",
+    load: () => import("./leads.js"),
+  },
   reminders: {
     core: false,
     description: "Reminders and follow-ups saved locally; check what is due",

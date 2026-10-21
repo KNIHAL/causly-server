@@ -156,12 +156,12 @@ export function decodeEntities(s) {
 }
 
 // Inline tags vanish (so "<b>free</b>." stays "free."); any other tag becomes a space.
-const cleanInline = (s) =>
+export const cleanInline = (s) =>
   decodeEntities(s.replace(/<\/?(?:b|i|em|strong|span|mark|u|a|small)\b[^>]*>/gi, "").replace(/<[^>]+>/g, " "))
     .replace(/\s+/g, " ")
     .trim();
 
-function metaContent(html, name) {
+export function metaContent(html, name) {
   const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   const nameFirst = new RegExp(`<meta\\s[^>]*(?:name|property)=["']${escaped}["'][^>]*content=["']([^"']*)["']`, "i");
   const contentFirst = new RegExp(`<meta\\s[^>]*content=["']([^"']*)["'][^>]*(?:name|property)=["']${escaped}["']`, "i");
@@ -281,10 +281,12 @@ function decodeBody(buffer, contentType) {
   }
 }
 
-/** Fetch a public web page and return readable text. */
-export async function fetchPage({ url: rawUrl, max_chars = 8000, include_links = false, timeout_ms = DEFAULT_TIMEOUT_MS } = {}) {
+/**
+ * Download a public page or API response: SSRF-guarded, redirects followed, size capped.
+ * Returns { final_url, status, content_type, kind: "html" | "text" | "binary", raw?, body_truncated? }.
+ */
+export async function fetchRaw(rawUrl, { timeout_ms = DEFAULT_TIMEOUT_MS } = {}) {
   if (!rawUrl) throw new Error("url is required.");
-  const cap = clamp(Math.trunc(max_chars) || 8000, 500, 30000);
   let url = parseHttpUrl(rawUrl);
 
   for (let hop = 0; hop <= MAX_REDIRECTS; hop++) {
@@ -299,38 +301,52 @@ export async function fetchPage({ url: rawUrl, max_chars = 8000, include_links =
     }
 
     const contentType = String(res.headers["content-type"] || "");
-    const result = { url: rawUrl, final_url: url.toString(), status, ok: status >= 200 && status < 300, content_type: contentType };
-
+    const base = { final_url: url.toString(), status, content_type: contentType };
     const isHtml = /html|xhtml/i.test(contentType);
     const isText = /^text\/|json|xml|javascript/i.test(contentType);
     if (!isHtml && !isText) {
       res.resume();
-      return { ...result, note: "Not a text page (binary or unsupported content type), so no text was returned.", notice: UNTRUSTED_NOTICE };
+      return { ...base, kind: "binary" };
     }
-
-    const { buffer, truncated: bodyTruncated } = await readBody(res, MAX_BYTES);
-    const raw = decodeBody(buffer, contentType);
-    let title = "";
-    let description = "";
-    let text = raw;
-    let links;
-    if (isHtml) {
-      const page = htmlToText(raw, url.toString(), { includeLinks: include_links });
-      ({ title, description, text } = page);
-      links = page.links;
-    }
-    const textTruncated = text.length > cap;
-    return {
-      ...result,
-      title,
-      description,
-      text: text.slice(0, cap),
-      truncated: textTruncated || bodyTruncated,
-      ...(include_links && isHtml ? { links } : {}),
-      notice: UNTRUSTED_NOTICE,
-    };
+    const { buffer, truncated } = await readBody(res, MAX_BYTES);
+    return { ...base, kind: isHtml ? "html" : "text", raw: decodeBody(buffer, contentType), body_truncated: truncated };
   }
   throw new Error(`Too many redirects (more than ${MAX_REDIRECTS}).`);
+}
+
+/** Fetch a public web page and return readable text. */
+export async function fetchPage({ url: rawUrl, max_chars = 8000, include_links = false, timeout_ms = DEFAULT_TIMEOUT_MS } = {}) {
+  if (!rawUrl) throw new Error("url is required.");
+  const cap = clamp(Math.trunc(max_chars) || 8000, 500, 30000);
+  const page = await fetchRaw(rawUrl, { timeout_ms });
+  const result = {
+    url: rawUrl,
+    final_url: page.final_url,
+    status: page.status,
+    ok: page.status >= 200 && page.status < 300,
+    content_type: page.content_type,
+  };
+  if (page.kind === "binary") {
+    return { ...result, note: "Not a text page (binary or unsupported content type), so no text was returned.", notice: UNTRUSTED_NOTICE };
+  }
+  let title = "";
+  let description = "";
+  let text = page.raw;
+  let links;
+  if (page.kind === "html") {
+    const parsed = htmlToText(page.raw, page.final_url, { includeLinks: include_links });
+    ({ title, description, text } = parsed);
+    links = parsed.links;
+  }
+  return {
+    ...result,
+    title,
+    description,
+    text: text.slice(0, cap),
+    truncated: text.length > cap || page.body_truncated,
+    ...(include_links && page.kind === "html" ? { links } : {}),
+    notice: UNTRUSTED_NOTICE,
+  };
 }
 
 // ---------------------------------------------------------------- web_search
