@@ -7,6 +7,7 @@ import { z } from "zod";
 import * as gitOps from "./tools/gitOps.js";
 import * as projectOps from "./tools/projectOps.js";
 import { initPacks } from "./packs/loader.js";
+import { registerCofounderPrompts } from "./prompts/cofounder.js";
 
 const server = new McpServer({
   name: "causly-server",
@@ -94,6 +95,7 @@ server.registerPrompt(
         content: {
           type: "text",
           text:
+            `First, load the toolsets you need with load_toolset: git, github, workflow.\n\n` +
             `Ship this change in ${repo_path}: ${description}\n\n` +
             `Steps:\n` +
             `1. Use project_info to understand the stack and current branch.\n` +
@@ -127,6 +129,7 @@ server.registerPrompt(
         content: {
           type: "text",
           text:
+            `First, load the toolsets you need with load_toolset: git, github, workflow.\n\n` +
             `Fix CI for ${owner}/${repo}${branch ? ` on branch ${branch}` : ""}.\n\n` +
             `Steps:\n` +
             `1. Call fix_ci (owner, repo${branch ? ", branch" : ""}) — it finds the latest failing run, ` +
@@ -160,6 +163,7 @@ server.registerPrompt(
         content: {
           type: "text",
           text:
+            `First, load the toolsets you need with load_toolset: git, vercel, workflow.\n\n` +
             `Deploy ${project} (${git_source_repo}) from ${repo_path}.\n\n` +
             `Call deploy_project (repo_path, project, git_source_repo, confirm: true). ` +
             `It checks the working tree is clean, runs tests + build, triggers the deployment, ` +
@@ -190,6 +194,7 @@ server.registerPrompt(
         content: {
           type: "text",
           text:
+            `First, load the github toolset with load_toolset.\n\n` +
             `Review PR #${pull_number} on ${owner}/${repo}.\n\n` +
             `1. github_get_pull_request for status/mergeable state.\n` +
             `2. github_get_pull_request_files for the changed-file list and size of the change.\n` +
@@ -202,6 +207,8 @@ server.registerPrompt(
     ],
   })
 );
+
+registerCofounderPrompts(server);
 
 // ---------------- Start server ----------------
 
