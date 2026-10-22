@@ -99,6 +99,7 @@ describe("htmlToText", () => {
 
   it("decodes entities", () => {
     expect(decodeEntities("a &amp; b &lt;c&gt; &#65; &#x42; &unknown;")).toBe("a & b <c> A B &unknown;");
+    expect(decodeEntities("Python&trade; caf&eacute; &copy; &rarr;")).toBe("Python\u2122 caf\u00e9 \u00a9 \u2192");
   });
 });
 

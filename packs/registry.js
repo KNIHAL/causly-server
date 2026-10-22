@@ -96,6 +96,11 @@ export const PACKS = {
     description: "Find leads: companies hiring (HN, remote job boards) and public company contact details",
     load: () => import("./leads.js"),
   },
+  seo: {
+    core: false,
+    description: "SEO and content: keyword ideas, page audit, draft check, Google Search Console",
+    load: () => import("./seo.js"),
+  },
   reminders: {
     core: false,
     description: "Reminders and follow-ups saved locally; check what is due",

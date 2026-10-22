@@ -780,6 +780,28 @@
         }
       ]
     },
+    "seo": {
+      "description": "SEO and content: keyword ideas, page audit, draft check, Google Search Console",
+      "core": false,
+      "tools": [
+        {
+          "name": "seo_keyword_ideas",
+          "description": "Keyword ideas for a topic from search autocomplete (Google, Bing, DuckDuckGo; free, no key). Returns long-tail phrases, questions and comparisons, each tagged with intent. There is NO search volume: best_rank (1 = most popular) and how many sources agree are rough demand signals. Higher expand levels send more requests."
+        },
+        {
+          "name": "seo_page_audit",
+          "description": "On-page SEO audit of a live URL: title and meta description length, headings, canonical, robots, word count, images without alt, internal/external links, structured data, Open Graph. Pass a target keyword to check where it appears. Returns a list of warnings and tips."
+        },
+        {
+          "name": "seo_content_check",
+          "description": "Check a draft (markdown or plain text) before publishing: word count, reading time and ease, sentence and paragraph length, headings, links, image alt text, and where the target keyword appears. Optionally check a planned title and meta description. Works locally; nothing is sent anywhere."
+        },
+        {
+          "name": "seo_search_console",
+          "description": "Your own site's real search performance from Google Search Console: queries, pages, clicks, impressions, CTR and average position. Call without `site` to list your properties. Use quick_wins: true to find queries ranking at positions 4-20 that could move up. Needs GSC_REFRESH_TOKEN (webmasters.readonly scope) plus GSC_CLIENT_ID/GSC_CLIENT_SECRET or the Gmail OAuth client."
+        }
+      ]
+    },
     "reminders": {
       "description": "Reminders and follow-ups saved locally; check what is due",
       "core": false,

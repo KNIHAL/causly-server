@@ -319,6 +319,12 @@ export const PERMISSION_LEVELS = {
   lead_hn_hiring: "READ",
   lead_remote_jobs: "READ",
   lead_company_contacts: "MEDIUM",
+
+  // SEO and content
+  seo_keyword_ideas: "READ",
+  seo_page_audit: "MEDIUM",
+  seo_content_check: "READ",
+  seo_search_console: "READ",
 };
 
 const APPROVAL_REQUIRED_LEVELS = new Set(["HIGH", "DESTRUCTIVE"]);
