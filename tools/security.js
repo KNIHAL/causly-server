@@ -325,6 +325,17 @@ export const PERMISSION_LEVELS = {
   seo_page_audit: "MEDIUM",
   seo_content_check: "READ",
   seo_search_console: "READ",
+
+  // Pipeline
+  pipeline_add_lead: "LOW",
+  pipeline_list: "READ",
+  pipeline_get: "READ",
+  pipeline_update: "LOW",
+  pipeline_log_activity: "LOW",
+  pipeline_add_contact: "LOW",
+  pipeline_report: "READ",
+  pipeline_export: "MEDIUM",
+  pipeline_delete_deal: "DESTRUCTIVE",
 };
 
 const APPROVAL_REQUIRED_LEVELS = new Set(["HIGH", "DESTRUCTIVE"]);

@@ -14,6 +14,7 @@ export default function register(server) {
         due_at: z.string().optional().describe("ISO 8601 date-time, e.g. 2026-10-25T09:00:00+05:30"),
         in_hours: z.number().optional().describe("Alternative to due_at: due this many hours from now"),
         note: z.string().optional(),
+        deal_id: z.number().optional().describe("Link the reminder to a pipeline deal"),
       },
     },
     wrap("reminder_create", reminderOps.reminderCreate)

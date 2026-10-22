@@ -101,6 +101,11 @@ export const PACKS = {
     description: "SEO and content: keyword ideas, page audit, draft check, Google Search Console",
     load: () => import("./seo.js"),
   },
+  pipeline: {
+    core: false,
+    description: "Local sales pipeline: leads, deals, contacts, activity log, report and CSV export",
+    load: () => import("./pipeline.js"),
+  },
   reminders: {
     core: false,
     description: "Reminders and follow-ups saved locally; check what is due",

@@ -1,6 +1,7 @@
 // MCP prompts that give any connecting agent its operating instructions.
 // Playbooks are added here only once the tools they use exist.
 import { z } from "zod";
+import { registerPlaybooks } from "./playbooks.js";
 
 export const COFOUNDER_PROMPT = `You are working as the technical co-founder of a small company, using the Causly MCP server. Act like a trusted partner: take initiative, finish the work, and be honest about what you did and what you did not do.
 
@@ -30,6 +31,8 @@ export const FOLLOW_UP_REVIEW_PROMPT = `Review my follow-ups.
 5. End with a short list: handled, snoozed, still open.`;
 
 export function registerCofounderPrompts(server) {
+  registerPlaybooks(server);
+
   server.registerPrompt(
     "cofounder",
     {

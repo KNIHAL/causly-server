@@ -15,6 +15,8 @@ registerMigrations("reminders", [
      updated_at TEXT NOT NULL
    )`,
   `CREATE INDEX idx_reminders_status_due ON reminders (status, due_at)`,
+  `ALTER TABLE reminders ADD COLUMN deal_id INTEGER`,
+  `CREATE INDEX idx_reminders_deal ON reminders (deal_id)`,
 ]);
 
 const STATUSES = ["pending", "done", "cancelled"];
@@ -38,7 +40,8 @@ function resolveDue({ due_at, in_hours }) {
 }
 
 /** Create a reminder. Give due_at (ISO 8601) or in_hours. */
-export async function reminderCreate({ title, due_at, in_hours, note }) {
+export async function reminderCreate({ title, due_at, in_hours, note, deal_id }) {
+  if (deal_id !== undefined && !Number.isInteger(deal_id)) throw new Error("deal_id must be a whole number.");
   if (!title || !title.trim()) throw new Error("title is required.");
   const due = resolveDue({ due_at, in_hours });
   if (!due) throw new Error("Pass due_at (ISO 8601) or in_hours.");
@@ -46,9 +49,9 @@ export async function reminderCreate({ title, due_at, in_hours, note }) {
   const now = new Date().toISOString();
   const { lastInsertRowid } = db
     .prepare(
-      "INSERT INTO reminders (title, note, due_at, status, created_at, updated_at) VALUES (?, ?, ?, 'pending', ?, ?)"
+      "INSERT INTO reminders (title, note, due_at, status, created_at, updated_at, deal_id) VALUES (?, ?, ?, 'pending', ?, ?, ?)"
     )
-    .run(title.trim(), note ?? null, due, now, now);
+    .run(title.trim(), note ?? null, due, now, now, deal_id ?? null);
   return plain(db.prepare("SELECT * FROM reminders WHERE id = ?").get(Number(lastInsertRowid)));
 }
 
