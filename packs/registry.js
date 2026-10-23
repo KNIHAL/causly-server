@@ -126,6 +126,11 @@ export const PACKS = {
     description: "Stripe (test mode first): customers, draft and sent invoices, payment links, payments, refunds",
     load: () => import("./stripe.js"),
   },
+  discord: {
+    core: false,
+    description: "Discord bot: list servers and channels, read messages, post messages",
+    load: () => import("./discord.js"),
+  },
   reminders: {
     core: false,
     description: "Reminders and follow-ups saved locally; check what is due",

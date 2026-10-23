@@ -373,6 +373,13 @@ export const PERMISSION_LEVELS = {
   stripe_create_payment_link: "HIGH",
   stripe_list_payments: "READ",
   stripe_refund: "HIGH",
+
+  // Discord
+  discord_get_me: "READ",
+  discord_list_guilds: "READ",
+  discord_list_channels: "READ",
+  discord_read_messages: "READ",
+  discord_send_message: "HIGH",
 };
 
 const APPROVAL_REQUIRED_LEVELS = new Set(["HIGH", "DESTRUCTIVE"]);
