@@ -346,6 +346,13 @@ export const PERMISSION_LEVELS = {
   calendar_create_event: "MEDIUM",
   calendar_update_event: "MEDIUM",
   calendar_delete_event: "DESTRUCTIVE",
+
+  // Telegram (notify only reaches the owner's own chat)
+  telegram_get_me: "READ",
+  telegram_get_updates: "READ",
+  telegram_get_chat: "READ",
+  telegram_notify: "LOW",
+  telegram_send_message: "HIGH",
 };
 
 const APPROVAL_REQUIRED_LEVELS = new Set(["HIGH", "DESTRUCTIVE"]);
