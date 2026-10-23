@@ -121,6 +121,11 @@ export const PACKS = {
     description: "Linear issues: list, read, create, update, comment",
     load: () => import("./linear.js"),
   },
+  stripe: {
+    core: false,
+    description: "Stripe (test mode first): customers, draft and sent invoices, payment links, payments, refunds",
+    load: () => import("./stripe.js"),
+  },
   reminders: {
     core: false,
     description: "Reminders and follow-ups saved locally; check what is due",

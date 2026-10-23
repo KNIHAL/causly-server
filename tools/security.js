@@ -362,6 +362,17 @@ export const PERMISSION_LEVELS = {
   linear_create_issue: "MEDIUM",
   linear_update_issue: "MEDIUM",
   linear_add_comment: "MEDIUM",
+
+  // Stripe (live keys are refused unless STRIPE_ALLOW_LIVE=true; anything that emails or moves money is HIGH)
+  stripe_get_account: "READ",
+  stripe_list_customers: "READ",
+  stripe_create_customer: "MEDIUM",
+  stripe_list_invoices: "READ",
+  stripe_create_invoice: "MEDIUM",
+  stripe_send_invoice: "HIGH",
+  stripe_create_payment_link: "HIGH",
+  stripe_list_payments: "READ",
+  stripe_refund: "HIGH",
 };
 
 const APPROVAL_REQUIRED_LEVELS = new Set(["HIGH", "DESTRUCTIVE"]);
