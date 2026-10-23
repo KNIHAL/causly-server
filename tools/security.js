@@ -336,6 +336,16 @@ export const PERMISSION_LEVELS = {
   pipeline_report: "READ",
   pipeline_export: "MEDIUM",
   pipeline_delete_deal: "DESTRUCTIVE",
+
+  // Google Calendar (inviting guests is gated separately inside the tools)
+  calendar_list_calendars: "READ",
+  calendar_list_events: "READ",
+  calendar_get_event: "READ",
+  calendar_free_busy: "READ",
+  calendar_find_slots: "READ",
+  calendar_create_event: "MEDIUM",
+  calendar_update_event: "MEDIUM",
+  calendar_delete_event: "DESTRUCTIVE",
 };
 
 const APPROVAL_REQUIRED_LEVELS = new Set(["HIGH", "DESTRUCTIVE"]);

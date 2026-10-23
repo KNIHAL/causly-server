@@ -106,6 +106,11 @@ export const PACKS = {
     description: "Local sales pipeline: leads, deals, contacts, activity log, report and CSV export",
     load: () => import("./pipeline.js"),
   },
+  calendar: {
+    core: false,
+    description: "Google Calendar: events, free/busy, find meeting slots, create, update and delete",
+    load: () => import("./calendar.js"),
+  },
   reminders: {
     core: false,
     description: "Reminders and follow-ups saved locally; check what is due",
