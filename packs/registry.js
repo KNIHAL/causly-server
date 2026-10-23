@@ -116,6 +116,11 @@ export const PACKS = {
     description: "Telegram bot: alert yourself, read messages sent to the bot, send to chats",
     load: () => import("./telegram.js"),
   },
+  linear: {
+    core: false,
+    description: "Linear issues: list, read, create, update, comment",
+    load: () => import("./linear.js"),
+  },
   reminders: {
     core: false,
     description: "Reminders and follow-ups saved locally; check what is due",

@@ -353,6 +353,15 @@ export const PERMISSION_LEVELS = {
   telegram_get_chat: "READ",
   telegram_notify: "LOW",
   telegram_send_message: "HIGH",
+
+  // Linear
+  linear_get_viewer: "READ",
+  linear_list_teams: "READ",
+  linear_list_issues: "READ",
+  linear_get_issue: "READ",
+  linear_create_issue: "MEDIUM",
+  linear_update_issue: "MEDIUM",
+  linear_add_comment: "MEDIUM",
 };
 
 const APPROVAL_REQUIRED_LEVELS = new Set(["HIGH", "DESTRUCTIVE"]);
