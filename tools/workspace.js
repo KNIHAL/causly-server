@@ -26,6 +26,7 @@ export const PATH_FIELDS = [
   "store_path",
   "plan_file",
   "var_file",
+  "transcript_file",
 ];
 
 // Resolve symlinks in the deepest existing part of a path, then re-attach the

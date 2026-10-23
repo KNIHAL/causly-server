@@ -131,6 +131,11 @@ export const PACKS = {
     description: "Discord bot: list servers and channels, read messages, post messages",
     load: () => import("./discord.js"),
   },
+  meetings: {
+    core: false,
+    description: "Meeting notes: transcribe recordings, save summaries, track action items, link to deals and calendar, prep for calls",
+    load: () => import("./meetings.js"),
+  },
   reminders: {
     core: false,
     description: "Reminders and follow-ups saved locally; check what is due",

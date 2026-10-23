@@ -347,6 +347,17 @@ export const PERMISSION_LEVELS = {
   calendar_update_event: "MEDIUM",
   calendar_delete_event: "DESTRUCTIVE",
 
+  // Meeting notes (transcribing uploads audio to Groq, so it needs confirm)
+  meeting_transcribe: "HIGH",
+  meeting_save: "MEDIUM",
+  meeting_list: "READ",
+  meeting_get: "READ",
+  meeting_search: "READ",
+  meeting_actions: "READ",
+  meeting_complete_action: "LOW",
+  meeting_prep: "READ",
+  meeting_delete: "DESTRUCTIVE",
+
   // Telegram (notify only reaches the owner's own chat)
   telegram_get_me: "READ",
   telegram_get_updates: "READ",
