@@ -120,7 +120,7 @@ async function resolveUser(gql, who) {
 }
 
 async function loadTeams(gql) {
-  const data = await gql(`query { teams(first: 100) { nodes { id key name states(first: 100) { nodes { id name type } } } } }`);
+  const data = await gql(`query { teams(first: 50) { nodes { id key name states(first: 30) { nodes { id name type } } } } }`);
   return data.teams.nodes;
 }
 
