@@ -1,10 +1,12 @@
 import { z } from "zod";
 import { wrap } from "../tools/toolWrapper.js";
 import * as pipelineOps from "../tools/pipelineOps.js";
+import { ensureReminders } from "../tools/reminderAlerts.js";
 
 const stage = z.enum(["lead", "contacted", "replied", "meeting", "proposal", "won", "lost"]);
 
 export default function register(server) {
+  ensureReminders(); // follow-ups are reminders: make sure they get announced
   // ---------------- Pipeline tools ----------------
   server.registerTool(
     "pipeline_add_lead",

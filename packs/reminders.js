@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { wrap } from "../tools/toolWrapper.js";
 import * as reminderOps from "../tools/reminderOps.js";
+import { ensureReminders } from "../tools/reminderAlerts.js";
 
 export default function register(server) {
   // ---------------- Reminder tools ----------------
@@ -52,5 +53,5 @@ export default function register(server) {
   );
 
   // Announce reminders when they become due (logs to stderr and emits "reminder.due").
-  reminderOps.startReminderJob();
+  ensureReminders();
 }

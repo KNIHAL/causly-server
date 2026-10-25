@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import fs from "fs";
 import os from "os";
 import path from "path";
-import { isInstalledPackage, envFiles } from "../tools/paths.js";
+import { isInstalledPackage, envFiles, PACKAGE_ROOT } from "../tools/paths.js";
 import { clientConfigPath, detectClients, serverEntry, upsertServerEntry, removeServerEntry, runInit, runRemove, runDoctor } from "../tools/cliOps.js";
 
 let dir;
@@ -34,12 +34,11 @@ describe("paths", () => {
     expect(isInstalledPackage("D:\\causly-server")).toBe(false);
   });
 
-  it("reads settings from CAUSLY_ENV_FILE, then ~/.causly, then the package folder", () => {
+  it("reads settings from ~/.causly, then the package folder; CAUSLY_ENV_FILE is used alone", () => {
+    delete process.env.CAUSLY_ENV_FILE;
+    expect(envFiles()).toEqual([path.join(home, ".causly", ".env"), path.join(PACKAGE_ROOT, ".env")]);
     process.env.CAUSLY_ENV_FILE = "/x/custom.env";
-    const files = envFiles();
-    expect(files[0]).toBe("/x/custom.env");
-    expect(files[1]).toBe(path.join(home, ".causly", ".env"));
-    expect(files).toHaveLength(3);
+    expect(envFiles()).toEqual(["/x/custom.env"]);
   });
 });
 

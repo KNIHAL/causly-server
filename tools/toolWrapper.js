@@ -3,6 +3,8 @@ import { checkApproval } from "./security.js";
 import { logActivity } from "./logger.js";
 import { checkWorkspace } from "./workspace.js";
 import { emitBoundaryAttestReceipt } from "./boundaryAttest.js";
+import { reloadEnvIfChanged } from "./envLoader.js";
+import { setupHint } from "./services.js";
 
 function reportAttestationFailure(toolName, operationId, err) {
   console.error(`BoundaryAttest error for ${toolName} (${operationId}): ${err.message}`);
@@ -15,9 +17,12 @@ export function createToolWrapper({
   receiptEmitter = emitBoundaryAttestReceipt,
   operationIdFactory = () => crypto.randomUUID(),
   attestationErrorReporter = reportAttestationFailure,
+  envRefresher = reloadEnvIfChanged,
+  errorHinter = setupHint,
 } = {}) {
   return function wrap(toolName, handler) {
     return async (input) => {
+      try { envRefresher(); } catch { /* a settings-file problem must never block a tool */ }
       const operationId = operationIdFactory();
       const attest = (evidence) => {
         try { receiptEmitter({ toolName, input, operationId, ...evidence }); }
@@ -44,7 +49,9 @@ export function createToolWrapper({
       } catch (err) {
         activityLogger(toolName, input, "ERROR", err.message, Date.now() - startedAt, operationId);
         attest({ status: "ERROR", error: err.message });
-        return { content: [{ type: "text", text: `Error: ${err.message}` }], isError: true };
+        let hint = null;
+        try { hint = errorHinter(err.message); } catch { /* hint is optional */ }
+        return { content: [{ type: "text", text: `Error: ${err.message}${hint ? `\n${hint}` : ""}` }], isError: true };
       }
     };
   };

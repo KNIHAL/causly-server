@@ -111,12 +111,17 @@ export async function checkDueReminders() {
   const due = db
     .prepare("SELECT * FROM reminders WHERE status = 'pending' AND notified_at IS NULL AND due_at <= ? ORDER BY due_at")
     .all(now);
+  let claimed = 0;
   for (const row of due) {
-    db.prepare("UPDATE reminders SET notified_at = ?, updated_at = ? WHERE id = ?").run(now, now, row.id);
+    // Claim it atomically: with several server processes sharing one database, only the one whose UPDATE
+    // changes the row announces it.
+    const claim = db.prepare("UPDATE reminders SET notified_at = ?, updated_at = ? WHERE id = ? AND notified_at IS NULL").run(now, now, row.id);
+    if (Number(claim.changes) !== 1) continue;
+    claimed++;
     console.error(`causly-server: reminder due: #${row.id} ${row.title}`);
     events.emit("reminder.due", { ...row, notified_at: now });
   }
-  return due.length;
+  return claimed;
 }
 
 export function startReminderJob(intervalMs = 60_000) {

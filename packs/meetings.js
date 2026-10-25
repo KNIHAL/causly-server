@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { wrap } from "../tools/toolWrapper.js";
 import * as meetingOps from "../tools/meetingOps.js";
+import { ensureReminders } from "../tools/reminderAlerts.js";
 
 const meetingId = z.number().describe("Meeting id from meeting_transcribe, meeting_save or meeting_list");
 const actionItems = z
@@ -8,6 +9,7 @@ const actionItems = z
   .describe("Replaces the open items of this meeting; finished items are kept. Items with a due_date get a reminder at 09:00 that day");
 
 export default function register(server) {
+  ensureReminders(); // action item due dates are reminders: make sure they get announced
   // ---------------- Meeting notes tools ----------------
   server.registerTool(
     "meeting_transcribe",
