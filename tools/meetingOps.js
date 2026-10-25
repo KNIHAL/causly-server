@@ -307,7 +307,9 @@ export async function saveMeeting(input = {}, deps = {}) {
     if (startedMs === undefined && !event.all_day && event.start) startedMs = Date.parse(event.start);
     if (duration === undefined && !event.all_day && event.start && event.end) duration = Math.max(1, Math.round((Date.parse(event.end) - Date.parse(event.start)) / MIN));
   }
-  const newTitle = title ?? (existing ? undefined : event?.title);
+  // A draft from a recording is titled after its file; once a calendar event is linked, its name is better.
+  const autoTitled = existing?.source === "audio" && existing.source_file && existing.title === titleFromFile(existing.source_file);
+  const newTitle = title ?? (!existing || autoTitled ? event?.title : undefined);
 
   if (!existing) {
     if (!newTitle) throw new Error("title is required for a new meeting (or pass calendar_event_id to take it from the calendar).");

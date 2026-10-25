@@ -219,6 +219,14 @@ describe.skipIf(!hasSqlite)("meetings", () => {
       expect(getEvent).toHaveBeenCalledWith({ event_id: "ev1" });
     });
 
+    it("renames a file-titled draft after the linked event, but keeps a title the user chose", async () => {
+      const getEvent = async () => ({ event: { id: "ev1", title: "Acme Kickoff", start: "2026-10-24T05:00:00Z", end: "2026-10-24T05:30:00Z", attendees: [] } });
+      const auto = await m.transcribeMeeting({ path: "x.m4a" }, stubTranscribe({ file: "x.m4a" }));
+      expect((await m.saveMeeting({ meeting_id: auto.meeting_id, summary: "s", calendar_event_id: "ev1" }, { getEvent })).meeting.title).toBe("Acme Kickoff");
+      const named = await m.transcribeMeeting({ path: "x.m4a", title: "My own title" }, stubTranscribe());
+      expect((await m.saveMeeting({ meeting_id: named.meeting_id, summary: "s", calendar_event_id: "ev1" }, { getEvent })).meeting.title).toBe("My own title");
+    });
+
     it("still saves when the calendar event cannot be read", async () => {
       const r = await m.saveMeeting({ title: "Call", summary: "s", calendar_event_id: "gone" }, { getEvent: async () => Promise.reject(new Error("404")) });
       expect(r.saved).toBe(true);
