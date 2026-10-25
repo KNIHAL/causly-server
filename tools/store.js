@@ -11,6 +11,7 @@
 import fs from "fs";
 import os from "os";
 import path from "path";
+import { causlyHome } from "./paths.js";
 
 const migrations = new Map(); // namespace -> SQL statements, in order
 const applied = new Map(); // namespace -> highest applied version, for the open db
@@ -23,7 +24,7 @@ export function registerMigrations(namespace, statements) {
 }
 
 export function dbPath() {
-  return process.env.CAUSLY_DB_PATH || path.join(os.homedir(), ".causly", "causly.db");
+  return process.env.CAUSLY_DB_PATH || path.join(causlyHome(), "causly.db");
 }
 
 async function openDatabase(file) {

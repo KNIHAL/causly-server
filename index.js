@@ -3,15 +3,18 @@ loadEnv();
 
 import { McpServer, ResourceTemplate } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
+import fs from "fs";
 import { z } from "zod";
 import * as gitOps from "./tools/gitOps.js";
 import * as projectOps from "./tools/projectOps.js";
 import { initPacks } from "./packs/loader.js";
 import { registerCofounderPrompts } from "./prompts/cofounder.js";
 
+const PACKAGE_VERSION = JSON.parse(fs.readFileSync(new URL("./package.json", import.meta.url), "utf8")).version;
+
 const server = new McpServer({
   name: "causly-server",
-  version: "1.1.0",
+  version: PACKAGE_VERSION,
 });
 
 // ---------------- MCP Resources ----------------
