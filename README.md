@@ -188,7 +188,7 @@ causly-server remove [--client <name>]
 ## Documentation, Roadmap, Contributing
 
 - Detailed docs: [agenv.causly.in/docs/server](https://agenv.causly.in/docs/server/intro)
-- [ROADMAP.md](./ROADMAP.md), [CONTRIBUTING.md](./CONTRIBUTING.md), [CODE_OF_CONDUCT.md](./CODE_OF_CONDUCT.md), [CHANGELOG.md](./CHANGELOG.md), [BUILD_LOG.md](./BUILD_LOG.md)
+- [ROADMAP.md](./ROADMAP.md), [CONTRIBUTING.md](./CONTRIBUTING.md), [CODE_OF_CONDUCT.md](./CODE_OF_CONDUCT.md), [CHANGELOG.md](./CHANGELOG.md)
 
 ## License
 
