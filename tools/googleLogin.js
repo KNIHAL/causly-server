@@ -187,6 +187,7 @@ export async function runGoogleLogin({
     say("Your browser should open. If it does not, open this link:\n");
     say(url);
     say("\nGoogle may say the app is not verified: choose Advanced, then continue (it is your own app). Tick every permission box, then press Allow.");
+    say('If Google shows "redirect_uri_mismatch", the OAuth client is a Web application. Create a new client of type "Desktop app" and save it with: causly-server keys set GMAIL_CLIENT_ID (and GMAIL_CLIENT_SECRET).');
     say("Waiting for you in the browser...");
     open(url);
     code = await server.result;
