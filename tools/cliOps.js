@@ -112,6 +112,9 @@ function pickClients(client, opts) {
  * Set the server up for the user's editors. Creates ~/.causly/.env from the template
  * (unless a checkout already has a .env) and registers the server with each client.
  */
+// Claude Desktop and others do not refresh tools mid-chat, so everyday packs load at startup.
+export const DEFAULT_TOOLSETS = "research,leads,seo,pipeline,reminders,meetings";
+
 export function runInit({ client, workspace, toolsets, platform, home, env, root = PACKAGE_ROOT } = {}) {
   const where = { platform, home, env };
   const clients = pickClients(client, where);
@@ -132,7 +135,7 @@ export function runInit({ client, workspace, toolsets, platform, home, env, root
     lines.push(`Using existing ${envPath}`);
   }
 
-  const entry = serverEntry({ root, platform, workspace, toolsets });
+  const entry = serverEntry({ root, platform, workspace, toolsets: toolsets ?? DEFAULT_TOOLSETS });
   const results = [];
   for (const c of clients) {
     const file = clientConfigPath(c, where);
