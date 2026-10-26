@@ -1,79 +1,138 @@
-# Causly Server — What If Your AI Agent Had Hands?
+# Causly Server — Turn Any AI Agent Into Your Technical Co-Founder
 
+[![npm](https://img.shields.io/npm/v/causly-server.svg)](https://www.npmjs.com/package/causly-server)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](./LICENSE)
 [![CI](https://github.com/KNIHAL/causly-server/actions/workflows/ci.yml/badge.svg)](https://github.com/KNIHAL/causly-server/actions/workflows/ci.yml)
 [![PRs welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](./CONTRIBUTING.md)
 
-**An open-source MCP server that gives your AI agent everything it needs to run the SDLC end-to-end — without leaving the conversation.**
+**An open-source MCP server that gives your AI agent the tools of a co-founder: ship code, find leads, track deals, take meeting notes, handle email and your calendar, all from one conversation.**
 
-Causly Server connects your AI agent directly to the systems your software development lifecycle actually runs on — version control, CI/CD, infrastructure, and monitoring — so it can inspect, build, verify, and ship real projects without you switching between a dozen tools yourself.
+Your agent stops being a chatbot that writes text and starts doing the work: it reads your repo, opens the pull request, finds companies that are hiring, logs them in your pipeline, books the follow-up, and reminds you on Telegram.
 
-Run it locally, connect it to your MCP-compatible client, and let your agent own the SDLC from a single conversation.
+Everything runs on your machine. Your keys, your data, your approval for anything risky.
 
 ## See It In Action
 
-
 [Working Demo](https://github.com/user-attachments/assets/7f4f33e8-2cd4-4c99-ada0-35653bbaa4c4)
 
-[Screenshort]<img width="1920" height="1020" alt="screenshort" src="https://github.com/user-attachments/assets/e9fb7c22-0a0b-4109-a44d-d2106912389f" />
+<img width="1920" height="1020" alt="Causly Server screenshot" src="https://github.com/user-attachments/assets/e9fb7c22-0a0b-4109-a44d-d2106912389f" />
 
+## What You Can Ask
 
-## Why Causly Server
+Once it is installed, just talk to your agent:
 
-Building and shipping a real product usually means moving between code editors, terminals, GitHub, databases, containers, cloud dashboards, monitoring tools, and communication platforms.
+- "Find companies hiring React developers and add the best three to my pipeline."
+- "Save notes from my call with Acme: they want a demo next week, follow up on Friday."
+- "What is due this week? Include meeting action items and reminders."
+- "Prep me for my next meeting."
+- "Ship this change: run the checks, open a pull request, and tell me when CI is green."
+- "Audit this page for SEO and suggest keywords."
+- "Find a free slot with this lead on Thursday and send the invite."
 
-Causly Server brings these capabilities into the MCP layer so an AI agent can work across the same environment instead of being limited to generating text or isolated actions.
+## Install
 
-The goal is simple: give an agent the tools it needs to **inspect, build, change, verify, and deploy real projects** while keeping execution local and under controls you can inspect.
+Requires Node.js 20 or newer.
 
-## What It Can Do
+```bash
+npm install -g causly-server
+causly-server init
+```
 
-Causly Server currently provides tools across the main stages of a software project's lifecycle.
+`init` finds Claude Desktop, Cursor and Windsurf on your machine and adds Causly Server to each. Restart your editor and you are done. Using Claude Code instead? `init` prints the one-line command for it.
 
-| Area                     | Capabilities                                                               |
-| ------------------------ | -------------------------------------------------------------------------- |
-| **Filesystem**           | Read, write, edit, move, copy, search files and directories                |
-| **Git**                  | Branch, commit, merge, stash, tag, diff, and other Git operations          |
-| **GitHub**               | Repositories, issues, pull requests, Actions and CI workflows              |
-| **Databases**            | PostgreSQL and MySQL queries and schema inspection                         |
-| **Supabase**             | Supabase Management API operations                                         |
-| **Docker**               | Build, run, manage, inspect, and compose containers                        |
-| **Terraform**            | Plan, apply, destroy, state management, and CI/CD integration              |
-| **Vercel**               | Deployments, verification, rollbacks, logs, and health checks              |
-| **Sentry**               | Search, inspect, and triage issues                                         |
-| **Notion**               | Pages, databases, blocks, and comments                                     |
-| **Slack**                | Channels, messages, and threads                                            |
-| **Gmail**                | Search, read, send, reply, and forward                                     |
-| **Secrets**              | Local encrypted secrets storage                                            |
-| **Project intelligence** | Detects the project stack and runs relevant test, lint, and build commands |
+Useful options:
 
-The current server contains **181 tools across 16 categories**.
+```bash
+causly-server init --client cursor            # pick editors instead of auto-detecting
+causly-server init --workspace D:\my-project  # limit file tools to one folder
+causly-server init --toolsets research,pipeline,meetings   # choose startup packs
+```
 
-The goal isn't the number of tools. It's giving an AI agent a connected set of capabilities that can work together across an actual project lifecycle.
+### Add your API keys
+
+You only need keys for the services you actually use.
+
+```bash
+causly-server setup            # step by step, each key is checked live
+causly-server doctor --test    # verify every configured service
+causly-server status           # one screen: editors, keys, pipeline, reminders, updates
+```
+
+Keys are stored in `~/.causly/.env` (hidden prompt, never printed back) and picked up without a restart.
+
+## Google Setup (Gmail, Calendar, Search Console)
+
+Google needs a one-time OAuth client that you own. It takes about five minutes.
+
+1. Open [Google Cloud Console](https://console.cloud.google.com), create or pick a project.
+2. Enable the APIs you want: **Gmail API**, **Google Calendar API**, and optionally **Google Search Console API**.
+3. Go to **Google Auth Platform**. Under **Branding**, fill in the app name and your support email. Under **Audience**, choose **External** and add your own Google account as a test user.
+4. Go to **Clients → Create client** and choose **Desktop app** as the application type. (A "Web application" client fails with `redirect_uri_mismatch`.) Copy the client ID and secret.
+5. Save them in Causly: `causly-server setup`, or `causly-server keys set GMAIL_CLIENT_ID` and `causly-server keys set GMAIL_CLIENT_SECRET`.
+6. Sign in once in your browser:
+
+```bash
+causly-server login google            # Gmail and Calendar
+causly-server login google all        # also Search Console
+```
+
+### Avoid the 7-day token expiry: Publish the app
+
+While the Google app is in **Testing** status, Google expires the sign-in token every 7 days. You can renew it any time with `causly-server login google`.
+
+To stop that for good, go to **Google Auth Platform → Audience** and click **Publish app** (set it to *In production*). This needs the Branding page from step 3 to be filled in first. For personal use you do not need Google verification; at sign-in you will see an "unverified app" warning, which is expected for your own client: choose **Advanced**, then continue.
+
+## Tool Packs
+
+Tools are grouped in packs and loaded lazily, so your agent is never flooded with hundreds of tool definitions. The packs below load at startup:
+
+| Pack | What it does |
+| --- | --- |
+| **files, directory, command, project** | Read, write, edit and search files; run commands with safety checks; detect your stack and run build, test, lint and typecheck |
+| **research** | Search the web and read pages as clean text |
+| **leads** | Find companies hiring (Hacker News, remote job boards) and public company contact details |
+| **pipeline** | Local sales pipeline: leads, deals, contacts, activity log, report, CSV export |
+| **meetings** | Transcribe recordings, save summaries, track action items, link them to deals and calendar events, prep for calls |
+| **reminders** | Follow-ups saved locally; ask what is due |
+| **seo** | Keyword ideas, page audit, draft check, Search Console |
+
+More packs are one command away and load on demand:
+
+| Pack | What it does |
+| --- | --- |
+| **calendar, gmail** | Events, free/busy, find meeting slots; search, read, send, reply, forward |
+| **telegram** | Alert yourself, read messages sent to your bot |
+| **git, github, workflow** | Full Git; repos, issues, pull requests, reviews, Actions; `ship_change`, `fix_ci`, `verify_ci_fix`, `deploy_project` |
+| **vercel, docker, terraform** | Deployments and health checks; containers and Compose; plan, apply, state |
+| **database, supabase** | Postgres and MySQL queries and schema; Supabase projects and SQL |
+| **slack, notion, linear** | Channels and threads; pages and databases; issues |
+| **sentry, secrets** | Issue triage; encrypted local secrets store |
+
+That is 230+ tools in total. Choose which packs load at startup:
+
+```bash
+causly-server toolsets                 # show what loads at startup
+causly-server toolsets add github,gmail
+causly-server toolsets remove seo
+causly-server toolsets reset
+```
+
+### No restart needed: `use_tool`
+
+Some editors do not refresh their tool list mid-chat. `use_tool` lets your agent call any tool by name, even one that is not loaded yet; the pack loads automatically and every safety check still applies.
 
 ## Workflow Tools
 
-Individual tools are the building blocks. Causly Server also includes higher-level workflow tools that combine them into verified outcomes.
+Single tools are building blocks. These combine them into verified outcomes:
 
-### `ship_change`
-
-Inspects the current changes, creates a branch, runs project checks, commits the changes, pushes the branch, and opens a pull request.
-
-### `fix_ci`
-
-Finds a failing GitHub Actions run and retrieves the real failure information so the agent can work from the actual CI output.
-
-### `verify_ci_fix`
-
-After the code is fixed, commits and pushes the changes, polls the workflow, and verifies that CI is actually green.
-
-### `deploy_project`
-
-Checks project health, runs tests and build checks, deploys the project, polls the deployment, and HTTP-verifies that the deployed URL is actually responding.
+- **`ship_change`**: inspects changes, creates a branch, runs project checks, commits, pushes, opens a pull request.
+- **`fix_ci`**: finds a failing GitHub Actions run and fetches the real failure output.
+- **`verify_ci_fix`**: commits and pushes the fix, polls the workflow, confirms CI is green.
+- **`deploy_project`**: checks health, runs tests and build, deploys, polls, and HTTP-verifies the live URL.
 
 ```mermaid
 flowchart TD
-    A["You describe a task to your AI agent"] --> B["Agent edits files"]
+    A["You describe a task"] --> B["Agent edits files"]
     B --> C["ship_change runs checks"]
     C --> D["Commit, push, open PR"]
     D --> E{"CI passes?"}
@@ -86,201 +145,61 @@ flowchart TD
     J --> K["Shipped"]
 ```
 
-A more detailed, per-category architecture breakdown lives in [docs/](https://agenv.causly.in/docs/server/intro)
+## Works With
+
+Tested with Claude Desktop, Cursor, Windsurf, a plain JavaScript MCP client, and LangChain (JS) through `@langchain/mcp-adapters`. Any MCP-compatible client or agent framework can connect to the same stdio server.
 
 ## Security
 
-Causly Server can perform actions that affect your machine, repositories, infrastructure, and production systems. Security controls are therefore part of the server itself.
+Causly can touch your files, repositories and infrastructure, so the controls live in the server itself.
 
-### Permission levels
+- **Permission levels:** every tool is `READ`, `LOW`, `MEDIUM`, `HIGH` or `DESTRUCTIVE`. `HIGH` and `DESTRUCTIVE` actions (deploys, merges, shell commands, deletes, raw SQL, Terraform apply and destroy, Docker removal) need an explicit `confirm: true`.
+- **Workspace limit:** `init --workspace <folder>` restricts file and command tools to one folder.
+- **Approval for outside actions:** anything that emails real people, such as calendar invites with guests, needs confirmation first.
+- **Secret redaction:** tokens, passwords and API keys are redacted before anything is written to logs.
+- **Command risk checks:** drive wipes, formatting and shutdown commands are blocked; force-pushes, `DROP TABLE`, `curl | bash` and `sudo` are flagged.
+- **Path protection:** writes and deletes inside protected system directories are blocked.
+- **Local encrypted secrets:** AES-256-GCM with a key you control, no external vault.
+- **Activity log:** every call is recorded in `logs/activity.log` as structured JSONL (timestamp, operation ID, risk, status, redacted input, duration).
+- **Your data stays local:** the pipeline, meetings and reminders live in a local SQLite file. `causly-server backup` and `restore` keep it safe.
 
-Every tool is classified as:
+Optional BoundaryAttest receipts for `ship_change`, `verify_ci_fix` and `deploy_project` are described in [the docs](https://agenv.causly.in/docs/server/tools/boundaryattest).
 
-`READ` / `LOW` / `MEDIUM` / `HIGH` / `DESTRUCTIVE`
+## Command Reference
 
-`HIGH` and `DESTRUCTIVE` operations require explicit `confirm: true` before execution. This includes actions such as deploys, merges, command execution, deletes, raw SQL, Terraform apply/destroy, and Docker removal.
-
-### Secret redaction
-
-Tokens, passwords, API keys, and similar sensitive fields are redacted before being written to logs.
-
-### Command risk classification
-
-Commands are checked for dangerous patterns such as drive wipes, formatting, and shutdown operations. Elevated-risk signals such as force-pushes, `DROP TABLE`, `curl | bash`, and `sudo` are also classified and surfaced for auditability.
-
-### Path protection
-
-Writes and deletes are blocked when the target path falls inside a protected system directory.
-
-### Local encrypted secrets
-
-The built-in secrets manager stores secrets locally using **AES-256-GCM** with a key you control. It does not require an external vault service.
-
-### Activity log
-
-Tool calls are recorded in `logs/activity.log` as structured JSONL entries containing the timestamp, operation ID, risk level, status, redacted input, and duration.
-
-### Optional BoundaryAttest receipts
-
-When explicitly enabled, Causly emits separate `server_attested` Interop Profile v0.2 receipts for `ship_change`, `verify_ci_fix`, and `deploy_project`.
-
-Interop Profile v0.2 uses RFC 8785/JCS for language-neutral canonicalization. BoundaryAttest v0.1 remains a legacy profile.
-
-This evidence layer does **not** replace or change Causly's approval or security behavior.
-
-See [docs/boundaryattest.md](https://agenv.causly.in/docs/server/tools/boundaryattest)
-
-## Getting Started
-
-The current setup flow is:
-
-**Fork → Clone → Install → Configure → Run → Connect your MCP client**
-
-### 1. Fork
-
-Fork this repository to your own GitHub account.
-
-### 2. Clone
-
-Clone your fork locally:
-
-```bash
-git clone https://github.com/KNIHAL/causly-server.git
-cd causly-server
+```text
+causly-server init | status | doctor [--test] | setup [service]
+causly-server keys list | set NAME | unset NAME | open
+causly-server login google [gmail,calendar,gsc|all]
+causly-server toolsets [add|remove|reset]
+causly-server backup [file] | restore <file> [--yes]
+causly-server remove [--client <name>]
 ```
-
-### 3. Install dependencies
-
-```bash
-npm install
-```
-
-### 4. Configure your environment
-
-Copy the example environment file:
-
-```bash
-cp .env.example .env
-```
-
-Open `.env` and add the API keys and credentials for the services you want to use.
-
-You only need to configure the integrations you plan to use.
-
-### 5. Connect Causly Server to your MCP client
-
-Add Causly Server to your MCP client's configuration using the local `index.js` entry point.
-
-For example, in Claude Desktop:
-
-**Windows:** `%APPDATA%\Claude\claude_desktop_config.json`
-
-```json
-{
-  "mcpServers": {
-    "causly-server": {
-      "command": "node",
-      "args": ["D:\\causly-server\\index.js"]
-    }
-  }
-}
-```
-
-Use the equivalent MCP server configuration for your MCP-compatible client.
-
-### 6. Restart your MCP client
-
-After saving the configuration, restart your MCP client.
-
-Causly Server will then be available to the client with the tools enabled by your configuration.
-
-> `setup.js` is currently kept as a helper/demo for configuring Claude Desktop. It is not the project's package installation mechanism.
-
 
 ## Known Limitations
 
-* `vercel_create_deployment` and `deploy_project` require the Vercel project to already be Git-linked.
-* `supabase_run_sql` uses the Supabase Management API. Some personal access tokens may restrict SQL execution and return `403`.
-* `slack_search_messages` requires a Slack user token with the `search:read` scope. Other Slack tools can work with a bot token.
-* Gmail tools use OAuth2 with a client ID, client secret, and refresh token rather than a simple API key.
-* `docker_push` requires registry authentication to already be configured on the host.
-* Sentry `resolve_issue`, `ignore_issue`, and `add_comment` require an authentication token with the `event:write` scope.
+- `vercel_create_deployment` and `deploy_project` need the Vercel project to be Git-linked already.
+- `supabase_run_sql` uses the Supabase Management API; some personal access tokens get a `403` for SQL.
+- `slack_search_messages` needs a Slack user token with the `search:read` scope.
+- `docker_push` needs registry authentication already configured on the host.
+- Sentry `resolve_issue`, `ignore_issue` and `add_comment` need a token with the `event:write` scope.
+- On Windows, if `npm install` fails with `'node' is not recognized` in a postinstall script, retry with `npm install --ignore-scripts` ([issue #2](https://github.com/KNIHAL/causly-server/issues/2)).
 
-## Project Structure
+## Documentation, Roadmap, Contributing
 
-```text
-causly-server/
-├── index.js                # Server entry point, tool/resource/prompt registration
-├── setup.js                 # Helper/demo for configuring your Claude Desktop config automatically
-├── package.json
-├── .env                     # Your local tokens (never committed)
-├── .env.example
-├── BUILD_LOG.md              # What was built, in what order, and why
-├── ROADMAP.md                 # What's planned next
-├── CONTRIBUTING.md
-├── CODE_OF_CONDUCT.md
-├── CHANGELOG.md
-├── docs/                     # Detailed technical docs (GitHub Pages)
-├── .github/
-│   ├── workflows/ci.yml
-│   ├── ISSUE_TEMPLATE/
-│   └── PULL_REQUEST_TEMPLATE.md
-├── tools/
-│   ├── fileOps.js           # File read/write/edit/move/copy
-│   ├── directoryOps.js      # Directory listing, tree, search
-│   ├── gitOps.js            # Git operations via simple-git
-│   ├── commandOps.js        # Shell command execution
-│   ├── githubOps.js         # GitHub REST API — repos, issues, PRs, Actions
-│   ├── vercelOps.js         # Vercel REST API — projects, deployments
-│   ├── supabaseOps.js       # Supabase Management API
-│   ├── slackOps.js          # Slack Web API — channels, messages, threads
-│   ├── gmailOps.js          # Gmail API (OAuth2) — search, read, send, reply, forward
-│   ├── notionOps.js         # Notion API — pages, databases, blocks, comments
-│   ├── terraformOps.js      # Terraform CLI wrapper — full lifecycle + state + CI hook
-│   ├── dockerOps.js         # Docker CLI wrapper — cross-platform (direct or via WSL)
-│   ├── dbOps.js             # Generic Postgres/MySQL query tools
-│   ├── secretsOps.js        # Local AES-256-GCM encrypted secrets manager
-│   ├── sentryOps.js         # Sentry API — issues, projects, stats
-│   ├── projectOps.js        # Stack detection, test/lint/build runners
-│   ├── workflowOps.js       # ship_change, fix_ci, verify_ci_fix, deploy_project
-│   ├── boundaryAttest.js    # Optional signed workflow-receipt POC
-│   ├── security.js          # Redaction, permission levels, risk classification
-│   ├── envLoader.js         # Dependency-free .env parser
-│   └── logger.js            # Structured JSONL activity logging
-└── logs/
-    └── activity.log          # Auto-generated
-```
-
-## Roadmap
-
-See [ROADMAP.md](./ROADMAP.md) for what's planned next.
-
-## Contributing
-
-See [CONTRIBUTING.md](./CONTRIBUTING.md) for how to add a new tool module and the manual testing checklist. Please also read the [Code of Conduct](./CODE_OF_CONDUCT.md).
-
-## Changelog
-
-See [CHANGELOG.md](./CHANGELOG.md) for release history.
-
-## Build history
-
-See [BUILD_LOG.md](./BUILD_LOG.md) for a full account of what was built, in what order, and the bugs found and fixed along the way.
+- Detailed docs: [agenv.causly.in/docs/server](https://agenv.causly.in/docs/server/intro)
+- [ROADMAP.md](./ROADMAP.md), [CONTRIBUTING.md](./CONTRIBUTING.md), [CODE_OF_CONDUCT.md](./CODE_OF_CONDUCT.md), [CHANGELOG.md](./CHANGELOG.md), [BUILD_LOG.md](./BUILD_LOG.md)
 
 ## License
 
-[MIT](./LICENSE) — free to use, modify, and distribute, including commercially.
+[MIT](./LICENSE): free to use, modify and distribute, including commercially.
 
-## Want something custom built on this?
+## Want Something Custom Built On This?
 
-If you need a custom MCP server, a specific integration, or a related service built for your own product or team — reach out: **nihal@causly.in**
+Need a custom MCP server, a specific integration, or a related service for your product or team? Reach out: **nihal@causly.in**
 
 ## Causly Hosted
 
-Don't want to run Causly Server on your own machine?
+Do not want to run Causly Server yourself? Causly Hosted is a managed version, currently in development.
 
-Causly Hosted is a managed version of Causly Server currently in development. Join the early-access waitlist to be notified when it's ready.
-
-[→ Join the Causly Hosted waitlist](https://tally.so/r/NpZkpW)
-
-
+[Join the Causly Hosted waitlist](https://tally.so/r/NpZkpW)
