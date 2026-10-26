@@ -3,6 +3,7 @@
 //   causly-server                      start the MCP server (what editors run)
 //   causly-server init [options]       set the server up in Claude Desktop, Cursor, Windsurf
 //   causly-server setup [service]      add API keys step by step, with a live check
+//   causly-server toolsets [add|remove|reset] [names]   choose what loads at startup
 //   causly-server keys <list|set|unset|open>
 //   causly-server doctor [--test]      check Node, settings, integrations
 //   causly-server remove [--client X]  take it out again
@@ -33,6 +34,10 @@ Usage:
       --workspace <folder>                  Limit file tools to this folder
       --toolsets <list>                     Load packs at startup, e.g. research,pipeline,meetings
       --no-setup                            Do not offer to add API keys afterwards
+  causly-server toolsets                Show which tool packs load at startup
+  causly-server toolsets add <names>    Load more packs at startup, e.g. github,calendar
+  causly-server toolsets remove <names> Stop loading packs at startup
+  causly-server toolsets reset          Back to the default packs
   causly-server setup [service]         Add API keys step by step (checks each one live)
   causly-server keys list               Show which keys are set (never the full value)
   causly-server keys set NAME           Set one key (hidden prompt, or pipe it in)
@@ -104,6 +109,11 @@ async function main() {
       console.error(`Unknown keys command "${sub}". Use: list, set NAME, unset NAME, open.`);
       process.exitCode = 1;
     }
+  } else if (command === "toolsets") {
+    const { runToolsets } = await import("../tools/toolsetOps.js");
+    const names = positional.slice(1).flatMap((s) => s.split(","));
+    const r = runToolsets({ action: positional[0] || "list", names, client: flag("client") });
+    console.log(r.lines.join("\n"));
   } else if (command === "remove") {
     console.log(ops.runRemove({ client: flag("client") }).lines.join("\n"));
   } else if (command === "doctor") {

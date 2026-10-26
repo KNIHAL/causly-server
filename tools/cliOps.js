@@ -51,7 +51,7 @@ export function serverEntry({ root = PACKAGE_ROOT, platform = os.platform(), exe
   return entry;
 }
 
-function readJson(file) {
+export function readJson(file) {
   if (!fs.existsSync(file)) return { config: {}, existed: false, broken: false };
   const raw = fs.readFileSync(file, "utf8");
   if (!raw.trim()) return { config: {}, existed: true, broken: false };
@@ -64,7 +64,7 @@ function readJson(file) {
   return { config: {}, existed: true, broken: true };
 }
 
-function backup(file) {
+export function backup(file) {
   const copy = `${file}.backup-${Date.now()}`;
   fs.copyFileSync(file, copy);
   return copy;
@@ -92,7 +92,7 @@ export function removeServerEntry(file) {
   return { removed: true, backup: copy };
 }
 
-function pickClients(client, opts) {
+export function pickClients(client, opts) {
   if (!client || client === "auto") {
     const found = detectClients(opts);
     return found.length ? found : ["claude"];
