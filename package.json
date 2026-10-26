@@ -7,8 +7,11 @@
   "type": "module",
   "scripts": {
     "start": "node index.js",
-    "setup": "node setup.js",
+    "setup": "node bin/causly.js init",
+    "doctor": "node bin/causly.js doctor",
+    "build:manifest": "node scripts/build-manifest.mjs",
     "test": "vitest run",
+    "prepublishOnly": "npm run build:manifest && vitest run",
     "test:boundaryattest": "vitest run tests/boundaryAttest.test.js",
     "verify:boundaryattest": "node tools/verifyBoundaryAttest.js"
   },
@@ -21,5 +24,36 @@
   },
   "devDependencies": {
     "vitest": "^5.0.0"
+  },
+  "bin": {
+    "causly-server": "bin/causly.js"
+  },
+  "files": [
+    "index.js",
+    "bin",
+    "tools",
+    "packs",
+    "prompts",
+    ".env.example",
+    "README.md",
+    "LICENSE",
+    "CHANGELOG.md"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "ai-agent",
+    "devops",
+    "cofounder",
+    "claude",
+    "cursor",
+    "windsurf"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/KNIHAL/causly-server.git"
   }
 }

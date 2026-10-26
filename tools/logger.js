@@ -1,11 +1,10 @@
 import fs from "fs";
 import path from "path";
 import crypto from "crypto";
-import { fileURLToPath } from "url";
 import { redactSecrets, redactSecretsInString, PERMISSION_LEVELS } from "./security.js";
+import { dataDir } from "./paths.js";
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const LOG_DIR = path.join(__dirname, "..", "logs");
+const LOG_DIR = path.join(dataDir(), "logs");
 const LOG_FILE = path.join(LOG_DIR, "activity.log");
 
 if (!fs.existsSync(LOG_DIR)) {

@@ -7,7 +7,6 @@ intelligence, workflow automation, and a full security layer (redaction,
 permission levels, approval gates, path protection, structured audit logs).
 An automated `vitest` test suite now covers every tool module (`npm test`),
 on top of manual verification against real disposable resources.
-See [BUILD_LOG.md](./BUILD_LOG.md) for how we got here.
 
 ## Next up
 

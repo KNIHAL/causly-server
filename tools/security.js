@@ -214,6 +214,184 @@ export const PERMISSION_LEVELS = {
   supabase_create_project: "MEDIUM",
   supabase_delete_project: "DESTRUCTIVE",
   supabase_run_sql: "HIGH",
+
+  // Database
+  postgres_query: "HIGH",
+  postgres_list_tables: "READ",
+  postgres_describe_table: "READ",
+  postgres_test_connection: "READ",
+  mysql_query: "HIGH",
+  mysql_list_tables: "READ",
+  mysql_describe_table: "READ",
+  mysql_test_connection: "READ",
+
+  // Secrets
+  secrets_set: "HIGH",
+  secrets_get: "MEDIUM",
+  secrets_list: "READ",
+  secrets_delete: "DESTRUCTIVE",
+  secrets_rotate_key: "HIGH",
+  secrets_generate_key: "LOW",
+
+  // Sentry
+  sentry_list_projects: "READ",
+  sentry_list_issues: "READ",
+  sentry_search_issues: "READ",
+  sentry_get_issue: "READ",
+  sentry_get_project_stats: "READ",
+  sentry_resolve_issue: "HIGH",
+  sentry_ignore_issue: "HIGH",
+  sentry_add_comment: "HIGH",
+
+  // Notion
+  notion_search: "READ",
+  notion_get_page: "READ",
+  notion_get_database: "READ",
+  notion_query_database: "READ",
+  notion_get_block_children: "READ",
+  notion_get_comments: "READ",
+  notion_list_users: "READ",
+  notion_get_user: "READ",
+  notion_create_page: "HIGH",
+  notion_update_page: "HIGH",
+  notion_create_database: "HIGH",
+  notion_append_block_children: "HIGH",
+  notion_update_block: "HIGH",
+  notion_add_comment: "HIGH",
+  notion_delete_block: "HIGH",
+
+  // Terraform
+  terraform_init: "LOW",
+  terraform_validate: "READ",
+  terraform_fmt: "MEDIUM",
+  terraform_plan: "LOW",
+  terraform_apply: "HIGH",
+  terraform_destroy: "DESTRUCTIVE",
+  terraform_show: "READ",
+  terraform_output: "READ",
+  terraform_workspace: "HIGH",
+  terraform_state_list: "READ",
+  terraform_state_show: "READ",
+  terraform_state_pull: "READ",
+  terraform_state_mv: "HIGH",
+  terraform_state_rm: "HIGH",
+  terraform_import: "HIGH",
+  terraform_taint: "HIGH",
+  terraform_untaint: "MEDIUM",
+  terraform_graph: "READ",
+  terraform_providers: "READ",
+  terraform_plan_comment: "MEDIUM",
+
+  // Docker
+  docker_version: "READ",
+  docker_ps: "READ",
+  docker_images: "READ",
+  docker_logs: "READ",
+  docker_inspect: "READ",
+  docker_stats: "READ",
+  docker_start: "LOW",
+  docker_pull: "MEDIUM",
+  docker_build: "HIGH",
+  docker_run: "HIGH",
+  docker_stop: "HIGH",
+  docker_restart: "HIGH",
+  docker_exec: "HIGH",
+  docker_push: "HIGH",
+  docker_compose_up: "HIGH",
+  docker_compose_down: "HIGH",
+  docker_remove: "DESTRUCTIVE",
+  docker_remove_image: "DESTRUCTIVE",
+
+  // Toolset management
+  search_tools: "READ",
+  load_toolset: "LOW",
+  use_tool: "READ", // only forwards; the called tool applies its own risk level and approvals
+
+  // Reminders
+  reminder_create: "LOW",
+  reminder_list: "READ",
+  reminder_update: "LOW",
+
+  // Research
+  web_search: "READ",
+  web_fetch: "MEDIUM",
+
+  // Leads
+  lead_hn_hiring: "READ",
+  lead_remote_jobs: "READ",
+  lead_company_contacts: "MEDIUM",
+
+  // SEO and content
+  seo_keyword_ideas: "READ",
+  seo_page_audit: "MEDIUM",
+  seo_content_check: "READ",
+  seo_search_console: "READ",
+
+  // Pipeline
+  pipeline_add_lead: "LOW",
+  pipeline_list: "READ",
+  pipeline_get: "READ",
+  pipeline_update: "LOW",
+  pipeline_log_activity: "LOW",
+  pipeline_add_contact: "LOW",
+  pipeline_report: "READ",
+  pipeline_export: "MEDIUM",
+  pipeline_delete_deal: "DESTRUCTIVE",
+
+  // Google Calendar (inviting guests is gated separately inside the tools)
+  calendar_list_calendars: "READ",
+  calendar_list_events: "READ",
+  calendar_get_event: "READ",
+  calendar_free_busy: "READ",
+  calendar_find_slots: "READ",
+  calendar_create_event: "MEDIUM",
+  calendar_update_event: "MEDIUM",
+  calendar_delete_event: "DESTRUCTIVE",
+
+  // Meeting notes (transcribing uploads audio to Groq, so it needs confirm)
+  meeting_transcribe: "HIGH",
+  meeting_save: "MEDIUM",
+  meeting_list: "READ",
+  meeting_get: "READ",
+  meeting_search: "READ",
+  meeting_actions: "READ",
+  meeting_complete_action: "LOW",
+  meeting_prep: "READ",
+  meeting_delete: "DESTRUCTIVE",
+
+  // Telegram (notify only reaches the owner's own chat)
+  telegram_get_me: "READ",
+  telegram_get_updates: "READ",
+  telegram_get_chat: "READ",
+  telegram_notify: "LOW",
+  telegram_send_message: "HIGH",
+
+  // Linear
+  linear_get_viewer: "READ",
+  linear_list_teams: "READ",
+  linear_list_issues: "READ",
+  linear_get_issue: "READ",
+  linear_create_issue: "MEDIUM",
+  linear_update_issue: "MEDIUM",
+  linear_add_comment: "MEDIUM",
+
+  // Stripe (live keys are refused unless STRIPE_ALLOW_LIVE=true; anything that emails or moves money is HIGH)
+  stripe_get_account: "READ",
+  stripe_list_customers: "READ",
+  stripe_create_customer: "MEDIUM",
+  stripe_list_invoices: "READ",
+  stripe_create_invoice: "MEDIUM",
+  stripe_send_invoice: "HIGH",
+  stripe_create_payment_link: "HIGH",
+  stripe_list_payments: "READ",
+  stripe_refund: "HIGH",
+
+  // Discord
+  discord_get_me: "READ",
+  discord_list_guilds: "READ",
+  discord_list_channels: "READ",
+  discord_read_messages: "READ",
+  discord_send_message: "HIGH",
 };
 
 const APPROVAL_REQUIRED_LEVELS = new Set(["HIGH", "DESTRUCTIVE"]);

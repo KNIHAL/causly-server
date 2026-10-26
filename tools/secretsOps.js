@@ -1,13 +1,11 @@
 import crypto from "crypto";
 import fs from "fs/promises";
 import path from "path";
-import { fileURLToPath } from "url";
+import { dataDir } from "./paths.js";
 
 const ALGO = "aes-256-gcm";
-// Anchor the default store to the repo root (one level up from tools/),
-// regardless of what directory the server process was launched from.
-const REPO_ROOT = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
-const DEFAULT_STORE_PATH = path.join(REPO_ROOT, ".causly-secrets.enc");
+// Fixed folder (the repo in a checkout, ~/.causly when installed from npm), whatever directory the server was launched from.
+const DEFAULT_STORE_PATH = path.join(dataDir(), ".causly-secrets.enc");
 
 function getMasterKey() {
   const key = process.env.SECRETS_MASTER_KEY;
