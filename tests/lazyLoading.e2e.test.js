@@ -48,7 +48,7 @@ describe("lazy tool loading (stdio)", () => {
     try {
       const manifest = JSON.parse(fs.readFileSync(new URL("../packs/manifest.json", import.meta.url), "utf8"));
       const total = Object.values(manifest.packs).reduce((n, p) => n + p.tools.length, 0);
-      expect((await names()).length).toBe(total + 2); // + search_tools, load_toolset
+      expect((await names()).length).toBe(total + 3); // + search_tools, load_toolset, use_tool
     } finally {
       await client.close();
     }

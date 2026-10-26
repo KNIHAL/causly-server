@@ -114,7 +114,7 @@ export function runToolsets({ action = "list", names = [], client, platform, hom
   if (action !== "list") {
     const labels = targets.map((t) => CLIENT_LABEL[t.client]).join(" and ");
     lines.unshift(
-      changed ? `Updated ${labels}. Restart ${labels} to apply.` : "Nothing changed.",
+      changed ? `Saved for ${labels}. These packs are in the tool list from the next restart; until then the agent can already use them through use_tool.` : "Nothing changed.",
       ...notes,
       ""
     );

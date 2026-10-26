@@ -305,6 +305,7 @@ export const PERMISSION_LEVELS = {
   // Toolset management
   search_tools: "READ",
   load_toolset: "LOW",
+  use_tool: "READ", // only forwards; the called tool applies its own risk level and approvals
 
   // Reminders
   reminder_create: "LOW",

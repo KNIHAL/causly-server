@@ -5,7 +5,7 @@ import { PERMISSION_LEVELS } from "../tools/security.js";
 // These tests import every pack, which is slow when the whole suite runs in parallel.
 vi.setConfig({ testTimeout: 30000 });
 
-const META_TOOLS = ["search_tools", "load_toolset"];
+const META_TOOLS = ["search_tools", "load_toolset", "use_tool"];
 const APPROVAL_LEVELS = new Set(["HIGH", "DESTRUCTIVE"]);
 
 // Register every pack on a stub server and record each tool's input fields.
