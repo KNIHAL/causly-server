@@ -2,6 +2,8 @@
 // causly-server command line.
 //   causly-server                      start the MCP server (what editors run)
 //   causly-server init [options]       set the server up in Claude Desktop, Cursor, Windsurf
+//   causly-server status | backup [file] | restore <file>
+//   causly-server login google [services]  sign in to Google in the browser
 //   causly-server setup [service]      add API keys step by step, with a live check
 //   causly-server toolsets [add|remove|reset] [names]   choose what loads at startup
 //   causly-server keys <list|set|unset|open>
@@ -34,6 +36,10 @@ Usage:
       --workspace <folder>                  Limit file tools to this folder
       --toolsets <list>                     Load packs at startup, e.g. research,pipeline,meetings
       --no-setup                            Do not offer to add API keys afterwards
+  causly-server status                  One screen: editors, keys, pipeline, reminders, backup, updates
+  causly-server backup [file]           Save a copy of your pipeline, meetings and reminders
+  causly-server restore <file> [--yes]  Put a backup back (the current data is kept as a copy)
+  causly-server login google [gmail,calendar,gsc|all]   Sign in to Google in the browser (default: Gmail and Calendar)
   causly-server toolsets                Show which tool packs load at startup
   causly-server toolsets add <names>    Load more packs at startup, e.g. github,calendar
   causly-server toolsets remove <names> Stop loading packs at startup
@@ -65,6 +71,7 @@ async function main() {
   if (command === "init") {
     const r = ops.runInit({ client: flag("client"), workspace: flag("workspace"), toolsets: flag("toolsets") });
     console.log(r.lines.join("\n"));
+    console.log(ops.welcomeLines().join("\n"));
     const term = createTerminal();
     try {
       if (term.interactive && !flag("no-setup") && (await term.confirm("\nAdd API keys now?"))) {
@@ -109,6 +116,41 @@ async function main() {
       console.error(`Unknown keys command "${sub}". Use: list, set NAME, unset NAME, open.`);
       process.exitCode = 1;
     }
+  } else if (command === "status") {
+    loadEnv();
+    const { runStatus } = await import("../tools/statusOps.js");
+    const r = await runStatus({ version: version() });
+    console.log(r.lines.join("\n"));
+  } else if (command === "backup") {
+    const { runBackup } = await import("../tools/backupOps.js");
+    const r = await runBackup({ file: positional[0] });
+    console.log(`Backup saved: ${r.file} (${Math.max(1, Math.round(r.bytes / 1024))} KB)`);
+    console.log("It holds your pipeline, meetings and reminders. API keys are not included (they are in the settings file).");
+  } else if (command === "restore") {
+    const { runRestore } = await import("../tools/backupOps.js");
+    if (!positional[0]) throw new Error("Give the backup file, for example: causly-server restore <file>");
+    const term = createTerminal();
+    try {
+      const ok = flag("yes") || (term.interactive && (await term.confirm("This replaces your current pipeline, meetings and reminders with the backup (a copy of the current data is kept). Continue?", false)));
+      if (!ok) throw new Error("Not restored. Add --yes to confirm without a prompt.");
+    } finally {
+      term.close();
+    }
+    const r = await runRestore({ file: positional[0] });
+    console.log(`Restored ${r.restored}`);
+    if (r.safety_copy) console.log(`Your previous data was saved to ${r.safety_copy}`);
+    console.log("Restart your editor so running tools reopen the data.");
+  } else if (command === "login") {
+    if ((positional[0] || "google") !== "google") throw new Error('Only "login google" exists. Other services use: causly-server setup <service>');
+    loadEnv();
+    const { runGoogleLogin, parseTargets } = await import("../tools/googleLogin.js");
+    const term = createTerminal();
+    try {
+      const r = await runGoogleLogin({ targets: parseTargets(positional.slice(1).join(",")), term });
+      if (!r.saved.length || r.checks.some((c) => !c.ok)) process.exitCode = 1;
+    } finally {
+      term.close();
+    }
   } else if (command === "toolsets") {
     const { runToolsets } = await import("../tools/toolsetOps.js");
     const names = positional.slice(1).flatMap((s) => s.split(","));
@@ -121,6 +163,9 @@ async function main() {
     const r = await ops.runDoctor();
     for (const c of r.checks) console.log(`${c.ok ? "ok  " : "warn"}  ${c.name}: ${c.detail}`);
     if (r.not_configured.length) console.log(`\nNot set up yet: ${r.not_configured.join(", ")}`);
+    const { checkForUpdate, updateMessage } = await import("../tools/updateCheck.js");
+    const update = updateMessage(await checkForUpdate({ current: version() }));
+    if (update) console.log(`\n${update}`);
     if (!r.ok) process.exitCode = 1;
     if (flag("test")) {
       const { testConfigured } = await import("../tools/setupOps.js");

@@ -8,6 +8,7 @@ import os from "os";
 import { SERVICES, findService, serviceState, checkService, allNames } from "./services.js";
 import { setEnvValue, unsetEnvValue, readEnvValues, describeSecret, isValidName, checkValue } from "./envFile.js";
 import { envWritePath } from "./paths.js";
+import { runGoogleLogin } from "./googleLogin.js";
 
 // ---------------------------------------------------------------- setup wizard
 
@@ -26,7 +27,7 @@ async function findTelegramChats(token, fetchFn) {
  * Walk the user through adding keys. Each service: show where to get the key, ask for it
  * (hidden), test it live, and save it only when the test passes (or the user insists).
  */
-export async function runSetup({ service, term, env = process.env, file = envWritePath(), fetch: fetchFn = globalThis.fetch, services = SERVICES } = {}) {
+export async function runSetup({ service, term, env = process.env, file = envWritePath(), fetch: fetchFn = globalThis.fetch, services = SERVICES, login = runGoogleLogin } = {}) {
   const say = (t = "") => term.write(`${t}\n`);
   const result = { saved: [], saved_untested: [], skipped: [] };
 
@@ -64,6 +65,16 @@ export async function runSetup({ service, term, env = process.env, file = envWri
 
   async function configure(svc) {
     say(`\n== ${svc.name} ==`);
+    if (svc.login && term.interactive && (await term.confirm("Sign in with your browser? (recommended, no copying of tokens)"))) {
+      try {
+        const r = await login({ targets: [svc.login], term, env, file, fetch: fetchFn });
+        (r.saved.includes(svc.login) ? result.saved : result.skipped).push(svc.id);
+      } catch (err) {
+        say(`Sign-in failed: ${err.message}`);
+        result.skipped.push(svc.id);
+      }
+      return;
+    }
     svc.steps.forEach((s, i) => say(`  ${i + 1}. ${s}`));
     say(`  Link: ${svc.url}\n`);
 

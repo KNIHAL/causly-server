@@ -40,7 +40,7 @@ async function googleCheck(env, { fetch: f }, { tokenName, idNames, secretNames,
   const form = new URLSearchParams({ client_id: clientId, client_secret: clientSecret, refresh_token: env[tokenName], grant_type: "refresh_token" });
   const { res, body } = await call(f, "https://oauth2.googleapis.com/token", { method: "POST", headers: { "content-type": "application/x-www-form-urlencoded" }, body: form });
   if (!res.ok) {
-    if (body.error === "invalid_grant") throw new Error("Google says the refresh token is expired or revoked. If your Google Cloud app is in Testing mode, tokens expire after 7 days: publish the app, then create a new token.");
+    if (body.error === "invalid_grant") throw new Error("Google says the refresh token is expired or revoked. If your Google Cloud app is in Testing mode, tokens expire after 7 days: publish the app, then sign in again with: causly-server login google");
     if (body.error === "invalid_client") throw new Error("Google rejected the client id or secret.");
     throw new Error(`Google error: ${body.error_description || body.error || `HTTP ${res.status}`}`);
   }
@@ -82,6 +82,7 @@ export const SERVICES = [
     id: "gmail",
     name: "Gmail",
     env: [{ name: "GMAIL_CLIENT_ID", secret: false }, { name: "GMAIL_CLIENT_SECRET", secret: true }, { name: "GMAIL_REFRESH_TOKEN", secret: true }],
+    login: "gmail",
     url: "https://developers.google.com/oauthplayground",
     steps: [
       "In console.cloud.google.com enable the Gmail API, set up the OAuth consent screen and create an OAuth client (Desktop app).",
@@ -99,6 +100,7 @@ export const SERVICES = [
       { name: "CALENDAR_CLIENT_SECRET", secret: true, optional: true, note: "Only if different from the Gmail client" },
       { name: "CAUSLY_TIMEZONE", secret: false, optional: true, note: "e.g. Asia/Kolkata (default: this computer's zone)" },
     ],
+    login: "calendar",
     url: "https://developers.google.com/oauthplayground",
     steps: [
       "Enable the Google Calendar API in the same Google Cloud project as Gmail.",
@@ -112,6 +114,29 @@ export const SERVICES = [
         idNames: ["CALENDAR_CLIENT_ID", "GMAIL_CLIENT_ID"],
         secretNames: ["CALENDAR_CLIENT_SECRET", "GMAIL_CLIENT_SECRET"],
         scopeAll: ["calendar.events", "calendar.readonly"],
+      }),
+  },
+  {
+    id: "gsc",
+    name: "Google Search Console",
+    env: [
+      { name: "GSC_REFRESH_TOKEN", secret: true },
+      { name: "GSC_CLIENT_ID", secret: false, optional: true, note: "Only if different from the Gmail client" },
+      { name: "GSC_CLIENT_SECRET", secret: true, optional: true, note: "Only if different from the Gmail client" },
+    ],
+    login: "gsc",
+    url: "https://developers.google.com/oauthplayground",
+    steps: [
+      "Enable the Search Console API in the same Google Cloud project as Gmail.",
+      "In OAuth Playground (your own credentials) authorize https://www.googleapis.com/auth/webmasters.readonly.",
+      "Exchange the code and copy the Refresh token.",
+    ],
+    check: (env, deps) =>
+      googleCheck(env, deps, {
+        tokenName: "GSC_REFRESH_TOKEN",
+        idNames: ["GSC_CLIENT_ID", "GMAIL_CLIENT_ID"],
+        secretNames: ["GSC_CLIENT_SECRET", "GMAIL_CLIENT_SECRET"],
+        scopeAny: ["webmasters"],
       }),
   },
   {
@@ -264,6 +289,7 @@ export async function checkService(svc, env = process.env, deps = {}) {
 /** When a tool error mentions one of a service's settings, say how to fix it. */
 export function setupHint(message, services = SERVICES) {
   const text = String(message ?? "");
+  if (/invalid_grant|expired or revoked/i.test(text)) return 'Fix: the Google sign-in expired. Run "causly-server login google" in a terminal.';
   const svc = services.find((s) => s.env.some((v) => !v.optional && text.includes(v.name)));
   return svc ? `Fix: run "causly-server setup ${svc.id}" in a terminal. New keys are picked up on the next tool call.` : null;
 }

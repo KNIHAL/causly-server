@@ -149,6 +149,20 @@ export function runInit({ client, workspace, toolsets, platform, home, env, root
   return { env_file: envPath, entry, clients: results, lines };
 }
 
+/** Shown after init: what to try first. */
+export function welcomeLines() {
+  return [
+    "",
+    "Try asking your agent:",
+    '  "Find companies hiring React developers and add the best three to my pipeline."',
+    '  "Save notes from my call with Acme: they want a demo next week, follow up on Friday."',
+    '  "What is due this week? Include meeting action items and reminders."',
+    '  "Prep me for my next meeting." (needs Google Calendar: causly-server login google)',
+    "",
+    "Useful commands: causly-server status | setup | login google | toolsets | backup | doctor --test",
+  ];
+}
+
 export function runRemove({ client, platform, home, env } = {}) {
   const where = { platform, home, env };
   const clients = client ? pickClients(client, where) : [...CLIENTS];
