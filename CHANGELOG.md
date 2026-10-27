@@ -2,17 +2,21 @@
 
 All notable changes to this project are documented here.
 
-## [Unreleased]
-
-### Added
-- Opt-in BoundaryAttest Interop Profile v0.2 `server_attested` receipts for the `ship_change`, `verify_ci_fix`, and `deploy_project` workflow boundary, with RFC 8785/JCS redacted evidence hashes, independent expected-key verification, and focused tests. BoundaryAttest v0.1 remains legacy-only.
+## [1.5.1]
 
 ### Changed
-- The central wrapper now owns each operation ID and supplies it to the existing audit logger so an optional receipt and normal audit event share one correlation identity. Approval and security semantics are unchanged.
+- New README for the npm package: install-first quick start, architecture diagram, demo GIF, tool pack tables, configuration, Google setup, security and privacy, troubleshooting and FAQ.
+- `.env.example`: the Google setup comments now describe the `causly-server login google` flow.
 
 ## [1.5.0]
 
 ### Added
+- **npm package and CLI**: `npm install -g causly-server`, then `causly-server init | setup | keys | doctor [--test] | status | toolsets | backup | restore | login google | remove`. `init` adds the server to Claude Desktop, Cursor and Windsurf.
+- **Lazy tool packs**: files, directory, command and project load first; other packs load on demand. `search_tools`, `load_toolset` and `use_tool` let an agent find and call any tool without restarting the editor. `toolsets` controls which packs load at startup.
+- **Co-founder packs**: research (2 tools), leads (3), SEO and content (4, including Search Console), pipeline (9, local SQLite), calendar (8), Telegram (5), Linear (7), meetings (9: Groq Whisper transcription, action items, deal and calendar links, call prep) and reminders (3, delivered to Telegram).
+- **Safety and local data**: opt-in workspace limit (`init --workspace`), approval gate for risky actions, and a local SQLite store under `~/.causly` with `backup` and `restore`.
+- **Google sign-in**: `causly-server login google` for Gmail, Calendar and Search Console.
+- Opt-in BoundaryAttest Interop Profile v0.2 `server_attested` receipts for the `ship_change`, `verify_ci_fix`, and `deploy_project` workflow boundary, with RFC 8785/JCS redacted evidence hashes, independent expected-key verification, and focused tests. BoundaryAttest v0.1 remains legacy-only.
 - **Notion — new category, 15 tools**: search, page/database CRUD, block append/read/update/delete, comments, users. All live-tested against a real shared Notion page.
 - **Terraform — new category, 20 tools**: full lifecycle (init/validate/fmt/plan/apply/destroy/show/output/workspace), state management (state_list/show/mv/rm/pull/import/taint/untaint), graph/providers, and a CI/CD hook (`terraform_plan_comment` — posts a plan summary as a GitHub PR comment). 17/20 live-tested.
 - **Docker — new category, 18 tools**: ps/images/build/run/stop/start/restart/rm/rmi/logs/inspect/exec/stats/push/pull/compose up-down. Cross-platform — tries `docker` directly first, falls back to `wsl docker` on Windows-only-WSL setups, with automatic Windows-path-to-WSL-path translation for build context, volumes, and compose working directory. 17/18 live-tested.
@@ -20,12 +24,13 @@ All notable changes to this project are documented here.
 - **Local encrypted secrets manager — new category, 6 tools**: set/get/list/delete/rotate_key/generate_key. AES-256-GCM, local file store, no external service required. All 6 live-tested including a full key-rotation cycle.
 - **Sentry monitoring — new category, 8 tools**: list_projects/list_issues/search_issues/get_issue/resolve_issue/ignore_issue/get_project_stats/add_comment. 5/8 live-tested.
 
-Total: 181 tools, up from 106.
+Total: 230+ tools, up from 106.
 
 ### Changed
+- The central wrapper now owns each operation ID and supplies it to the existing audit logger so an optional receipt and normal audit event share one correlation identity. Approval and security semantics are unchanged.
 - **License: PolyForm Noncommercial 1.0.0 → MIT.** Added `"license": "MIT"` to `package.json`.
 - Removed the temporary `register/` staging folder now that all tool registrations live directly in `index.js`.
-- Simplified `setup.js` — dropped interactive token prompting (tokens are documented/edited directly in `.env`), kept the cross-platform Claude Desktop config auto-update.
+- Removed the legacy `setup.js` helper (`causly-server init` replaces it) and moved the docs site and landing code out of this repo.
 - Updated `CONTRIBUTING.md` and `ROADMAP.md` to reflect the new tool categories and the current Azure/GCP/AWS-deferred stance.
 
 ### Fixed
