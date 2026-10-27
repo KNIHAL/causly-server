@@ -1,15 +1,14 @@
-<p align="center">
+# Causly Server
+
+**The open-source MCP server that turns any AI agent into your technical co-founder.**
+
+<p>
   <a href="https://www.npmjs.com/package/causly-server"><img src="https://img.shields.io/npm/v/causly-server.svg?color=FF9A1F" alt="npm version"></a>
-  <a href="https://www.npmjs.com/package/causly-server"><img src="https://img.shields.io/npm/dm/causly-server.svg?color=FF9A1F" alt="npm downloads"></a>
   <a href="./LICENSE"><img src="https://img.shields.io/badge/License-MIT-blue.svg" alt="MIT license"></a>
   <a href="https://github.com/KNIHAL/causly-server/actions/workflows/ci.yml"><img src="https://github.com/KNIHAL/causly-server/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
   <img src="https://img.shields.io/badge/node-%E2%89%A5%2020-339933.svg" alt="Node 20 or newer">
   <a href="./CONTRIBUTING.md"><img src="https://img.shields.io/badge/PRs-welcome-brightgreen.svg" alt="PRs welcome"></a>
 </p>
-
-# Causly Server
-
-**The open-source MCP server that turns any AI agent into your technical co-founder.**
 
 Most agents can write text. Causly Server gives them hands: they ship code, hunt for clients, track deals, take meeting notes, handle your calendar and remind you on Telegram, all from one conversation, all on your own machine.
 
@@ -17,8 +16,6 @@ Most agents can write text. Causly Server gives them hands: they ship code, hunt
 npm install -g causly-server
 causly-server init
 ```
-
-Restart your editor and ask your agent what to do next.
 
 <p align="center">
   <img src="https://raw.githubusercontent.com/KNIHAL/causly-server/master/docs/images/demo.gif" alt="Install, init and doctor in under ten seconds" width="85%">
