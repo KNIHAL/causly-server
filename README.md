@@ -1,8 +1,4 @@
 <p align="center">
-  <img src="https://raw.githubusercontent.com/KNIHAL/causly-server/master/docs/images/hero-banner.png" alt="Causly Server: What if your agent had hands? The open-source MCP server that turns any AI agent into your technical co-founder." width="100%">
-</p>
-
-<p align="center">
   <a href="https://www.npmjs.com/package/causly-server"><img src="https://img.shields.io/npm/v/causly-server.svg?color=FF9A1F" alt="npm version"></a>
   <a href="https://www.npmjs.com/package/causly-server"><img src="https://img.shields.io/npm/dm/causly-server.svg?color=FF9A1F" alt="npm downloads"></a>
   <a href="./LICENSE"><img src="https://img.shields.io/badge/License-MIT-blue.svg" alt="MIT license"></a>
@@ -24,13 +20,9 @@ causly-server init
 
 Restart your editor and ask your agent what to do next.
 
-## See it in action
-
 <p align="center">
   <img src="https://raw.githubusercontent.com/KNIHAL/causly-server/master/docs/images/demo.gif" alt="Install, init and doctor in under ten seconds" width="85%">
 </p>
-
-[Watch the 25-second demo](VIDEO_URL_HERE) (the agent scene uses illustrative demo data).
 
 ## Contents
 
@@ -328,7 +320,6 @@ Start with `causly-server doctor`. It tells you what is missing.
 | The agent cannot see a tool that is not loaded | Ask it to call the tool with `use_tool`, or run `causly-server toolsets add <pack>`. |
 | Gmail or Calendar stopped working | Your Google token expired (7 days in Testing mode). Run `causly-server login google`. |
 | `redirect_uri_mismatch` during Google sign-in | Your OAuth client is a "Web application". Create a **Desktop app** client instead. |
-| `npm install` fails with `'node' is not recognized` in a postinstall script (Windows) | Retry with `npm install --ignore-scripts` ([issue #2](https://github.com/KNIHAL/causly-server/issues/2)). |
 | A reminder never reached Telegram | Set both `TELEGRAM_BOT_TOKEN` and `TELEGRAM_CHAT_ID`, then run `causly-server doctor --test`. |
 | Transcription fails on a large file | Install `ffmpeg` and make sure it is on your `PATH`. Files above 25 MB are compressed first. |
 | `restore` cannot replace the data file | Quit Claude Desktop, Cursor and any app using Causly Server, then run it again. |
