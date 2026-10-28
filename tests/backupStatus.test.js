@@ -2,7 +2,9 @@ import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import fs from "fs";
 import os from "os";
 import path from "path";
-import { DatabaseSync } from "node:sqlite";
+const sqlite = await import("node:sqlite").catch(() => null); // needs Node 22.13+
+const hasSqlite = !!sqlite;
+const DatabaseSync = sqlite?.DatabaseSync;
 import { runBackup, runRestore, latestBackup } from "../tools/backupOps.js";
 import { runStatus } from "../tools/statusOps.js";
 import { checkForUpdate, compareVersions, updateMessage } from "../tools/updateCheck.js";
@@ -37,7 +39,7 @@ afterEach(() => {
   fs.rmSync(dir, { recursive: true, force: true });
 });
 
-describe("backup and restore", () => {
+describe.skipIf(!hasSqlite)("backup and restore", () => {
   it("backs up a live database and refuses to overwrite a backup", async () => {
     makeDb(dbFile, ["a", "b"]);
     const r = await runBackup({ dbFile, now: NOW });
@@ -121,7 +123,7 @@ describe("update check", () => {
   });
 });
 
-describe("status", () => {
+describe.skipIf(!hasSqlite)("status", () => {
   const root = path.resolve(import.meta.dirname, "..");
 
   it("shows editors, keys, data and the backup state", async () => {

@@ -84,12 +84,13 @@ describe("runCommand — blocked patterns", () => {
   it("does not block a benign command containing 'shutdown' as a substring of something else", async () => {
     // Sanity: ensure the blocklist doesn't over-match ordinary commands.
     execFile.mockImplementationOnce(ok("build ok", ""));
+    exec.mockImplementationOnce(ok("build ok", ""));
     const result = await runCommand({ command: "npm run build" });
     expect(result.exit_code).toBe(0);
   });
 });
 
-describe("runCommand — Windows execution chain (assumes win32 host)", () => {
+describe.skipIf(process.platform !== "win32")("runCommand - Windows execution chain (assumes win32 host)", () => {
   it("runs successfully via PowerShell on the first attempt", async () => {
     execFile.mockImplementationOnce(ok("hello", ""));
     const result = await runCommand({ command: "echo hello" });

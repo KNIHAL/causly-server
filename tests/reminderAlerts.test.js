@@ -88,7 +88,7 @@ describe.skipIf(!hasSqlite)("several processes, one database", () => {
   afterEach(() => {
     closeDb();
     delete process.env.CAUSLY_DB_PATH;
-    fs.rmSync(dir, { recursive: true, force: true });
+    fs.rmSync(dir, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 });
   });
 
   it("claims a due reminder once in-process", async () => {

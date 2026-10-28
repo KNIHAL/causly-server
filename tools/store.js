@@ -36,7 +36,8 @@ async function openDatabase(file) {
   }
   if (file !== ":memory:") fs.mkdirSync(path.dirname(file), { recursive: true });
   const handle = new sqlite.DatabaseSync(file);
-  handle.exec("PRAGMA journal_mode = WAL; PRAGMA foreign_keys = ON; PRAGMA busy_timeout = 5000;"); // wait for another process's write instead of failing
+  handle.exec("PRAGMA busy_timeout = 5000;"); // set first, so the WAL switch below also waits for other processes
+  handle.exec("PRAGMA journal_mode = WAL; PRAGMA foreign_keys = ON;"); // wait for another process's write instead of failing
   handle.exec(
     "CREATE TABLE IF NOT EXISTS schema_migrations (" +
       "namespace TEXT NOT NULL, version INTEGER NOT NULL, applied_at TEXT NOT NULL, " +
