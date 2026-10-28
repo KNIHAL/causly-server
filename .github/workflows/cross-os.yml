@@ -1,0 +1,39 @@
+name: cross-os
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [master, cofounder]
+  pull_request:
+
+jobs:
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        node: [20, 22]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Unit tests
+        run: npm test --if-present
+
+      - name: Agent smoke test (plain MCP client)
+        run: node scripts/agent-smoke.mjs
+
+      - name: Install published package globally
+        run: npm install -g causly-server
+
+      - name: CLI sanity check
+        run: causly-server doctor
+        continue-on-error: true
