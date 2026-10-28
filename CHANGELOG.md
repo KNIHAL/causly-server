@@ -2,6 +2,14 @@
 
 All notable changes to this project are documented here.
 
+## [1.5.3]
+
+### Added
+- MCP Registry metadata: `mcpName` in package.json and a `server.json`, so the server can be listed in the official MCP Registry.
+
+### Changed
+- npm package description now matches the README tagline.
+
 ## [1.5.2]
 
 ### Fixed

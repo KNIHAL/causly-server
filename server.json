@@ -1,0 +1,20 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.KNIHAL/causly-server",
+  "description": "Open-source MCP server that turns any AI agent into your technical co-founder",
+  "repository": {
+    "url": "https://github.com/KNIHAL/causly-server",
+    "source": "github"
+  },
+  "version": "1.5.3",
+  "packages": [
+    {
+      "registryType": "npm",
+      "identifier": "causly-server",
+      "version": "1.5.3",
+      "transport": {
+        "type": "stdio"
+      }
+    }
+  ]
+}

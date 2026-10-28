@@ -1,7 +1,8 @@
 {
   "name": "causly-server",
-  "version": "1.5.2",
-  "description": "Causly MCP server — an open-source MCP server that gives AI agents the tools to build, ship, deploy, and operate real software end-to-end.",
+  "mcpName": "io.github.KNIHAL/causly-server",
+  "version": "1.5.3",
+  "description": "Open-source MCP server that turns any AI agent into your technical co-founder",
   "license": "MIT",
   "main": "index.js",
   "type": "module",
