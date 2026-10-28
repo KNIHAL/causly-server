@@ -2,6 +2,15 @@
 
 All notable changes to this project are documented here.
 
+## [1.5.2]
+
+### Fixed
+- Local store: several processes opening the same database at once could fail with "database is locked". The busy timeout is now set before the switch to WAL mode.
+
+### Changed
+- Requires Node 22.13 or newer (the local store uses `node:sqlite`).
+- CI now runs the tests on Linux, macOS and Windows.
+
 ## [1.5.1]
 
 ### Changed
