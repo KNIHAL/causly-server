@@ -89,7 +89,7 @@ describe("runCommand — blocked patterns", () => {
   });
 });
 
-describe("runCommand — Windows execution chain (assumes win32 host)", () => {
+describe.skipIf(process.platform !== "win32")("runCommand - Windows execution chain (assumes win32 host)", () => {
   it("runs successfully via PowerShell on the first attempt", async () => {
     execFile.mockImplementationOnce(ok("hello", ""));
     const result = await runCommand({ command: "echo hello" });
