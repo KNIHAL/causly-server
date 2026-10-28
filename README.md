@@ -6,7 +6,7 @@
   <a href="https://www.npmjs.com/package/causly-server"><img src="https://img.shields.io/npm/v/causly-server.svg?color=FF9A1F" alt="npm version"></a>
   <a href="./LICENSE"><img src="https://img.shields.io/badge/License-MIT-blue.svg" alt="MIT license"></a>
   <a href="https://github.com/KNIHAL/causly-server/actions/workflows/ci.yml"><img src="https://github.com/KNIHAL/causly-server/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
-  <img src="https://img.shields.io/badge/node-%E2%89%A5%2020-339933.svg" alt="Node 20 or newer">
+  <img src="https://img.shields.io/badge/node-%E2%89%A5%2022.13-339933.svg" alt="Node 22.13 or newer">
   <a href="./CONTRIBUTING.md"><img src="https://img.shields.io/badge/PRs-welcome-brightgreen.svg" alt="PRs welcome"></a>
 </p>
 
