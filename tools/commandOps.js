@@ -1,6 +1,7 @@
 import { exec, execFile } from "child_process";
 import { promisify } from "util";
 import os from "os";
+import path from "path";
 import { classifyCommandRisk } from "./security.js";
 
 const execAsync = promisify(exec);
@@ -42,9 +43,9 @@ function findKey(env, name) {
   return Object.keys(env).find((k) => k.toUpperCase() === name.toUpperCase());
 }
 
-function buildEnv() {
-  if (!IS_WINDOWS) return process.env;
-  const env = { ...process.env };
+// Pure and platform-independent (uses path.win32) so it can be tested on any OS.
+export function buildWindowsEnv(baseEnv, { execPath = process.execPath, homedir = () => os.homedir() } = {}) {
+  const env = { ...baseEnv };
 
   // IMPORTANT: always read/write through the env's *actual* existing key
   // casing (e.g. "Path" vs "PATH"). Setting env.PATH when the real key is
@@ -77,20 +78,42 @@ function buildEnv() {
   // `npm run <script>`'s nested cmd.exe -> node.exe spawn), even though
   // our own top-level `node`/`npm` calls succeed via PowerShell's separate
   // system-PATH resolution. Ensure these are always present.
+  //
+  // The directory of the Node that runs this server and the npm global dir
+  // are PREPENDED (not appended): the Node that runs the server must be the
+  // Node that runs lifecycle scripts, even if an older Node sits earlier in
+  // PATH. Nothing here is machine- or user-specific.
   const pathKey = findKey(env, "PATH") || "PATH";
-  const home = env.USERPROFILE || env.HOME || "C:\\Users\\nihal";
-  const criticalPaths = [
-    "C:\\Program Files\\nodejs",
-    `${home}\\AppData\\Roaming\\npm`,
-  ];
-  const currentPath = env[pathKey] || "";
-  const currentPathList = currentPath.split(";").map((p) => p.trim()).filter(Boolean);
-  const missingPaths = criticalPaths.filter(
-    (p) => !currentPathList.some((existing) => existing.toLowerCase() === p.toLowerCase())
-  );
-  env[pathKey] = [...currentPathList, ...missingPaths].join(";");
+  const home = env.USERPROFILE || env.HOME || homedir();
+  const npmGlobal = env.APPDATA
+    ? path.win32.join(env.APPDATA, "npm")
+    : path.win32.join(home, "AppData", "Roaming", "npm");
+  const first = [path.win32.dirname(execPath), npmGlobal];
+  const rest = (env[pathKey] || "").split(";").map((p) => p.trim()).filter(Boolean);
+  const seen = new Set();
+  env[pathKey] = [...first, ...rest]
+    .filter((p) => {
+      const key = p.toLowerCase();
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    })
+    .join(";");
+
+  // npm runs lifecycle scripts through cmd.exe and reads ComSpec to find it;
+  // in a stripped environment (Claude Desktop) it can be missing or empty.
+  const comSpecKey = findKey(env, "COMSPEC") || "ComSpec";
+  if (!env[comSpecKey]) {
+    const systemRoot = env.SystemRoot || env.windir || "C:\\Windows";
+    env[comSpecKey] = path.win32.join(systemRoot, "System32", "cmd.exe");
+  }
 
   return env;
+}
+
+function buildEnv() {
+  if (!IS_WINDOWS) return process.env;
+  return buildWindowsEnv(process.env);
 }
 
 // Commands containing these patterns are blocked outright — no override.
