@@ -21,6 +21,10 @@ const SECRET_KEY_PATTERNS = [
   "private_key",
   "client_secret",
   "auth_token",
+  "connection_string",
+  "connectionstring",
+  "dsn",
+  "database_url",
 ];
 
 const REDACTED = "[REDACTED]";
@@ -37,6 +41,7 @@ function isSecretKey(key) {
  */
 export function redactSecrets(value, seen = new WeakSet()) {
   if (value === null || value === undefined) return value;
+  if (typeof value === "string") return redactSecretsInString(value);
 
   if (Array.isArray(value)) {
     if (seen.has(value)) return "[Circular]";
@@ -63,13 +68,47 @@ export function redactSecrets(value, seen = new WeakSet()) {
  * value pairs like `token=xxx`, `token: xxx`, `"token":"xxx"` are caught;
  * this is not a substitute for redactSecrets() on structured data.
  */
-export function redactSecretsInString(str) {
+function redactKeyValuePairs(str) {
   if (typeof str !== "string") return str;
   const pattern = new RegExp(
     `\\b(${SECRET_KEY_PATTERNS.join("|")})\\b(\\s*[:=]\\s*)("[^"]*"|'[^']*'|\\S+)`,
     "gi"
   );
   return str.replace(pattern, (_match, key, sep) => `${key}${sep}${REDACTED}`);
+}
+
+// Credentials embedded in values: scheme://user:password@host, Bearer tokens, well-known token prefixes.
+const URL_USERINFO = /\b([a-z][a-z0-9+.-]*:\/\/)[^\s/'"]+@/gi;
+const BEARER = /\b(Bearer\s+)[A-Za-z0-9._~+/=-]{8,}/gi;
+const TOKEN_PATTERNS = [
+  /\bgh[pousr]_[A-Za-z0-9]{20,}/g,
+  /\bgithub_pat_[A-Za-z0-9_]{20,}/g,
+  /\bglpat-[A-Za-z0-9_-]{20,}/g,
+  /\bxox[abprs]-[A-Za-z0-9-]{10,}/g,
+  /\bsk-[A-Za-z0-9_-]{20,}/g,
+  /\bAKIA[0-9A-Z]{16}\b/g,
+  /\bAIza[0-9A-Za-z_-]{35}/g,
+  /\beyJ[A-Za-z0-9_-]{5,}\.[A-Za-z0-9_-]{5,}\.[A-Za-z0-9_-]{5,}/g,
+];
+// JSON fragments: "some_password": "value" (the key may contain a secret name anywhere).
+const JSON_SECRET_PAIR = new RegExp(
+  `("[^"]*(?:${SECRET_KEY_PATTERNS.join("|")})[^"]*"\\s*:\\s*)("(?:[^"\\\\]|\\\\.)*"|[^\\s,}\\]]+)`,
+  "gi"
+);
+
+/**
+ * Redact secret-looking substrings out of a plain string (an error message,
+ * a command line, a log detail). Catches key/value pairs (`token=xxx`,
+ * `"password": "xxx"`), credentials inside URLs, Bearer tokens and common
+ * token formats. Best-effort - structured data should go through redactSecrets().
+ */
+export function redactSecretsInString(str) {
+  if (typeof str !== "string") return str;
+  let out = str.replace(JSON_SECRET_PAIR, `$1"${REDACTED}"`);
+  out = out.replace(URL_USERINFO, `$1${REDACTED}@`);
+  out = out.replace(BEARER, `$1${REDACTED}`);
+  for (const pattern of TOKEN_PATTERNS) out = out.replace(pattern, REDACTED);
+  return redactKeyValuePairs(out);
 }
 
 // ---------------- Permission levels ----------------

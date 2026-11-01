@@ -7,6 +7,7 @@ All notable changes to this project are documented here.
 ### Security
 - Updated vulnerable dependencies: `simple-git` 4.x, `@modelcontextprotocol/sdk` 1.32.x, `zod` 4.6.x, plus transitive fixes. `npm audit --omit=dev` now reports 0 vulnerabilities.
 - Added a test that keeps the direct dependencies on patched versions.
+- Credentials no longer reach the activity log or error responses: passwords inside URLs and connection strings, Bearer tokens, common token formats and JSON password fields are redacted, and `connection_string`, `dsn` and `database_url` fields are always redacted.
 
 ### Fixed
 - Windows: `npm install` (and any npm lifecycle script) through `run_command` no longer fails with `'node' is not recognized` (issue #2). The Node that runs the server and the npm global folder now come first in `PATH`, `ComSpec` is set when missing, and the hard-coded user name and Node folder are gone.
