@@ -2,6 +2,7 @@ import crypto from "crypto";
 import fs from "fs/promises";
 import path from "path";
 import { dataDir } from "./paths.js";
+import { assertPathAllowed } from "./pathGuard.js";
 
 const ALGO = "aes-256-gcm";
 // Fixed folder (the repo in a checkout, ~/.causly when installed from npm), whatever directory the server was launched from.
@@ -26,6 +27,7 @@ function storePath(store_path) {
 }
 
 async function loadStore(store_path) {
+  if (store_path) assertPathAllowed(store_path, "read");
   const p = storePath(store_path);
   try {
     const raw = await fs.readFile(p, "utf8");
@@ -37,6 +39,7 @@ async function loadStore(store_path) {
 }
 
 async function saveStore(store_path, data) {
+  if (store_path) assertPathAllowed(store_path, "write");
   const p = storePath(store_path);
   await fs.writeFile(p, JSON.stringify(data, null, 2), "utf8");
 }

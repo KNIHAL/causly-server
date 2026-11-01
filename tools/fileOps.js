@@ -1,11 +1,6 @@
 import fs from "fs/promises";
 import path from "path";
-import { isPathDenied } from "./security.js";
-
-function assertPathAllowed(targetPath) {
-  const check = isPathDenied(targetPath);
-  if (check.denied) throw new Error(check.reason);
-}
+import { assertPathAllowed } from "./pathGuard.js";
 
 /**
  * mkdir(recursive: true) that tolerates Windows quirks where the target
@@ -22,6 +17,7 @@ async function safeMkdir(dirPath) {
 
 /** Read a single file's full text content. */
 export async function readFile({ path: filePath, encoding = "utf8" }) {
+  assertPathAllowed(filePath, "read");
   const content = await fs.readFile(filePath, encoding);
   return { path: filePath, content };
 }
@@ -31,6 +27,7 @@ export async function readMultipleFiles({ paths, encoding = "utf8" }) {
   const results = await Promise.all(
     paths.map(async (p) => {
       try {
+        assertPathAllowed(p, "read");
         const content = await fs.readFile(p, encoding);
         return { path: p, content, success: true };
       } catch (err) {
@@ -106,6 +103,8 @@ export async function moveFile({ source, destination }) {
 
 /** Copy a file (not recursive — for directories use copyDirectory). */
 export async function copyFile({ source, destination }) {
+  assertPathAllowed(source, "read");
+  assertPathAllowed(destination);
   await safeMkdir(path.dirname(destination));
   await fs.copyFile(source, destination);
   return { source, destination, copied: true };
@@ -113,6 +112,7 @@ export async function copyFile({ source, destination }) {
 
 /** Get metadata about a file or directory. */
 export async function getFileInfo({ path: targetPath }) {
+  assertPathAllowed(targetPath, "read");
   const stats = await fs.stat(targetPath);
   return {
     path: targetPath,
