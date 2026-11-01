@@ -7,6 +7,7 @@ All notable changes to this project are documented here.
 ### Security
 - Updated vulnerable dependencies: `simple-git` 4.x, `@modelcontextprotocol/sdk` 1.32.x, `zod` 4.6.x, plus transitive fixes. `npm audit --omit=dev` now reports 0 vulnerabilities.
 - Added a test that keeps the direct dependencies on patched versions.
+- Docker Compose (WSL fallback on Windows) no longer builds a shell command from the project folder, so a folder name containing quotes or shell characters cannot run commands. A test now fails if any code builds shell text for `exec`.
 - Credentials no longer reach the activity log or error responses: passwords inside URLs and connection strings, Bearer tokens, common token formats and JSON password fields are redacted, and `connection_string`, `dsn` and `database_url` fields are always redacted.
 
 ### Fixed

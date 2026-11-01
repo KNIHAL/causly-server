@@ -274,22 +274,22 @@ describe("dockerOps — WSL fallback on Windows", () => {
     expect(wslArgs[volIndex + 1]).toBe("/mnt/d/projects/myapp:/app");
   });
 
-  it("dockerComposeUp falls back to `wsl bash -lc` when even `wsl docker` fails", async () => {
+  it("dockerComposeUp falls back to `wsl --cd` when even `wsl docker` fails", async () => {
     setPlatform("win32");
     execFile.mockImplementationOnce((cmd, args, opts, cb) => cb(notFoundErr())); // direct `docker`
     execFile.mockImplementationOnce((cmd, args, opts, cb) => cb(notFoundErr())); // runDocker's own `wsl docker` retry
-    execFile.mockImplementationOnce(ok("compose up via wsl bash", "")); // compose's own `wsl bash -lc`
+    execFile.mockImplementationOnce(ok("compose up via wsl bash", "")); // compose's own `wsl --cd`
 
     const result = await dockerComposeUp({ project_dir: "D:\\projects\\myapp" });
     expect(result.exit_code).toBe(0);
     expect(execFile.mock.calls[2][0]).toBe("wsl");
-    expect(execFile.mock.calls[2][1][0]).toBe("bash");
-    expect(execFile.mock.calls[2][1][1]).toBe("-lc");
-    expect(execFile.mock.calls[2][1][2]).toContain("/mnt/d/projects/myapp");
-    expect(execFile.mock.calls[2][1][2]).toContain("docker compose up -d");
+    expect(execFile.mock.calls[2][1][0]).toBe("--cd");
+    expect(execFile.mock.calls[2][1][1]).toBe("/mnt/d/projects/myapp");
+    expect(execFile.mock.calls[2][1][2]).toBe("--");
+    expect(execFile.mock.calls[2][1].slice(3)).toEqual(["docker", "compose", "up", "-d"]);
   });
 
-  it("dockerComposeDown falls back to `wsl bash -lc` when even `wsl docker` fails", async () => {
+  it("dockerComposeDown falls back to `wsl --cd` when even `wsl docker` fails", async () => {
     setPlatform("win32");
     execFile.mockImplementationOnce((cmd, args, opts, cb) => cb(notFoundErr()));
     execFile.mockImplementationOnce((cmd, args, opts, cb) => cb(notFoundErr()));
@@ -297,7 +297,7 @@ describe("dockerOps — WSL fallback on Windows", () => {
 
     const result = await dockerComposeDown({ project_dir: "D:\\projects\\myapp" });
     expect(result.exit_code).toBe(0);
-    expect(execFile.mock.calls[2][1][2]).toContain("docker compose down");
+    expect(execFile.mock.calls[2][1].slice(3)).toEqual(["docker", "compose", "down"]);
   });
 
   it("dockerComposeUp resolves via runDocker's own `wsl docker` retry without needing bash -lc", async () => {
