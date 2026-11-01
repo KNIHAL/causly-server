@@ -1,4 +1,7 @@
+import { guardedRequest } from "./netGuard.js";
+
 const VERCEL_API = "https://api.vercel.com";
+const HTTP_CHECK_HEADERS = { "user-agent": "causly-server http_check", accept: "*/*" };
 
 function getToken() {
   const token = process.env.VERCEL_TOKEN;
@@ -175,15 +178,15 @@ export async function vercelCancelDeployment({ deployment_id }) {
 export async function httpCheck({ url, timeout_ms = 10_000 }) {
   const start = Date.now();
   try {
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), timeout_ms);
-    const res = await fetch(url, { method: "GET", redirect: "follow", signal: controller.signal });
-    clearTimeout(timer);
+    // Same guard as web_fetch: public addresses only, checked on every redirect hop.
+    const { res } = await guardedRequest(url, { timeoutMs: timeout_ms, headers: HTTP_CHECK_HEADERS });
+    const status = res.statusCode;
+    res.destroy(); // only the status matters
     const response_time_ms = Date.now() - start;
     return {
       url,
-      status: res.status,
-      healthy: res.status >= 200 && res.status < 400,
+      status,
+      healthy: status >= 200 && status < 400,
       response_time_ms,
     };
   } catch (err) {
@@ -192,7 +195,7 @@ export async function httpCheck({ url, timeout_ms = 10_000 }) {
       status: null,
       healthy: false,
       response_time_ms: Date.now() - start,
-      error: err.name === "AbortError" ? "timeout" : err.message,
+      error: err.code === "CAUSLY_TIMEOUT" ? "timeout" : err.message,
     };
   }
 }

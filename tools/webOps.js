@@ -10,11 +10,8 @@
 // loopback and link-local addresses (SSRF guard), checked at connection time so DNS
 // tricks and redirects cannot get around it. Set CAUSLY_ALLOW_PRIVATE_HOSTS=true to
 // allow private addresses (for example to read a local dev server).
-import dns from "dns";
-import http from "http";
-import https from "https";
-import net from "net";
 import zlib from "zlib";
+import { guardedRequest } from "./netGuard.js";
 
 const MAX_BYTES = 2 * 1024 * 1024;
 const MAX_REDIRECTS = 5;
@@ -30,97 +27,8 @@ const clamp = (n, min, max) => Math.min(Math.max(n, min), max);
 
 // ---------------------------------------------------------------- SSRF guard
 
-const allowPrivate = () => /^(1|true|yes)$/i.test(process.env.CAUSLY_ALLOW_PRIVATE_HOSTS || "");
-
-const ipv4ToInt = (ip) => ip.split(".").reduce((n, part) => n * 256 + Number(part), 0);
-
-const V4_BLOCKED = [
-  ["0.0.0.0", 8],
-  ["10.0.0.0", 8],
-  ["100.64.0.0", 10],
-  ["127.0.0.0", 8],
-  ["169.254.0.0", 16],
-  ["172.16.0.0", 12],
-  ["192.0.0.0", 24],
-  ["192.0.2.0", 24],
-  ["192.168.0.0", 16],
-  ["198.18.0.0", 15],
-  ["198.51.100.0", 24],
-  ["203.0.113.0", 24],
-  ["224.0.0.0", 4],
-  ["240.0.0.0", 4],
-];
-
-const inCidr = (ipInt, [base, bits]) => {
-  const start = ipv4ToInt(base);
-  return ipInt >= start && ipInt < start + 2 ** (32 - bits);
-};
-
-/** True only for a globally routable address. Anything unparseable counts as not public. */
-export function isPublicAddress(address) {
-  const ip = String(address).replace(/^\[|\]$/g, "").split("%")[0];
-  const family = net.isIP(ip);
-  if (family === 4) return !V4_BLOCKED.some((cidr) => inCidr(ipv4ToInt(ip), cidr));
-  if (family === 6) {
-    const lower = ip.toLowerCase();
-    const mapped = lower.match(/^::ffff:(\d+\.\d+\.\d+\.\d+)$/);
-    if (mapped) return isPublicAddress(mapped[1]);
-    const mappedHex = lower.match(/^::ffff:([0-9a-f]{1,4}):([0-9a-f]{1,4})$/);
-    if (mappedHex) {
-      const hi = parseInt(mappedHex[1], 16);
-      const lo = parseInt(mappedHex[2], 16);
-      return isPublicAddress(`${hi >> 8}.${hi & 255}.${lo >> 8}.${lo & 255}`);
-    }
-    if (lower.startsWith("::")) return false; // unspecified, loopback, compatible forms
-    const first = parseInt(lower.split(":")[0], 16);
-    if ((first & 0xfe00) === 0xfc00) return false; // unique local fc00::/7
-    if ((first & 0xffc0) === 0xfe80) return false; // link-local fe80::/10
-    if ((first & 0xff00) === 0xff00) return false; // multicast
-    if (lower.startsWith("2001:db8:") || lower.startsWith("2001:0db8:")) return false; // documentation
-    if (lower.startsWith("64:ff9b:")) return false; // NAT64, blocked conservatively
-    return true;
-  }
-  return false;
-}
-
-export function parseHttpUrl(raw) {
-  let url;
-  try {
-    url = new URL(raw);
-  } catch {
-    throw new Error(`Not a valid URL: ${raw}`);
-  }
-  if (url.protocol !== "http:" && url.protocol !== "https:") {
-    throw new Error("Only http and https URLs are allowed.");
-  }
-  if (url.username || url.password) throw new Error("URLs with embedded credentials are not allowed.");
-  return url;
-}
-
-// IP-literal hosts skip DNS, so they are checked here; names are checked in guardedLookup.
-function assertHostAllowed(url) {
-  if (allowPrivate()) return;
-  const host = url.hostname.replace(/^\[|\]$/g, "");
-  if (net.isIP(host) && !isPublicAddress(host)) {
-    throw new Error(`Blocked: ${host} is a private or reserved address.`);
-  }
-}
-
-// Used by the HTTP client for every connection, so the address that is checked
-// is the address that is actually connected to.
-function guardedLookup(hostname, options, callback) {
-  dns.lookup(hostname, { ...options, all: true }, (err, addresses) => {
-    if (err) return callback(err);
-    if (!allowPrivate()) {
-      const bad = addresses.find((a) => !isPublicAddress(a.address));
-      if (bad) {
-        return callback(new Error(`Blocked: ${hostname} resolves to a private or reserved address (${bad.address}).`));
-      }
-    }
-    if (options && options.all) return callback(null, addresses);
-    callback(null, addresses[0].address, addresses[0].family);
-  });
-}
+// The guard lives in netGuard.js and is shared with http_check and the other URL-fetching tools.
+export { isPublicAddress, parseHttpUrl } from "./netGuard.js";
 
 // ---------------------------------------------------------------- HTML to text
 
@@ -252,33 +160,11 @@ export function htmlToText(html, baseUrl, { includeLinks = false } = {}) {
 
 // ---------------------------------------------------------------- web_fetch
 
-function getOnce(url, timeoutMs) {
-  return new Promise((resolve, reject) => {
-    const lib = url.protocol === "https:" ? https : http;
-    const req = lib.request(
-      url,
-      {
-        method: "GET",
-        lookup: guardedLookup,
-        signal: AbortSignal.timeout(timeoutMs),
-        headers: {
-          "user-agent": FETCH_UA,
-          accept: "text/html,application/xhtml+xml,application/xml;q=0.9,text/plain;q=0.8,*/*;q=0.5",
-          "accept-encoding": "gzip, deflate, br",
-        },
-      },
-      resolve
-    );
-    req.on("error", (err) => {
-      if (err.name === "TimeoutError" || err.code === "ABORT_ERR") {
-        reject(new Error(`Request timed out after ${timeoutMs}ms.`));
-      } else {
-        reject(err);
-      }
-    });
-    req.end();
-  });
-}
+const FETCH_HEADERS = {
+  "user-agent": FETCH_UA,
+  accept: "text/html,application/xhtml+xml,application/xml;q=0.9,text/plain;q=0.8,*/*;q=0.5",
+  "accept-encoding": "gzip, deflate, br",
+};
 
 async function readBody(res, maxBytes) {
   const encoding = String(res.headers["content-encoding"] || "").toLowerCase();
@@ -318,33 +204,20 @@ function decodeBody(buffer, contentType) {
  */
 export async function fetchRaw(rawUrl, { timeout_ms = DEFAULT_TIMEOUT_MS } = {}) {
   if (!rawUrl) throw new Error("url is required.");
-  let url = parseHttpUrl(rawUrl);
+  const { res, url } = await guardedRequest(rawUrl, { timeoutMs: timeout_ms, headers: FETCH_HEADERS, maxRedirects: MAX_REDIRECTS });
+  const status = res.statusCode;
 
-  for (let hop = 0; hop <= MAX_REDIRECTS; hop++) {
-    assertHostAllowed(url);
-    const res = await getOnce(url, timeout_ms);
-    const status = res.statusCode;
-
-    if ([301, 302, 303, 307, 308].includes(status) && res.headers.location) {
-      res.resume();
-      url = parseHttpUrl(new URL(res.headers.location, url).toString());
-      continue;
-    }
-
-    const contentType = String(res.headers["content-type"] || "");
-    const base = { final_url: url.toString(), status, content_type: contentType };
-    const isHtml = /html|xhtml/i.test(contentType);
-    const isText = /^text\/|json|xml|javascript/i.test(contentType);
-    if (!isHtml && !isText) {
-      res.resume();
-      return { ...base, kind: "binary" };
-    }
-    const { buffer, truncated } = await readBody(res, MAX_BYTES);
-    return { ...base, kind: isHtml ? "html" : "text", raw: decodeBody(buffer, contentType), body_truncated: truncated };
+  const contentType = String(res.headers["content-type"] || "");
+  const base = { final_url: url.toString(), status, content_type: contentType };
+  const isHtml = /html|xhtml/i.test(contentType);
+  const isText = /^text\/|json|xml|javascript/i.test(contentType);
+  if (!isHtml && !isText) {
+    res.resume();
+    return { ...base, kind: "binary" };
   }
-  throw new Error(`Too many redirects (more than ${MAX_REDIRECTS}).`);
+  const { buffer, truncated } = await readBody(res, MAX_BYTES);
+  return { ...base, kind: isHtml ? "html" : "text", raw: decodeBody(buffer, contentType), body_truncated: truncated };
 }
-
 /** Fetch a public web page and return readable text. */
 export async function fetchPage({ url: rawUrl, max_chars = 8000, include_links = false, timeout_ms = DEFAULT_TIMEOUT_MS } = {}) {
   if (!rawUrl) throw new Error("url is required.");
