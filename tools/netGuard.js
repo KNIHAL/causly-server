@@ -34,6 +34,24 @@ const inCidr = (ipInt, [base, bits]) => {
   return ipInt >= start && ipInt < start + 2 ** (32 - bits);
 };
 
+// The eight 16-bit groups of an IPv6 address, or null when it cannot be parsed.
+function ipv6Groups(ip) {
+  let s = ip.toLowerCase();
+  const dotted = s.match(/^(.*:)(\d+\.\d+\.\d+\.\d+)$/);
+  if (dotted) {
+    const [a, b, c, d] = dotted[2].split(".").map(Number);
+    s = `${dotted[1]}${((a << 8) | b).toString(16)}:${((c << 8) | d).toString(16)}`;
+  }
+  const parts = s.split("::");
+  if (parts.length > 2) return null;
+  const head = parts[0] ? parts[0].split(":") : [];
+  const tail = parts.length === 2 && parts[1] ? parts[1].split(":") : [];
+  const fill = parts.length === 2 ? 8 - head.length - tail.length : 0;
+  if (fill < 0) return null;
+  const groups = [...head, ...Array(fill).fill("0"), ...tail].map((g) => parseInt(g, 16));
+  return groups.length === 8 && groups.every((g) => Number.isInteger(g)) ? groups : null;
+}
+
 /** True only for a globally routable address. Anything unparseable counts as not public. */
 export function isPublicAddress(address) {
   const ip = String(address).replace(/^\[|\]$/g, "").split("%")[0];
@@ -56,6 +74,13 @@ export function isPublicAddress(address) {
     if ((first & 0xff00) === 0xff00) return false; // multicast
     if (lower.startsWith("2001:db8:") || lower.startsWith("2001:0db8:")) return false; // documentation
     if (lower.startsWith("64:ff9b:")) return false; // NAT64, blocked conservatively
+    // Transition forms that carry an IPv4 address are judged by that address.
+    const g = ipv6Groups(lower);
+    if (!g) return false;
+    const v4 = (hi, lo) => `${hi >> 8}.${hi & 255}.${lo >> 8}.${lo & 255}`;
+    if (g[0] === 0x2002) return isPublicAddress(v4(g[1], g[2])); // 6to4
+    if (g[0] === 0x2001 && g[1] === 0) return false; // Teredo, blocked conservatively
+    if ((g[4] === 0 || g[4] === 0x0200) && g[5] === 0x5efe) return isPublicAddress(v4(g[6], g[7])); // ISATAP
     return true;
   }
   return false;
