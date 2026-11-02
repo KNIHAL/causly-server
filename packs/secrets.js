@@ -22,10 +22,11 @@ server.registerTool(
 server.registerTool(
   "secrets_get",
   {
-    description: "Retrieve and decrypt a secret by name.",
+    description: "Retrieve and decrypt a secret by name. HIGH risk (the decrypted value is returned to the agent) - requires confirm: true.",
     inputSchema: {
       name: z.string(),
       store_path: z.string().optional(),
+      confirm: z.boolean().optional().describe("Must be true to proceed"),
     },
   },
   wrap("secrets_get", secretsOps.secretsGet)

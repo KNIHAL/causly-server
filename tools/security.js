@@ -149,19 +149,19 @@ export const PERMISSION_LEVELS = {
   git_status: "READ",
   git_add: "LOW",
   git_commit: "MEDIUM",
-  git_push: "MEDIUM",
+  git_push: "HIGH",
   git_pull: "MEDIUM",
   git_log: "READ",
   git_diff: "READ",
   git_branch: "READ",
   git_create_branch: "LOW",
   git_checkout: "MEDIUM",
-  git_merge: "MEDIUM",
+  git_merge: "HIGH",
   git_reset: "HIGH",
-  git_stash: "LOW",
+  git_stash: "MEDIUM", // drop needs confirm, see ACTION_LEVELS
   git_show: "READ",
   git_remote: "MEDIUM",
-  git_tag: "LOW",
+  git_tag: "MEDIUM", // delete needs confirm, see ACTION_LEVELS
   git_changed_files: "READ",
   git_diff_stat: "READ",
   git_check_clean: "READ",
@@ -208,7 +208,7 @@ export const PERMISSION_LEVELS = {
   vercel_delete_project: "DESTRUCTIVE",
   vercel_get_deployment_logs: "READ",
   vercel_get_deployment_events: "READ",
-  vercel_cancel_deployment: "MEDIUM",
+  vercel_cancel_deployment: "HIGH",
   http_check: "READ",
 
   // Project intelligence
@@ -250,7 +250,7 @@ export const PERMISSION_LEVELS = {
   supabase_list_organizations: "READ",
   supabase_list_projects: "READ",
   supabase_get_project: "READ",
-  supabase_create_project: "MEDIUM",
+  supabase_create_project: "HIGH",
   supabase_delete_project: "DESTRUCTIVE",
   supabase_run_sql: "HIGH",
 
@@ -266,7 +266,7 @@ export const PERMISSION_LEVELS = {
 
   // Secrets
   secrets_set: "HIGH",
-  secrets_get: "MEDIUM",
+  secrets_get: "HIGH",
   secrets_list: "READ",
   secrets_delete: "DESTRUCTIVE",
   secrets_rotate_key: "HIGH",
@@ -446,7 +446,7 @@ const APPROVAL_REQUIRED_LEVELS = new Set(["HIGH", "DESTRUCTIVE"]);
  * Returns { allowed, level, reason }. Never throws.
  */
 export function checkApproval(toolName, input) {
-  const level = PERMISSION_LEVELS[toolName] || "MEDIUM";
+  const level = getPermissionLevel(toolName, input);
   if (!APPROVAL_REQUIRED_LEVELS.has(level)) {
     return { allowed: true, level };
   }
@@ -458,6 +458,29 @@ export function checkApproval(toolName, input) {
     level,
     reason: `'${toolName}' is a ${level}-risk action and requires explicit confirmation. Re-call with confirm: true to proceed.`,
   };
+}
+
+// Tools whose risk depends on what they are asked to do. The base level in PERMISSION_LEVELS
+// applies unless the input names one of these actions, so only the destructive action needs
+// `confirm: true`.
+export const ACTION_LEVELS = {
+  git_stash: { field: "action", levels: { drop: "HIGH" } },
+  git_tag: { field: "action", levels: { delete: "HIGH" } },
+};
+
+/**
+ * The permission level for one call: the tool's level, or the higher level of the action named
+ * in the input. A tool without an entry gets MEDIUM (a safe default; tests/permissionLevels.test.js
+ * fails when a shipped tool is missing from PERMISSION_LEVELS).
+ */
+export function getPermissionLevel(toolName, input) {
+  const base = PERMISSION_LEVELS[toolName] || "MEDIUM";
+  const rule = ACTION_LEVELS[toolName];
+  if (rule && input && typeof input === "object" && typeof input[rule.field] === "string") {
+    const action = input[rule.field].trim().toLowerCase();
+    if (Object.hasOwn(rule.levels, action)) return rule.levels[action];
+  }
+  return base;
 }
 
 // ---------------- Command risk classification ----------------

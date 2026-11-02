@@ -1,7 +1,7 @@
 import fs from "fs";
 import path from "path";
 import crypto from "crypto";
-import { redactSecrets, redactSecretsInString, PERMISSION_LEVELS } from "./security.js";
+import { redactSecrets, redactSecretsInString, getPermissionLevel } from "./security.js";
 import { dataDir } from "./paths.js";
 
 const LOG_DIR = path.join(dataDir(), "logs");
@@ -31,7 +31,7 @@ export function logActivity(toolName, input, status, details = "", durationMs = 
       timestamp: new Date().toISOString(),
       operation_id: operationId,
       tool: toolName,
-      risk_level: PERMISSION_LEVELS[toolName] || "MEDIUM",
+      risk_level: getPermissionLevel(toolName, input),
       status,
       input: redactSecrets(input),
       details: redactSecretsInString(details),

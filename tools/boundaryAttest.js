@@ -1,7 +1,7 @@
 import crypto from "crypto";
 import fs from "fs";
 import path from "path";
-import { redactSecrets, redactSecretsInString, PERMISSION_LEVELS } from "./security.js";
+import { redactSecrets, redactSecretsInString, getPermissionLevel } from "./security.js";
 
 export const BOUNDARYATTEST_TOOLS = new Set(["ship_change", "verify_ci_fix", "deploy_project"]);
 const REQUIRED_CLAIM_FIELDS = ["receipt_version", "receipt_role", "event_id", "timestamp", "action_type", "status"];
@@ -138,7 +138,7 @@ export function emitBoundaryAttestReceipt({ toolName, input, result, error, stat
     status: status.toLowerCase(),
     operation_id: operationId,
     tool_name: toolName,
-    risk_level: PERMISSION_LEVELS[toolName] || "MEDIUM",
+    risk_level: getPermissionLevel(toolName, input),
     input_hash: hashRedacted(input),
     input_representation: "causly.redacted.jcs.v1",
   };

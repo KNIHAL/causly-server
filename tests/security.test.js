@@ -101,7 +101,7 @@ describe("checkApproval", () => {
   });
 
   it("allows LOW-level tools without confirm", () => {
-    const result = checkApproval("git_stash", {});
+    const result = checkApproval("git_add", {});
     expect(result.allowed).toBe(true);
     expect(result.level).toBe("LOW");
   });
