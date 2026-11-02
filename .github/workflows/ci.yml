@@ -9,16 +9,21 @@ on:
 jobs:
   syntax-check:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        node: [22, 24]
     steps:
       - uses: actions/checkout@v4
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 18
+          node-version: ${{ matrix.node }}
+          cache: npm
 
       - name: Install dependencies
-        run: npm install
+        run: npm ci
 
       - name: Check syntax of all JS files
         run: |
@@ -47,9 +52,56 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 22
+          cache: npm
 
       - name: Install dependencies
-        run: npm install
+        run: npm ci
 
       - name: Run focused BoundaryAttest tests
         run: npm run test:boundaryattest
+
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Audit production dependencies (fails on high or critical)
+        run: npm audit --omit=dev --audit-level=high
+
+  # The docs live in the agenv repo. This job checks that the tool pages still match
+  # packs/manifest.json and the permission levels in tools/security.js.
+  docs-drift:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check out the docs repo
+        uses: actions/checkout@v4
+        with:
+          repository: KNIHAL/causly-agent-environment
+          ref: master
+          path: agenv
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Docs drift test
+        env:
+          CAUSLY_DOCS_DIR: ${{ github.workspace }}/agenv/website/docs/server
+          CAUSLY_REQUIRE_DOCS: "1"
+        run: npx vitest run tests/docsDrift.test.js
