@@ -11,6 +11,7 @@
 // and spaces that Windows ignores. pathGuard.js adds real-path resolution (symlinks, 8.3 names).
 import os from "os";
 import path from "path";
+import { PACKAGE_ROOT } from "./paths.js";
 
 const WIN_SYSTEM_DIRS = [
   "C:\\Windows",
@@ -44,12 +45,17 @@ const POSIX_SYSTEM_DIRS = [
 ];
 
 // Credential folders below a home directory, with "/" separators.
-const HOME_SECRET_DIRS = [".ssh", ".aws", ".config/gcloud", "Library/Keychains", ".local/share/keyrings"];
+const HOME_SECRET_DIRS = [".ssh", ".aws", ".config/gcloud", ".kube", ".gnupg", ".azure", ".causly", "Library/Keychains", ".local/share/keyrings"];
 const POSIX_SECRET_ABSOLUTE = ["/Library/Keychains", "/System/Library/Keychains"];
 const WIN_HOME_SECRET_DIRS = [
   ".ssh",
   ".aws",
   ".config\\gcloud",
+  ".kube",
+  ".gnupg",
+  ".azure",
+  ".causly",
+  "AppData\\Roaming\\gnupg",
   "AppData\\Roaming\\gcloud",
   "AppData\\Roaming\\Microsoft\\Credentials",
   "AppData\\Local\\Microsoft\\Credentials",
@@ -78,6 +84,12 @@ const underPosix = (n, prefix) => n === prefix || n.startsWith(`${prefix}/`);
 
 function ciRegExp(source) {
   return new RegExp(source, "i");
+}
+
+// Causly's own data: ~/.causly or CAUSLY_HOME (API keys, secrets store, database), a custom
+// CAUSLY_ENV_FILE and the .env next to the code (a git checkout).
+function causlyOwnPaths(env) {
+  return [env.CAUSLY_HOME, env.CAUSLY_ENV_FILE, path.join(PACKAGE_ROOT, ".env")].filter(Boolean);
 }
 
 function isLocalHost(name) {
@@ -156,6 +168,7 @@ function checkWin32(raw, access, { home, env }) {
   }
   if (env.APPDATA) secretDirs.push(`${env.APPDATA.toLowerCase()}\\gcloud`, `${env.APPDATA.toLowerCase()}\\microsoft\\credentials`, `${env.APPDATA.toLowerCase()}\\microsoft\\protect`, `${env.APPDATA.toLowerCase()}\\microsoft\\vault`);
   if (env.LOCALAPPDATA) secretDirs.push(`${env.LOCALAPPDATA.toLowerCase()}\\microsoft\\credentials`, `${env.LOCALAPPDATA.toLowerCase()}\\microsoft\\vault`);
+  for (const p of causlyOwnPaths(env)) secretDirs.push(path.win32.normalize(p).toLowerCase());
   const secret = secretDirs.find((d) => underWin(n, path.win32.normalize(d))) || (WIN_ANY_HOME_SECRET.test(n) ? "a user credentials folder" : null);
   if (secret) {
     return { denied: true, reason: `'${raw}' is inside a protected credentials location (${secret}) and cannot be accessed through this tool.` };
@@ -172,7 +185,7 @@ function checkWin32(raw, access, { home, env }) {
   return { denied: false };
 }
 
-function checkPosix(raw, access, { home }) {
+function checkPosix(raw, access, { home, env }) {
   if (!raw.startsWith("/")) return { denied: false }; // relative: pathGuard resolves it first
   const n = path.posix.normalize(raw).toLowerCase();
 
@@ -181,6 +194,7 @@ function checkPosix(raw, access, { home }) {
     const h = path.posix.normalize(home.replace(/\\/g, "/")).toLowerCase().replace(/\/$/, "");
     for (const d of HOME_SECRET_DIRS) secretDirs.push(`${h}/${d.toLowerCase()}`);
   }
+  for (const p of causlyOwnPaths(env)) secretDirs.push(path.posix.normalize(p.replace(/\\/g, "/")).toLowerCase());
   const secret = secretDirs.find((d) => underPosix(n, d)) || (POSIX_ANY_HOME_SECRET.test(n) ? "a user credentials folder" : null);
   if (secret) {
     return { denied: true, reason: `'${raw}' is inside a protected credentials location (${secret}) and cannot be accessed through this tool.` };

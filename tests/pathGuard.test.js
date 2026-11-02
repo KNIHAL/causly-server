@@ -195,6 +195,27 @@ describe("resolving the real path", () => {
   });
 });
 
+describe("causly's own folder (API keys, secrets store, database)", () => {
+  it("CAUSLY_HOME cannot be read or written through the file tools", async () => {
+    const causlyHome = path.join(root, "causly-home");
+    fs.mkdirSync(causlyHome);
+    fs.writeFileSync(path.join(causlyHome, ".env"), "GROQ_API_KEY=secret");
+    vi.stubEnv("CAUSLY_HOME", causlyHome);
+    await expect(fileOps.readFile({ path: path.join(causlyHome, ".env") })).rejects.toThrow(/protected/);
+    await expect(fileOps.writeFile({ path: path.join(causlyHome, ".env"), content: "x" })).rejects.toThrow(/protected/);
+    await expect(directoryOps.listDirectory({ path: causlyHome })).rejects.toThrow(/protected/);
+    const found = await directoryOps.searchFiles({ root_path: root, pattern: ".env" });
+    expect(found.matches.map((m) => m.path)).not.toContain(path.join(causlyHome, ".env"));
+    expect(fs.readFileSync(path.join(causlyHome, ".env"), "utf8")).toBe("GROQ_API_KEY=secret");
+  });
+
+  it("the secrets tools can still use their default store (it is not a file-tool argument)", async () => {
+    const store = path.join(work, "secrets.enc");
+    await secretsOps.secretsSet({ name: "K", value: "v", store_path: store, confirm: true });
+    expect((await secretsOps.secretsGet({ name: "K", store_path: store })).value).toBe("v");
+  });
+});
+
 describe("walkers skip protected folders instead of listing them", () => {
   it("searchFiles from a parent folder does not descend into .ssh", async () => {
     const found = await directoryOps.searchFiles({ root_path: home, pattern: "id_test" });

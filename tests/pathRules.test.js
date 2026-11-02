@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
+import path from "node:path";
 import { isPathDenied } from "../tools/pathRules.js";
+import { PACKAGE_ROOT } from "../tools/paths.js";
 
 // P0-06: protected-path rules (pure string rules, run on every OS). The real-filesystem part is in pathGuard.test.js.
 const HOME = "/home/me";
@@ -169,6 +171,58 @@ describe("Windows-only name tricks (refused for read and write)", () => {
   it("a colon is only allowed after the drive letter", () => {
     expect(denied("D:\\work\\file.txt")).toBe(false);
     expect(denied("d:/work/file.txt")).toBe(false);
+  });
+});
+
+describe("more credential stores: causly's own folder, kube, gpg, azure", () => {
+  it.each([
+    "/home/me/.causly/.env",
+    "/home/me/.causly/causly.db",
+    "/home/me/.kube/config",
+    "/home/me/.gnupg/private-keys-v1.d/key.key",
+    "/home/me/.azure/accessTokens.json",
+    "/Users/bob/.kube/config",
+    "C:\\Users\\me\\.causly\\.env",
+    "C:\\Users\\me\\.kube\\config",
+    "C:\\Users\\me\\.gnupg\\x",
+    "C:\\Users\\me\\.azure\\azureProfile.json",
+    "C:\\Users\\me\\AppData\\Roaming\\gnupg\\secring.gpg",
+  ])("refuses %s for read and write", (p) => {
+    for (const access of ["read", "write"]) {
+      expect(denied(p, { access }), `${access} ${p}`).toBe(true);
+    }
+  });
+
+  it.each(["/home/me/.causly-notes/x", "/home/me/.kubernetes/x", "/home/me/.gnupgx/x", "C:\\Users\\me\\.azure-notes\\x"])(
+    "does not touch the look-alike %s",
+    (p) => {
+      expect(denied(p, { access: "read" })).toBe(false);
+    }
+  );
+
+  it("protects CAUSLY_HOME wherever it points", () => {
+    const env = { CAUSLY_HOME: "D:\\data\\causly" };
+    for (const access of ["read", "write"]) {
+      expect(denied("D:\\data\\causly\\.env", { env, access })).toBe(true);
+      expect(denied("D:\\data\\causly\\causly.db", { env, access })).toBe(true);
+    }
+    expect(denied("D:\\data\\causly-other\\x", { env, access: "read" })).toBe(false);
+    expect(denied("/srv/causly-home/.env", { env: { CAUSLY_HOME: "/srv/causly-home" }, access: "read" })).toBe(true);
+  });
+
+  it("protects the file named by CAUSLY_ENV_FILE", () => {
+    const env = { CAUSLY_ENV_FILE: "E:\\keys\\prod.env" };
+    expect(denied("E:\\keys\\prod.env", { env, access: "read" })).toBe(true);
+    expect(denied("E:\\keys\\prod.env", { env, access: "write" })).toBe(true);
+    expect(denied("E:\\keys\\notes.txt", { env, access: "read" })).toBe(false);
+  });
+
+  it("protects the .env next to the code (a git checkout), but not the rest of the folder", () => {
+    for (const access of ["read", "write"]) {
+      expect(denied(path.join(PACKAGE_ROOT, ".env"), { access }), access).toBe(true);
+    }
+    expect(denied(path.join(PACKAGE_ROOT, ".env.example"), { access: "read" })).toBe(false);
+    expect(denied(path.join(PACKAGE_ROOT, "package.json"), { access: "write" })).toBe(false);
   });
 });
 
