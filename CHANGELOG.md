@@ -19,12 +19,14 @@ All notable changes to this project are documented here.
 ### Fixed
 - Windows: `npm install` (and any npm lifecycle script) through `run_command` no longer fails with `'node' is not recognized` (issue #2). The Node that runs the server and the npm global folder now come first in `PATH`, `ComSpec` is set when missing, and the hard-coded user name and Node folder are gone.
 
+- A damaged local database (`causly.db`) now gives an error that names the file and says to move it aside or run `causly-server restore`, instead of SQLite's bare `file is not a database`. The file handle is also released, so the damaged file is not left locked on Windows.
 - `edit_file` now matches a multi-line `old_str` in files with CRLF line endings (it failed with "not found" on normal Windows files) and keeps the file's original line endings.
 - `github_list_issues` with `state: "all"` could return an empty list when the latest items were pull requests (GitHub counts them in the page size). It now reads further pages until it has enough real issues.
 
 ### Maintenance
 - CI now uses Node.js 22 and 24 and `npm ci` everywhere (it still ran Node 18 and `npm install`), and the cross-OS matrix covers both Node versions.
 - New automatic checks: `npm audit --omit=dev --audit-level=high`, a test that the npm package holds only the `files` allowlist (no `.env`, databases, logs or keys), and a docs drift test that compares the tool pages with `packs/manifest.json` and the permission levels.
+- Upgrade test with a database written by the real 1.5.0 (pipeline, meetings, action items, reminders): data stays intact, old migrations are not re-run, new writes work. Corrupt `.env`, secrets file, database and client config are covered too.
 - Input fuzz tests (`tests/fuzz.boundaries.test.js`, helper `tests/helpers/fuzz.js`) feed quotes, shell metacharacters, injection payloads, traversal, UNC paths, long and non-ASCII names to the file, directory, git, command, project, Terraform and Docker tools and check that nothing is evaluated and nothing leaves the workspace.
 - npm package now lists its `homepage` and issue tracker. A new `publish.yml` workflow publishes with npm provenance when a `v<version>` GitHub release is published, and a test keeps `package.json`, `server.json` and the changelog in step.
 - Dependabot opens weekly pull requests for npm packages and GitHub Actions.

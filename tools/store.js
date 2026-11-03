@@ -27,6 +27,19 @@ export function dbPath() {
   return process.env.CAUSLY_DB_PATH || path.join(causlyHome(), "causly.db");
 }
 
+/** A damaged database gets an error that names the file and says what to do, not just SQLite's own text. */
+function describeOpenError(file, err) {
+  const message = String(err?.message ?? err);
+  if (/not a database|malformed|corrupt|disk image|encrypted/i.test(message)) {
+    return new Error(
+      `The local database ${file} is not a valid SQLite file (it may be damaged). ` +
+        "Move it aside to start fresh, or restore a backup with: causly-server restore <backup-file>. " +
+        `Original error: ${message}`
+    );
+  }
+  return err instanceof Error ? err : new Error(message);
+}
+
 async function openDatabase(file) {
   let sqlite;
   try {
@@ -35,14 +48,25 @@ async function openDatabase(file) {
     throw new Error(`The local store needs Node 22.13 or newer (this is ${process.version}).`);
   }
   if (file !== ":memory:") fs.mkdirSync(path.dirname(file), { recursive: true });
-  const handle = new sqlite.DatabaseSync(file);
-  handle.exec("PRAGMA busy_timeout = 5000;"); // set first, so the WAL switch below also waits for other processes
-  handle.exec("PRAGMA journal_mode = WAL; PRAGMA foreign_keys = ON;"); // wait for another process's write instead of failing
-  handle.exec(
-    "CREATE TABLE IF NOT EXISTS schema_migrations (" +
-      "namespace TEXT NOT NULL, version INTEGER NOT NULL, applied_at TEXT NOT NULL, " +
-      "PRIMARY KEY (namespace, version))"
-  );
+  let handle;
+  try {
+    handle = new sqlite.DatabaseSync(file);
+    handle.exec("PRAGMA busy_timeout = 5000;"); // set first, so the WAL switch below also waits for other processes
+    handle.exec("PRAGMA journal_mode = WAL; PRAGMA foreign_keys = ON;"); // wait for another process's write instead of failing
+    handle.exec(
+      "CREATE TABLE IF NOT EXISTS schema_migrations (" +
+        "namespace TEXT NOT NULL, version INTEGER NOT NULL, applied_at TEXT NOT NULL, " +
+        "PRIMARY KEY (namespace, version))"
+    );
+  } catch (err) {
+    // Release the file (on Windows an open handle keeps it locked), then explain what to do.
+    try {
+      handle?.close();
+    } catch {
+      // already closed
+    }
+    throw describeOpenError(file, err);
+  }
   return handle;
 }
 
