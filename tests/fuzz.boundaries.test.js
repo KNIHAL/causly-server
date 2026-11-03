@@ -53,8 +53,12 @@ describe("files and directories", () => {
   }, 120000);
 
   it("traversal and UNC values are stopped by the workspace jail; the rest fail cleanly or succeed", async () => {
-    const TRAVERSAL = new Set(["parent traversal", "parent traversal (slash)", "UNC path"]);
+    // Backslash traversal and UNC paths only mean something on Windows. On Linux and macOS a backslash is an
+    // ordinary character in a file name, so those values are just odd names there.
+    const isWin = process.platform === "win32";
+    const TRAVERSAL = new Set(["parent traversal (slash)", ...(isWin ? ["parent traversal", "UNC path"] : [])]);
     for (const { label, value } of all) {
+      if (!isWin && label === "UNC path") continue;
       // A UNC value is a whole path, not a name to join onto the workspace.
       const target = label === "UNC path" ? value : path.join(box.ws, "nested", value);
       // The wrapper runs this check before any tool. Without it a traversal path is a legitimate path.
