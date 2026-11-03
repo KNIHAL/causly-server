@@ -59,27 +59,63 @@ export async function writeFile({ path: filePath, content }) {
  * rewriting the whole file manually. `old_str` must be unique unless
  * replace_all is true.
  */
+/** Escape text for use inside a RegExp. */
+function escapeRegExp(s) {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+/**
+ * Find old_str in a file that uses CRLF line endings. Line endings in old_str are matched leniently
+ * (LF or CRLF), so a multi-line old_str copied from an LF-only source still matches.
+ */
+function findIgnoringLineEndings(original, old_str) {
+  const pattern = escapeRegExp(old_str.replace(/\r\n/g, "\n")).replace(/\n/g, "\\r?\\n");
+  return [...original.matchAll(new RegExp(pattern, "g"))].map((m) => ({ index: m.index, length: m[0].length, text: m[0] }));
+}
+
+/** new_str with its line endings set to the ending used where it goes (the match, else the file). */
+function withLineEndingOf(newStr, matchedText, original) {
+  const sample = /\r?\n/.exec(matchedText) ?? /\r?\n/.exec(original);
+  const eol = sample ? sample[0] : "\n";
+  return newStr.replace(/\r\n/g, "\n").replace(/\n/g, eol);
+}
+
+/**
+ * Replace text in a file. Files with CRLF endings match multi-line old_str whichever ending it uses,
+ * and the file keeps its original line endings (inserted lines get the ending used at that spot).
+ */
 export async function editFile({ path: filePath, old_str, new_str, replace_all = false }) {
   assertPathAllowed(filePath);
   const original = await fs.readFile(filePath, "utf8");
+  const crlf = original.includes("\r\n");
 
-  if (!original.includes(old_str)) {
-    throw new Error("old_str not found in file — no changes made.");
+  const matches = crlf
+    ? findIgnoringLineEndings(original, old_str)
+    : (() => {
+        const found = [];
+        for (let i = original.indexOf(old_str); i !== -1 && old_str.length; i = original.indexOf(old_str, i + old_str.length)) {
+          found.push({ index: i, length: old_str.length, text: old_str });
+        }
+        return found;
+      })();
+
+  if (matches.length === 0) {
+    throw new Error("old_str not found in file - no changes made.");
+  }
+  if (matches.length > 1 && !replace_all) {
+    throw new Error(
+      "old_str appears multiple times. Pass replace_all: true, or make old_str more specific/unique."
+    );
   }
 
-  let updated;
-  if (replace_all) {
-    updated = original.split(old_str).join(new_str);
-  } else {
-    const firstIndex = original.indexOf(old_str);
-    const lastIndex = original.lastIndexOf(old_str);
-    if (firstIndex !== lastIndex) {
-      throw new Error(
-        "old_str appears multiple times. Pass replace_all: true, or make old_str more specific/unique."
-      );
-    }
-    updated = original.slice(0, firstIndex) + new_str + original.slice(firstIndex + old_str.length);
+  const chosen = replace_all ? matches : [matches[0]];
+  let updated = "";
+  let cursor = 0;
+  for (const m of chosen) {
+    updated += original.slice(cursor, m.index) + (crlf ? withLineEndingOf(new_str, m.text, original) : new_str);
+    cursor = m.index + m.length;
   }
+  updated += original.slice(cursor);
 
   await fs.writeFile(filePath, updated, "utf8");
   return { path: filePath, edited: true };

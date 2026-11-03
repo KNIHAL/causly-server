@@ -19,6 +19,9 @@ All notable changes to this project are documented here.
 ### Fixed
 - Windows: `npm install` (and any npm lifecycle script) through `run_command` no longer fails with `'node' is not recognized` (issue #2). The Node that runs the server and the npm global folder now come first in `PATH`, `ComSpec` is set when missing, and the hard-coded user name and Node folder are gone.
 
+- `edit_file` now matches a multi-line `old_str` in files with CRLF line endings (it failed with "not found" on normal Windows files) and keeps the file's original line endings.
+- `github_list_issues` with `state: "all"` could return an empty list when the latest items were pull requests (GitHub counts them in the page size). It now reads further pages until it has enough real issues.
+
 ### Maintenance
 - CI now uses Node.js 22 and 24 and `npm ci` everywhere (it still ran Node 18 and `npm install`), and the cross-OS matrix covers both Node versions.
 - New automatic checks: `npm audit --omit=dev --audit-level=high`, a test that the npm package holds only the `files` allowlist (no `.env`, databases, logs or keys), and a docs drift test that compares the tool pages with `packs/manifest.json` and the permission levels.
