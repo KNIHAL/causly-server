@@ -13,6 +13,9 @@ All notable changes to this project are documented here.
 - Permission levels raised where the risk was higher than the level: `git_push`, `git_merge`, `secrets_get`, `supabase_create_project` and `vercel_cancel_deployment` are now `HIGH` and need `confirm: true` (their input schemas accept it). `git_stash` and `git_tag` are `MEDIUM`, and only their destructive actions (`drop`, `delete`) need `confirm: true`. A test now fails if a shipped tool has no explicit level, or if a `HIGH` or `DESTRUCTIVE` tool cannot accept `confirm`.
 - Credentials no longer reach the activity log or error responses: passwords inside URLs and connection strings, Bearer tokens, common token formats and JSON password fields are redacted, and `connection_string`, `dsn` and `database_url` fields are always redacted.
 
+### Added
+- Every tool now carries the four MCP annotations (`readOnlyHint`, `destructiveHint`, `idempotentHint`, `openWorldHint`), derived from its permission level. They are hints for clients, not enforcement. Tests check that all tools have them, that `READ` tools are never marked destructive, and that stdout carries only JSON-RPC.
+
 ### Fixed
 - Windows: `npm install` (and any npm lifecycle script) through `run_command` no longer fails with `'node' is not recognized` (issue #2). The Node that runs the server and the npm global folder now come first in `PATH`, `ComSpec` is set when missing, and the hard-coded user name and Node folder are gone.
 
