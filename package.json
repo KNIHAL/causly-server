@@ -53,6 +53,10 @@
     "cursor",
     "windsurf"
   ],
+  "homepage": "https://server.causly.in",
+  "bugs": {
+    "url": "https://github.com/KNIHAL/causly-server/issues"
+  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/KNIHAL/causly-server.git"

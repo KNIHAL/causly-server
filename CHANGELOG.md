@@ -26,6 +26,7 @@ All notable changes to this project are documented here.
 - CI now uses Node.js 22 and 24 and `npm ci` everywhere (it still ran Node 18 and `npm install`), and the cross-OS matrix covers both Node versions.
 - New automatic checks: `npm audit --omit=dev --audit-level=high`, a test that the npm package holds only the `files` allowlist (no `.env`, databases, logs or keys), and a docs drift test that compares the tool pages with `packs/manifest.json` and the permission levels.
 - Input fuzz tests (`tests/fuzz.boundaries.test.js`, helper `tests/helpers/fuzz.js`) feed quotes, shell metacharacters, injection payloads, traversal, UNC paths, long and non-ASCII names to the file, directory, git, command, project, Terraform and Docker tools and check that nothing is evaluated and nothing leaves the workspace.
+- npm package now lists its `homepage` and issue tracker. A new `publish.yml` workflow publishes with npm provenance when a `v<version>` GitHub release is published, and a test keeps `package.json`, `server.json` and the changelog in step.
 - Dependabot opens weekly pull requests for npm packages and GitHub Actions.
 
 ## [1.5.3]
