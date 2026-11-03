@@ -1,5 +1,5 @@
 import crypto from "crypto";
-import { checkApproval } from "./security.js";
+import { checkApproval, redactSecretsInString } from "./security.js";
 import { logActivity } from "./logger.js";
 import { checkWorkspace } from "./workspace.js";
 import { emitBoundaryAttestReceipt } from "./boundaryAttest.js";
@@ -51,7 +51,7 @@ export function createToolWrapper({
         attest({ status: "ERROR", error: err.message });
         let hint = null;
         try { hint = errorHinter(err.message); } catch { /* hint is optional */ }
-        return { content: [{ type: "text", text: `Error: ${err.message}${hint ? `\n${hint}` : ""}` }], isError: true };
+        return { content: [{ type: "text", text: `Error: ${redactSecretsInString(err.message)}${hint ? `\n${hint}` : ""}` }], isError: true };
       }
     };
   };

@@ -78,14 +78,25 @@ export async function githubCreateIssue({ owner, repo, title, body = "", labels 
   return { number: data.number, html_url: data.html_url, title: data.title };
 }
 
-/** List issues on a repository. */
+/**
+ * List issues on a repository. GitHub's issues endpoint also returns pull requests, and the page size
+ * counts them, so a repo whose latest items are all PRs returned an empty list for state "all". Keep
+ * reading pages until enough real issues are found (or the list ends).
+ */
 export async function githubListIssues({ owner, repo, state = "open", per_page = 30 }) {
-  const data = await githubFetch(`/repos/${owner}/${repo}/issues?state=${state}&per_page=${per_page}`);
-  return {
-    issues: data
-      .filter((i) => !i.pull_request) // GitHub's issues endpoint also returns PRs
-      .map((i) => ({ number: i.number, title: i.title, state: i.state, html_url: i.html_url })),
-  };
+  const PAGE = 100;
+  const MAX_PAGES = 10;
+  const issues = [];
+  for (let page = 1; page <= MAX_PAGES && issues.length < per_page; page++) {
+    const data = await githubFetch(`/repos/${owner}/${repo}/issues?state=${state}&per_page=${PAGE}&page=${page}`);
+    for (const i of data) {
+      if (i.pull_request) continue;
+      issues.push({ number: i.number, title: i.title, state: i.state, html_url: i.html_url });
+      if (issues.length >= per_page) break;
+    }
+    if (data.length < PAGE) break;
+  }
+  return { issues };
 }
 
 /** Create a pull request. */

@@ -36,13 +36,14 @@ server.registerTool(
   "supabase_create_project",
   {
     description:
-      "Create a new Supabase project. Requires an organization_id (use supabase_list_organizations to find it) and a database password.",
+      "Create a new Supabase project. Requires an organization_id (use supabase_list_organizations to find it) and a database password. HIGH risk (creates a billable resource) - requires confirm: true.",
     inputSchema: {
       name: z.string(),
       organization_id: z.string(),
       db_pass: z.string(),
       region: z.string().optional().describe("Defaults to ap-south-1"),
       plan: z.string().optional().describe("Defaults to free"),
+      confirm: z.boolean().optional().describe("Must be true to proceed"),
     },
   },
   wrap("supabase_create_project", supabaseOps.supabaseCreateProject)

@@ -134,7 +134,7 @@
         },
         {
           "name": "git_push",
-          "description": "Push commits to a remote."
+          "description": "Push commits to a remote. HIGH risk (visible to others, hard to undo) - requires confirm: true."
         },
         {
           "name": "git_pull",
@@ -162,7 +162,7 @@
         },
         {
           "name": "git_merge",
-          "description": "Merge the given branch into the current branch."
+          "description": "Merge the given branch into the current branch. HIGH risk (changes the working branch) - requires confirm: true."
         },
         {
           "name": "git_reset",
@@ -170,7 +170,7 @@
         },
         {
           "name": "git_stash",
-          "description": "Stash working changes. action: 'save' | 'pop' | 'apply' | 'list' | 'drop' (defaults to save)."
+          "description": "Stash working changes. action: 'save' | 'pop' | 'apply' | 'list' | 'drop' (defaults to save). Only 'drop' is HIGH risk and requires confirm: true."
         },
         {
           "name": "git_show",
@@ -182,7 +182,7 @@
         },
         {
           "name": "git_tag",
-          "description": "Manage git tags. action: 'list' | 'create' | 'delete' (defaults to list)."
+          "description": "Manage git tags. action: 'list' | 'create' | 'delete' (defaults to list). Only 'delete' is HIGH risk and requires confirm: true."
         },
         {
           "name": "git_changed_files",
@@ -376,7 +376,7 @@
         },
         {
           "name": "vercel_cancel_deployment",
-          "description": "Cancel a currently building or queued deployment."
+          "description": "Cancel a currently building or queued deployment. HIGH risk (can affect production) - requires confirm: true."
         },
         {
           "name": "http_check",
@@ -402,7 +402,7 @@
         },
         {
           "name": "supabase_create_project",
-          "description": "Create a new Supabase project. Requires an organization_id (use supabase_list_organizations to find it) and a database password."
+          "description": "Create a new Supabase project. Requires an organization_id (use supabase_list_organizations to find it) and a database password. HIGH risk (creates a billable resource) - requires confirm: true."
         },
         {
           "name": "supabase_delete_project",
@@ -462,7 +462,7 @@
         },
         {
           "name": "secrets_get",
-          "description": "Retrieve and decrypt a secret by name."
+          "description": "Retrieve and decrypt a secret by name. HIGH risk (the decrypted value is returned to the agent) - requires confirm: true."
         },
         {
           "name": "secrets_list",

@@ -10,7 +10,6 @@ import {
   vercelGetDeploymentLogs,
   vercelGetDeploymentEvents,
   vercelCancelDeployment,
-  httpCheck,
 } from "../tools/vercelOps.js";
 
 const jsonRes = (data, ok = true, status = 200) => ({
@@ -204,45 +203,5 @@ describe("vercelOps — mutations & misc", () => {
     const result = await vercelCancelDeployment({ deployment_id: "d1" });
     expect(global.fetch.mock.calls[0][1].method).toBe("PATCH");
     expect(result).toEqual({ deployment_id: "d1", state: "CANCELED" });
-  });
-});
-
-describe("httpCheck", () => {
-  it("reports healthy: true for a 2xx response", async () => {
-    global.fetch.mockResolvedValueOnce({ status: 200 });
-    const result = await httpCheck({ url: "https://example.com" });
-    expect(result.healthy).toBe(true);
-    expect(result.status).toBe(200);
-    expect(typeof result.response_time_ms).toBe("number");
-  });
-
-  it("reports healthy: false for a 5xx response", async () => {
-    global.fetch.mockResolvedValueOnce({ status: 503 });
-    const result = await httpCheck({ url: "https://example.com" });
-    expect(result.healthy).toBe(false);
-    expect(result.status).toBe(503);
-  });
-
-  it("reports healthy: true for a 3xx redirect (still < 400)", async () => {
-    global.fetch.mockResolvedValueOnce({ status: 301 });
-    const result = await httpCheck({ url: "https://example.com" });
-    expect(result.healthy).toBe(true);
-  });
-
-  it("reports a network error via err.message", async () => {
-    global.fetch.mockRejectedValueOnce(new Error("getaddrinfo ENOTFOUND"));
-    const result = await httpCheck({ url: "https://nowhere.invalid" });
-    expect(result.healthy).toBe(false);
-    expect(result.status).toBeNull();
-    expect(result.error).toBe("getaddrinfo ENOTFOUND");
-  });
-
-  it("reports 'timeout' on an AbortError", async () => {
-    const abortErr = new Error("The operation was aborted");
-    abortErr.name = "AbortError";
-    global.fetch.mockRejectedValueOnce(abortErr);
-    const result = await httpCheck({ url: "https://example.com", timeout_ms: 5000 });
-    expect(result.error).toBe("timeout");
-    expect(result.healthy).toBe(false);
   });
 });

@@ -97,8 +97,8 @@ server.registerTool(
 server.registerTool(
   "vercel_cancel_deployment",
   {
-    description: "Cancel a currently building or queued deployment.",
-    inputSchema: { deployment_id: z.string() },
+    description: "Cancel a currently building or queued deployment. HIGH risk (can affect production) - requires confirm: true.",
+    inputSchema: { deployment_id: z.string(), confirm: z.boolean().optional().describe("Must be true to proceed") },
   },
   wrap("vercel_cancel_deployment", vercelOps.vercelCancelDeployment)
 );

@@ -1,14 +1,10 @@
 import fs from "fs/promises";
 import path from "path";
-import { isPathDenied } from "./security.js";
-
-function assertPathAllowed(targetPath) {
-  const check = isPathDenied(targetPath);
-  if (check.denied) throw new Error(check.reason);
-}
+import { assertPathAllowed, isPathAllowed } from "./pathGuard.js";
 
 /** List immediate contents (files + folders) of a directory. */
 export async function listDirectory({ path: dirPath }) {
+  assertPathAllowed(dirPath, "read");
   const entries = await fs.readdir(dirPath, { withFileTypes: true });
   return {
     path: dirPath,
@@ -21,6 +17,7 @@ export async function listDirectory({ path: dirPath }) {
 
 /** Recursively build a tree view of a directory, up to max_depth. */
 export async function directoryTree({ path: dirPath, max_depth = 5, _currentDepth = 0 }) {
+  assertPathAllowed(dirPath, "read");
   if (_currentDepth >= max_depth) {
     return { name: path.basename(dirPath), type: "directory", truncated: true };
   }
@@ -34,6 +31,7 @@ export async function directoryTree({ path: dirPath, max_depth = 5, _currentDept
 
     const fullPath = path.join(dirPath, entry.name);
     if (entry.isDirectory()) {
+      if (!isPathAllowed(fullPath, "read")) continue; // protected folders are not listed
       children.push(
         await directoryTree({ path: fullPath, max_depth, _currentDepth: _currentDepth + 1 })
       );
@@ -64,6 +62,7 @@ export async function deleteDirectory({ path: dirPath, recursive = true }) {
  * match) starting from a root directory.
  */
 export async function searchFiles({ root_path, pattern, max_results = 100 }) {
+  assertPathAllowed(root_path, "read");
   const results = [];
   const lowerPattern = pattern.toLowerCase();
 
@@ -85,7 +84,7 @@ export async function searchFiles({ root_path, pattern, max_results = 100 }) {
       if (entry.name.toLowerCase().includes(lowerPattern)) {
         results.push({ path: fullPath, type: entry.isDirectory() ? "directory" : "file" });
       }
-      if (entry.isDirectory()) {
+      if (entry.isDirectory() && isPathAllowed(fullPath, "read")) {
         await walk(fullPath);
       }
     }

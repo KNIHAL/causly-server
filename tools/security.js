@@ -21,6 +21,10 @@ const SECRET_KEY_PATTERNS = [
   "private_key",
   "client_secret",
   "auth_token",
+  "connection_string",
+  "connectionstring",
+  "dsn",
+  "database_url",
 ];
 
 const REDACTED = "[REDACTED]";
@@ -37,6 +41,7 @@ function isSecretKey(key) {
  */
 export function redactSecrets(value, seen = new WeakSet()) {
   if (value === null || value === undefined) return value;
+  if (typeof value === "string") return redactSecretsInString(value);
 
   if (Array.isArray(value)) {
     if (seen.has(value)) return "[Circular]";
@@ -63,13 +68,47 @@ export function redactSecrets(value, seen = new WeakSet()) {
  * value pairs like `token=xxx`, `token: xxx`, `"token":"xxx"` are caught;
  * this is not a substitute for redactSecrets() on structured data.
  */
-export function redactSecretsInString(str) {
+function redactKeyValuePairs(str) {
   if (typeof str !== "string") return str;
   const pattern = new RegExp(
     `\\b(${SECRET_KEY_PATTERNS.join("|")})\\b(\\s*[:=]\\s*)("[^"]*"|'[^']*'|\\S+)`,
     "gi"
   );
   return str.replace(pattern, (_match, key, sep) => `${key}${sep}${REDACTED}`);
+}
+
+// Credentials embedded in values: scheme://user:password@host, Bearer tokens, well-known token prefixes.
+const URL_USERINFO = /\b([a-z][a-z0-9+.-]*:\/\/)[^\s/'"]+@/gi;
+const BEARER = /\b(Bearer\s+)[A-Za-z0-9._~+/=-]{8,}/gi;
+const TOKEN_PATTERNS = [
+  /\bgh[pousr]_[A-Za-z0-9]{20,}/g,
+  /\bgithub_pat_[A-Za-z0-9_]{20,}/g,
+  /\bglpat-[A-Za-z0-9_-]{20,}/g,
+  /\bxox[abprs]-[A-Za-z0-9-]{10,}/g,
+  /\bsk-[A-Za-z0-9_-]{20,}/g,
+  /\bAKIA[0-9A-Z]{16}\b/g,
+  /\bAIza[0-9A-Za-z_-]{35}/g,
+  /\beyJ[A-Za-z0-9_-]{5,}\.[A-Za-z0-9_-]{5,}\.[A-Za-z0-9_-]{5,}/g,
+];
+// JSON fragments: "some_password": "value" (the key may contain a secret name anywhere).
+const JSON_SECRET_PAIR = new RegExp(
+  `("[^"]*(?:${SECRET_KEY_PATTERNS.join("|")})[^"]*"\\s*:\\s*)("(?:[^"\\\\]|\\\\.)*"|[^\\s,}\\]]+)`,
+  "gi"
+);
+
+/**
+ * Redact secret-looking substrings out of a plain string (an error message,
+ * a command line, a log detail). Catches key/value pairs (`token=xxx`,
+ * `"password": "xxx"`), credentials inside URLs, Bearer tokens and common
+ * token formats. Best-effort - structured data should go through redactSecrets().
+ */
+export function redactSecretsInString(str) {
+  if (typeof str !== "string") return str;
+  let out = str.replace(JSON_SECRET_PAIR, `$1"${REDACTED}"`);
+  out = out.replace(URL_USERINFO, `$1${REDACTED}@`);
+  out = out.replace(BEARER, `$1${REDACTED}`);
+  for (const pattern of TOKEN_PATTERNS) out = out.replace(pattern, REDACTED);
+  return redactKeyValuePairs(out);
 }
 
 // ---------------- Permission levels ----------------
@@ -110,19 +149,19 @@ export const PERMISSION_LEVELS = {
   git_status: "READ",
   git_add: "LOW",
   git_commit: "MEDIUM",
-  git_push: "MEDIUM",
+  git_push: "HIGH",
   git_pull: "MEDIUM",
   git_log: "READ",
   git_diff: "READ",
   git_branch: "READ",
   git_create_branch: "LOW",
   git_checkout: "MEDIUM",
-  git_merge: "MEDIUM",
+  git_merge: "HIGH",
   git_reset: "HIGH",
-  git_stash: "LOW",
+  git_stash: "MEDIUM", // drop needs confirm, see ACTION_LEVELS
   git_show: "READ",
   git_remote: "MEDIUM",
-  git_tag: "LOW",
+  git_tag: "MEDIUM", // delete needs confirm, see ACTION_LEVELS
   git_changed_files: "READ",
   git_diff_stat: "READ",
   git_check_clean: "READ",
@@ -169,7 +208,7 @@ export const PERMISSION_LEVELS = {
   vercel_delete_project: "DESTRUCTIVE",
   vercel_get_deployment_logs: "READ",
   vercel_get_deployment_events: "READ",
-  vercel_cancel_deployment: "MEDIUM",
+  vercel_cancel_deployment: "HIGH",
   http_check: "READ",
 
   // Project intelligence
@@ -211,7 +250,7 @@ export const PERMISSION_LEVELS = {
   supabase_list_organizations: "READ",
   supabase_list_projects: "READ",
   supabase_get_project: "READ",
-  supabase_create_project: "MEDIUM",
+  supabase_create_project: "HIGH",
   supabase_delete_project: "DESTRUCTIVE",
   supabase_run_sql: "HIGH",
 
@@ -227,7 +266,7 @@ export const PERMISSION_LEVELS = {
 
   // Secrets
   secrets_set: "HIGH",
-  secrets_get: "MEDIUM",
+  secrets_get: "HIGH",
   secrets_list: "READ",
   secrets_delete: "DESTRUCTIVE",
   secrets_rotate_key: "HIGH",
@@ -407,7 +446,7 @@ const APPROVAL_REQUIRED_LEVELS = new Set(["HIGH", "DESTRUCTIVE"]);
  * Returns { allowed, level, reason }. Never throws.
  */
 export function checkApproval(toolName, input) {
-  const level = PERMISSION_LEVELS[toolName] || "MEDIUM";
+  const level = getPermissionLevel(toolName, input);
   if (!APPROVAL_REQUIRED_LEVELS.has(level)) {
     return { allowed: true, level };
   }
@@ -419,6 +458,29 @@ export function checkApproval(toolName, input) {
     level,
     reason: `'${toolName}' is a ${level}-risk action and requires explicit confirmation. Re-call with confirm: true to proceed.`,
   };
+}
+
+// Tools whose risk depends on what they are asked to do. The base level in PERMISSION_LEVELS
+// applies unless the input names one of these actions, so only the destructive action needs
+// `confirm: true`.
+export const ACTION_LEVELS = {
+  git_stash: { field: "action", levels: { drop: "HIGH" } },
+  git_tag: { field: "action", levels: { delete: "HIGH" } },
+};
+
+/**
+ * The permission level for one call: the tool's level, or the higher level of the action named
+ * in the input. A tool without an entry gets MEDIUM (a safe default; tests/permissionLevels.test.js
+ * fails when a shipped tool is missing from PERMISSION_LEVELS).
+ */
+export function getPermissionLevel(toolName, input) {
+  const base = PERMISSION_LEVELS[toolName] || "MEDIUM";
+  const rule = ACTION_LEVELS[toolName];
+  if (rule && input && typeof input === "object" && typeof input[rule.field] === "string") {
+    const action = input[rule.field].trim().toLowerCase();
+    if (Object.hasOwn(rule.levels, action)) return rule.levels[action];
+  }
+  return base;
 }
 
 // ---------------- Command risk classification ----------------
@@ -456,33 +518,6 @@ export function classifyCommandRisk(command) {
 
 // ---------------- Path security ----------------
 
-// System-critical directories that must never be targeted by delete/write
-// operations, even on a trusted single-user machine — a wrong path here
-// is the difference between "oops, undo" and "reinstall Windows". Matched
-// case-insensitively against the resolved absolute path prefix.
-const DENIED_PATH_PREFIXES = [
-  "C:\\Windows",
-  "C:\\Program Files",
-  "C:\\Program Files (x86)",
-  "C:\\ProgramData",
-  "C:\\Users\\Default",
-  "C:\\Users\\Public",
-  "C:\\System Volume Information",
-  "C:\\Recovery",
-  "C:\\Boot",
-];
-
-/**
- * Checks whether a path falls inside a denied system directory. Compares
- * the normalized, lowercased path against known-dangerous prefixes.
- * Returns { denied, reason }.
- */
-export function isPathDenied(targetPath) {
-  if (!targetPath || typeof targetPath !== "string") return { denied: false };
-  const normalized = targetPath.replace(/\//g, "\\").toLowerCase();
-  const hit = DENIED_PATH_PREFIXES.find((prefix) => normalized.startsWith(prefix.toLowerCase()));
-  if (hit) {
-    return { denied: true, reason: `'${targetPath}' is inside a protected system directory (${hit}) and cannot be modified through this tool.` };
-  }
-  return { denied: false };
-}
+// The protected-path rules live in pathRules.js (pure rules) and pathGuard.js (real-path resolution).
+// isPathDenied stays exported from here for existing callers.
+export { isPathDenied } from "./pathRules.js";

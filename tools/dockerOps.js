@@ -67,6 +67,15 @@ export async function dockerVersion() {
   return runDocker(["version"]);
 }
 
+/**
+ * Arguments for running docker inside WSL in a given directory. The directory is handed to
+ * `wsl --cd` as an argument of its own and never becomes part of shell text, so quotes, `;`,
+ * `$(...)` or backticks in a folder name cannot run anything.
+ */
+function wslComposeArgs(wslDir, dockerArgs) {
+  return ["--cd", wslDir, "--", "docker", ...dockerArgs];
+}
+
 /** List containers. Set all=true to include stopped ones (defaults to running only). */
 export async function dockerPs({ all = false }) {
   const args = ["ps", "--format", "{{json .}}"];
@@ -228,9 +237,9 @@ export async function dockerComposeUp({ project_dir, detach = true, confirm }) {
   if (direct.exit_code === 0 || !direct.notFound || process.platform !== "win32") return direct;
 
   const wslDir = toWslPath(project_dir);
-  const composeCmd = `cd '${wslDir}' && docker compose up${detach ? " -d" : ""}`;
+  const composeArgs = ["compose", "up", ...(detach ? ["-d"] : [])];
   try {
-    const { stdout, stderr } = await execFileAsync("wsl", ["bash", "-lc", composeCmd], {
+    const { stdout, stderr } = await execFileAsync("wsl", wslComposeArgs(wslDir, composeArgs), {
       timeout: 300000,
       maxBuffer: 1024 * 1024 * 20,
     });
@@ -246,9 +255,9 @@ export async function dockerComposeDown({ project_dir, confirm }) {
   if (direct.exit_code === 0 || !direct.notFound || process.platform !== "win32") return direct;
 
   const wslDir = toWslPath(project_dir);
-  const composeCmd = `cd '${wslDir}' && docker compose down`;
+  const composeArgs = ["compose", "down"];
   try {
-    const { stdout, stderr } = await execFileAsync("wsl", ["bash", "-lc", composeCmd], {
+    const { stdout, stderr } = await execFileAsync("wsl", wslComposeArgs(wslDir, composeArgs), {
       timeout: 120000,
       maxBuffer: 1024 * 1024 * 20,
     });

@@ -2,6 +2,35 @@
 
 All notable changes to this project are documented here.
 
+## [1.5.4]
+
+### Security
+- Updated vulnerable dependencies: `simple-git` 4.x, `@modelcontextprotocol/sdk` 1.32.x, `zod` 4.6.x, plus transitive fixes. `npm audit --omit=dev` now reports 0 vulnerabilities.
+- Added a test that keeps the direct dependencies on patched versions.
+- `http_check` now refuses private, loopback and link-local addresses (SSRF), on every redirect hop, using the same guard as `web_fetch`. `CAUSLY_ALLOW_PRIVATE_HOSTS=true` still turns it off. The guard also judges IPv6 forms that carry an IPv4 address (6to4, ISATAP, Teredo) by that address.
+- File and directory tools now protect paths consistently (`copy_file` had no check at all). Paths are resolved to their real location first (`..`, symlinks, junctions, 8.3 short names), compared on folder boundaries, and cover Windows, macOS and Linux system folders. Credential folders (`~/.ssh`, `~/.aws`, `~/.config/gcloud`, OS keychains) can no longer be read or written, and Windows device names (`CON`, `NUL`), alternate data streams and `\\?\` paths are refused. The secrets `store_path` follows the same rules. The same goes for `~/.kube`, `~/.gnupg`, `~/.azure` and Causly's own folder (`~/.causly` or `CAUSLY_HOME`, which holds your API keys), so an agent cannot read your keys through the file tools.
+- Docker Compose (WSL fallback on Windows) no longer builds a shell command from the project folder, so a folder name containing quotes or shell characters cannot run commands. A test now fails if any code builds shell text for `exec`.
+- Permission levels raised where the risk was higher than the level: `git_push`, `git_merge`, `secrets_get`, `supabase_create_project` and `vercel_cancel_deployment` are now `HIGH` and need `confirm: true` (their input schemas accept it). `git_stash` and `git_tag` are `MEDIUM`, and only their destructive actions (`drop`, `delete`) need `confirm: true`. A test now fails if a shipped tool has no explicit level, or if a `HIGH` or `DESTRUCTIVE` tool cannot accept `confirm`.
+- Credentials no longer reach the activity log or error responses: passwords inside URLs and connection strings, Bearer tokens, common token formats and JSON password fields are redacted, and `connection_string`, `dsn` and `database_url` fields are always redacted.
+
+### Added
+- Every tool now carries the four MCP annotations (`readOnlyHint`, `destructiveHint`, `idempotentHint`, `openWorldHint`), derived from its permission level. They are hints for clients, not enforcement. Tests check that all tools have them, that `READ` tools are never marked destructive, and that stdout carries only JSON-RPC.
+
+### Fixed
+- Windows: `npm install` (and any npm lifecycle script) through `run_command` no longer fails with `'node' is not recognized` (issue #2). The Node that runs the server and the npm global folder now come first in `PATH`, `ComSpec` is set when missing, and the hard-coded user name and Node folder are gone.
+
+- A damaged local database (`causly.db`) now gives an error that names the file and says to move it aside or run `causly-server restore`, instead of SQLite's bare `file is not a database`. The file handle is also released, so the damaged file is not left locked on Windows.
+- `edit_file` now matches a multi-line `old_str` in files with CRLF line endings (it failed with "not found" on normal Windows files) and keeps the file's original line endings.
+- `github_list_issues` with `state: "all"` could return an empty list when the latest items were pull requests (GitHub counts them in the page size). It now reads further pages until it has enough real issues.
+
+### Maintenance
+- CI now uses Node.js 22 and 24 and `npm ci` everywhere (it still ran Node 18 and `npm install`), and the cross-OS matrix covers both Node versions.
+- New automatic checks: `npm audit --omit=dev --audit-level=high`, a test that the npm package holds only the `files` allowlist (no `.env`, databases, logs or keys), and a docs drift test that compares the tool pages with `packs/manifest.json` and the permission levels.
+- Upgrade test with a database written by the real 1.5.0 (pipeline, meetings, action items, reminders): data stays intact, old migrations are not re-run, new writes work. Corrupt `.env`, secrets file, database and client config are covered too.
+- Input fuzz tests (`tests/fuzz.boundaries.test.js`, helper `tests/helpers/fuzz.js`) feed quotes, shell metacharacters, injection payloads, traversal, UNC paths, long and non-ASCII names to the file, directory, git, command, project, Terraform and Docker tools and check that nothing is evaluated and nothing leaves the workspace.
+- npm package now lists its `homepage` and issue tracker. A new `publish.yml` workflow publishes with npm provenance when a `v<version>` GitHub release is published, and a test keeps `package.json`, `server.json` and the changelog in step.
+- Dependabot opens weekly pull requests for npm packages and GitHub Actions.
+
 ## [1.5.3]
 
 ### Added

@@ -44,8 +44,13 @@ server.registerTool(
 server.registerTool(
   "git_push",
   {
-    description: "Push commits to a remote.",
-    inputSchema: { repo_path: z.string(), remote: z.string().optional(), branch: z.string().optional() },
+    description: "Push commits to a remote. HIGH risk (visible to others, hard to undo) - requires confirm: true.",
+    inputSchema: {
+      repo_path: z.string(),
+      remote: z.string().optional(),
+      branch: z.string().optional(),
+      confirm: z.boolean().optional().describe("Must be true to proceed"),
+    },
   },
   wrap("git_push", gitOps.gitPush)
 );
@@ -111,8 +116,8 @@ server.registerTool(
 server.registerTool(
   "git_merge",
   {
-    description: "Merge the given branch into the current branch.",
-    inputSchema: { repo_path: z.string(), branch: z.string() },
+    description: "Merge the given branch into the current branch. HIGH risk (changes the working branch) - requires confirm: true.",
+    inputSchema: { repo_path: z.string(), branch: z.string(), confirm: z.boolean().optional().describe("Must be true to proceed") },
   },
   wrap("git_merge", gitOps.gitMerge)
 );
@@ -134,12 +139,13 @@ server.registerTool(
 server.registerTool(
   "git_stash",
   {
-    description: "Stash working changes. action: 'save' | 'pop' | 'apply' | 'list' | 'drop' (defaults to save).",
+    description: "Stash working changes. action: 'save' | 'pop' | 'apply' | 'list' | 'drop' (defaults to save). Only 'drop' is HIGH risk and requires confirm: true.",
     inputSchema: {
       repo_path: z.string(),
       action: z.string().optional().describe("save, pop, apply, list, or drop"),
       message: z.string().optional().describe("Stash message, only used with save"),
       stash_id: z.string().optional().describe("e.g. stash@{0}, used with pop/apply/drop"),
+      confirm: z.boolean().optional().describe("Must be true to proceed"),
     },
   },
   wrap("git_stash", gitOps.gitStash)
@@ -171,12 +177,13 @@ server.registerTool(
 server.registerTool(
   "git_tag",
   {
-    description: "Manage git tags. action: 'list' | 'create' | 'delete' (defaults to list).",
+    description: "Manage git tags. action: 'list' | 'create' | 'delete' (defaults to list). Only 'delete' is HIGH risk and requires confirm: true.",
     inputSchema: {
       repo_path: z.string(),
       action: z.string().optional().describe("list, create, or delete"),
       tag_name: z.string().optional().describe("Required for create/delete"),
       message: z.string().optional().describe("Annotation message, optional for create"),
+      confirm: z.boolean().optional().describe("Must be true to proceed"),
     },
   },
   wrap("git_tag", gitOps.gitTag)

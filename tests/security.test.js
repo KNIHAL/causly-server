@@ -71,11 +71,11 @@ describe("redactSecretsInString", () => {
     expect(result).toBe("password: [REDACTED]");
   });
 
-  it("does not redact JSON-style quoted keys (key wrapped in quotes) — known limitation", () => {
-    // The regex expects `key:` or `key=` immediately after a word boundary;
-    // a closing quote right after the key (`"password":`) breaks that match.
+  it("redacts JSON-style quoted keys (fixed in P0-03) — previously a known limitation", () => {
+    // Quoted JSON keys are handled by their own pattern;
+    // the plain key=value pattern alone would miss `"password":`.
     const result = redactSecretsInString('{"password": "hunter2"}');
-    expect(result).toBe('{"password": "hunter2"}');
+    expect(result).toBe('{"password": "[REDACTED]"}');
   });
 
   it("is case-insensitive", () => {
@@ -101,7 +101,7 @@ describe("checkApproval", () => {
   });
 
   it("allows LOW-level tools without confirm", () => {
-    const result = checkApproval("git_stash", {});
+    const result = checkApproval("git_add", {});
     expect(result.allowed).toBe(true);
     expect(result.level).toBe("LOW");
   });

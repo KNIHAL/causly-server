@@ -2,6 +2,7 @@ import fs from "fs";
 import { z } from "zod";
 import { PACKS } from "./registry.js";
 import { wrap } from "../tools/toolWrapper.js";
+import { withAnnotations } from "../tools/annotations.js";
 
 // Per-server state, so tests can use stub servers without sharing anything.
 const state = new WeakMap(); // server -> { loading: Map<name, Promise>, loaded: Set<name> }
@@ -14,8 +15,9 @@ function stateFor(server) {
     if (typeof server.registerTool === "function") {
       const original = server.registerTool.bind(server);
       server.registerTool = (name, config, cb) => {
-        s.tools.set(name, { config, cb });
-        return original(name, config, cb);
+        const annotated = withAnnotations(name, config);
+        s.tools.set(name, { config: annotated, cb });
+        return original(name, annotated, cb);
       };
     }
   }
@@ -198,7 +200,9 @@ export async function useTool(server, { tool, arguments: args, describe }, extra
 }
 
 export function registerMetaTools(server) {
-  server.registerTool(
+  // Meta tools are registered directly (not through stateFor), so they get their annotations here.
+  const register = (name, config, cb) => server.registerTool(name, withAnnotations(name, config), cb);
+  register(
     "search_tools",
     {
       description:
@@ -211,7 +215,7 @@ export function registerMetaTools(server) {
     wrap("search_tools", async ({ query, limit }) => searchTools(server, query, limit))
   );
 
-  server.registerTool(
+  register(
     "load_toolset",
     {
       description:
@@ -223,7 +227,7 @@ export function registerMetaTools(server) {
     wrap("load_toolset", async ({ toolsets }) => loadToolsets(server, toolsets))
   );
 
-  server.registerTool(
+  register(
     "use_tool",
     {
       description:
