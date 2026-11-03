@@ -44,5 +44,5 @@ describe.skipIf(process.platform !== "win32")("runCommand on Windows with a stri
     });
     assert.equal(result.exit_code, 0, `${result.stdout}\n${result.stderr}`);
     assert.equal(fs.readFileSync(path.join(dir, "ran.txt"), "utf8"), "ok");
-  });
+  }, 120_000); // a real npm install: slow when the whole suite runs in parallel
 });

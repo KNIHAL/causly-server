@@ -2,7 +2,7 @@
 
 All notable changes to this project are documented here.
 
-## [1.5.4] (unreleased)
+## [1.5.4]
 
 ### Security
 - Updated vulnerable dependencies: `simple-git` 4.x, `@modelcontextprotocol/sdk` 1.32.x, `zod` 4.6.x, plus transitive fixes. `npm audit --omit=dev` now reports 0 vulnerabilities.
