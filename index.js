@@ -1,13 +1,12 @@
 import { loadEnv } from "./tools/envLoader.js";
 loadEnv();
 
-import { McpServer, ResourceTemplate } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import fs from "fs";
 import { z } from "zod";
-import * as gitOps from "./tools/gitOps.js";
-import * as projectOps from "./tools/projectOps.js";
 import { initPacks } from "./packs/loader.js";
+import { registerProjectResources } from "./tools/projectResources.js";
 import { registerCofounderPrompts } from "./prompts/cofounder.js";
 import { setOperatorPrompt, createElicitationPrompt } from "./tools/operatorApproval.js";
 import { hardenDataFolder } from "./tools/privateFiles.js";
@@ -21,61 +20,10 @@ const server = new McpServer({
 
 // ---------------- MCP Resources ----------------
 //
-// Give the AI project context without forcing it to reconstruct
-// everything through individual tool calls. The repo path is passed
-// URI-encoded as a single path segment (Windows paths contain ':' and
-// '\', which aren't safe as raw URI template variables) and decoded on
-// read. Example URI: causly://project/D%3A%5Ccausly-server/health
+// Project context for the agent (health, info, git state). A read goes through the workspace limit.
+// See tools/projectResources.js.
 
-function projectResourceUri(kind) {
-  return new ResourceTemplate(`causly://project/{encodedPath}/${kind}`, { list: undefined });
-}
-
-server.registerResource(
-  "project_health_resource",
-  projectResourceUri("health"),
-  {
-    title: "Project Health",
-    description: "Git cleanliness, dependency install status, and env file presence for a project directory.",
-    mimeType: "application/json",
-  },
-  async (uri, { encodedPath }) => {
-    const repo_path = decodeURIComponent(encodedPath);
-    const data = await projectOps.projectHealth({ repo_path });
-    return { contents: [{ uri: uri.href, mimeType: "application/json", text: JSON.stringify(data, null, 2) }] };
-  }
-);
-
-server.registerResource(
-  "project_info_resource",
-  projectResourceUri("info"),
-  {
-    title: "Project Info",
-    description: "Language, framework, package manager, resolved commands, and git branch/remotes for a project directory.",
-    mimeType: "application/json",
-  },
-  async (uri, { encodedPath }) => {
-    const repo_path = decodeURIComponent(encodedPath);
-    const data = await projectOps.projectInfo({ repo_path });
-    return { contents: [{ uri: uri.href, mimeType: "application/json", text: JSON.stringify(data, null, 2) }] };
-  }
-);
-
-server.registerResource(
-  "project_git_resource",
-  projectResourceUri("git"),
-  {
-    title: "Project Git State",
-    description: "Current git status (changed files, ahead/behind, clean state) for a project directory.",
-    mimeType: "application/json",
-  },
-  async (uri, { encodedPath }) => {
-    const repo_path = decodeURIComponent(encodedPath);
-    const data = await gitOps.gitStatus({ repo_path });
-    return { contents: [{ uri: uri.href, mimeType: "application/json", text: JSON.stringify(data, null, 2) }] };
-  }
-);
-
+registerProjectResources(server);
 
 // ---------------- MCP Prompts ----------------
 //

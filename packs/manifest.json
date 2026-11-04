@@ -1140,7 +1140,7 @@
         },
         {
           "name": "docker_compose_up",
-          "description": "Run docker compose up for a project directory. HIGH risk — requires confirm: true."
+          "description": "Run docker compose up for a project directory. HIGH risk — requires confirm: true. With CAUSLY_WORKSPACE set, the Compose file's host mounts, build contexts and secret/config files must be inside it."
         },
         {
           "name": "docker_compose_down",

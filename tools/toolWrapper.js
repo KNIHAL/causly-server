@@ -2,7 +2,7 @@ import crypto from "crypto";
 import { redactSecretsInString } from "./security.js";
 import { resolveApproval } from "./operatorApproval.js";
 import { logActivity } from "./logger.js";
-import { checkWorkspace } from "./workspace.js";
+import { checkWorkspaceAndMounts } from "./mountGuard.js";
 import { emitBoundaryAttestReceipt } from "./boundaryAttest.js";
 import { reloadEnvIfChanged } from "./envLoader.js";
 import { setupHint } from "./services.js";
@@ -13,7 +13,7 @@ function reportAttestationFailure(toolName, operationId, err) {
 
 export function createToolWrapper({
   approvalCheck = resolveApproval,
-  workspaceCheck = checkWorkspace,
+  workspaceCheck = checkWorkspaceAndMounts,
   activityLogger = logActivity,
   receiptEmitter = emitBoundaryAttestReceipt,
   operationIdFactory = () => crypto.randomUUID(),
@@ -29,7 +29,7 @@ export function createToolWrapper({
         try { receiptEmitter({ toolName, input, operationId, ...evidence }); }
         catch (err) { attestationErrorReporter(toolName, operationId, err); }
       };
-      const workspace = workspaceCheck(toolName, input);
+      const workspace = await workspaceCheck(toolName, input);
       if (!workspace.allowed) {
         activityLogger(toolName, input, "BLOCKED", workspace.reason, null, operationId);
         attest({ status: "BLOCKED", error: workspace.reason });

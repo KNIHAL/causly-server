@@ -62,6 +62,18 @@ async function runDocker(args, { timeout_ms = 60000, cwd, wslArgs, wslCwd } = {}
   return direct;
 }
 
+/**
+ * Names (image, container, build folder) are positional arguments of the docker command. One that starts
+ * with "-" would be read as an option instead (`--volume=/:/host`, `--privileged`, `--user=root`), which
+ * would get around the volume check of the workspace limit. Reject it.
+ */
+function plainArg(label, value) {
+  if (typeof value !== "string" || value === "" || value.startsWith("-")) {
+    throw new Error(`${label} must be a name or a path, not an option (it cannot be empty or start with "-").`);
+  }
+  return value;
+}
+
 /** Get Docker client/server version info — connectivity check. */
 export async function dockerVersion() {
   return runDocker(["version"]);
@@ -104,6 +116,7 @@ export async function dockerImages() {
 
 /** Build an image from a Dockerfile. HIGH risk — requires confirm: true. */
 export async function dockerBuild({ context_dir, tag, dockerfile, build_args, confirm }) {
+  plainArg("context_dir", context_dir);
   const buildArgsFlags = [];
   if (build_args) {
     for (const [k, v] of Object.entries(build_args)) {
@@ -126,6 +139,7 @@ export async function dockerBuild({ context_dir, tag, dockerfile, build_args, co
 
 /** Run a new container from an image. HIGH risk — requires confirm: true. */
 export async function dockerRun({ image, name, ports, env, volumes, detach = true, command, confirm }) {
+  plainArg("image", image);
   const base = [];
   if (detach) base.push("-d");
   if (name) base.push("--name", name);
@@ -153,21 +167,25 @@ export async function dockerRun({ image, name, ports, env, volumes, detach = tru
 
 /** Stop a running container. HIGH risk — requires confirm: true. */
 export async function dockerStop({ container, confirm }) {
+  plainArg("container", container);
   return runDocker(["stop", container]);
 }
 
 /** Start a stopped container. */
 export async function dockerStart({ container }) {
+  plainArg("container", container);
   return runDocker(["start", container]);
 }
 
 /** Restart a container. HIGH risk — requires confirm: true. */
 export async function dockerRestart({ container, confirm }) {
+  plainArg("container", container);
   return runDocker(["restart", container]);
 }
 
 /** Remove a container. DESTRUCTIVE — requires confirm: true. */
 export async function dockerRemove({ container, force = false, confirm }) {
+  plainArg("container", container);
   const args = ["rm"];
   if (force) args.push("-f");
   args.push(container);
@@ -176,6 +194,7 @@ export async function dockerRemove({ container, force = false, confirm }) {
 
 /** Remove an image. DESTRUCTIVE — requires confirm: true. */
 export async function dockerRemoveImage({ image, force = false, confirm }) {
+  plainArg("image", image);
   const args = ["rmi"];
   if (force) args.push("-f");
   args.push(image);
@@ -184,6 +203,7 @@ export async function dockerRemoveImage({ image, force = false, confirm }) {
 
 /** Get logs from a container. */
 export async function dockerLogs({ container, tail = 100, since }) {
+  plainArg("container", container);
   const args = ["logs", "--tail", String(tail)];
   if (since) args.push("--since", since);
   args.push(container);
@@ -192,6 +212,7 @@ export async function dockerLogs({ container, tail = 100, since }) {
 
 /** Inspect a container or image — full JSON metadata. */
 export async function dockerInspect({ target }) {
+  plainArg("target", target);
   const result = await runDocker(["inspect", target]);
   if (result.exit_code !== 0) return result;
   try {
@@ -203,6 +224,7 @@ export async function dockerInspect({ target }) {
 
 /** Execute a command inside a running container. */
 export async function dockerExec({ container, command }) {
+  plainArg("container", container);
   const args = ["exec", container, ...command.split(" ")];
   return runDocker(args);
 }
@@ -221,12 +243,41 @@ export async function dockerStats() {
 
 /** Push an image to a registry. HIGH risk — requires confirm: true. */
 export async function dockerPush({ image, confirm }) {
+  plainArg("image", image);
   return runDocker(["push", image], { timeout_ms: 300000 });
 }
 
 /** Pull an image from a registry. */
 export async function dockerPull({ image }) {
+  plainArg("image", image);
   return runDocker(["pull", image], { timeout_ms: 300000 });
+}
+
+/**
+ * The Compose project of a folder as Docker itself resolves it (`docker compose config --format json`):
+ * includes, overrides, variables and COMPOSE_FILE already applied. The workspace check reads mounts from
+ * this model. Throws a plain message when Docker or the Compose file cannot be read.
+ */
+export async function dockerComposeConfig({ project_dir }) {
+  const configArgs = ["compose", "config", "--format", "json"];
+  let result = await runDocker(configArgs, { cwd: project_dir, timeout_ms: 30000 });
+  if (result.exit_code !== 0 && result.notFound && process.platform === "win32") {
+    try {
+      const { stdout, stderr } = await execFileAsync("wsl", wslComposeArgs(toWslPath(project_dir), configArgs), {
+        timeout: 30000,
+        maxBuffer: 1024 * 1024 * 20,
+      });
+      result = { stdout, stderr, exit_code: 0 };
+    } catch (err) {
+      result = { stdout: err.stdout || "", stderr: err.stderr || err.message, exit_code: err.code ?? 1 };
+    }
+  }
+  if (result.exit_code !== 0) throw new Error(String(result.stderr || "docker compose config failed").trim().slice(0, 500));
+  try {
+    return JSON.parse(result.stdout);
+  } catch {
+    throw new Error("docker compose config did not return JSON (Docker Compose v2 is needed).");
+  }
 }
 
 /** Run docker compose up for a project directory. HIGH risk — requires confirm: true. */
