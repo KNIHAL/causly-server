@@ -10,6 +10,7 @@ import * as projectOps from "./tools/projectOps.js";
 import { initPacks } from "./packs/loader.js";
 import { registerCofounderPrompts } from "./prompts/cofounder.js";
 import { setOperatorPrompt, createElicitationPrompt } from "./tools/operatorApproval.js";
+import { hardenDataFolder } from "./tools/privateFiles.js";
 
 const PACKAGE_VERSION = JSON.parse(fs.readFileSync(new URL("./package.json", import.meta.url), "utf8")).version;
 
@@ -218,6 +219,7 @@ registerCofounderPrompts(server);
 
 async function main() {
   const transport = new StdioServerTransport();
+  try { hardenDataFolder(); } catch { /* permissions are best effort: never block startup */ }
   setOperatorPrompt(createElicitationPrompt(server.server));
   await initPacks(server);
 

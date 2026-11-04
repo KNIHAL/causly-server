@@ -3,6 +3,7 @@ import fs from "fs/promises";
 import path from "path";
 import { dataDir } from "./paths.js";
 import { assertPathAllowed } from "./pathGuard.js";
+import { writeFileAtomic } from "./privateFiles.js";
 
 const ALGO = "aes-256-gcm";
 // Fixed folder (the repo in a checkout, ~/.causly when installed from npm), whatever directory the server was launched from.
@@ -41,7 +42,8 @@ async function loadStore(store_path) {
 async function saveStore(store_path, data) {
   if (store_path) assertPathAllowed(store_path, "write");
   const p = storePath(store_path);
-  await fs.writeFile(p, JSON.stringify(data, null, 2), "utf8");
+  // Temporary file + rename, owner-only: a crash can never leave half a secrets file.
+  writeFileAtomic(p, JSON.stringify(data, null, 2), { mkdir: !store_path });
 }
 
 function encrypt(plaintext, key) {

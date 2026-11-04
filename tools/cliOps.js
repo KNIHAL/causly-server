@@ -5,6 +5,7 @@ import os from "os";
 import path from "path";
 import { execFile } from "child_process";
 import { PACKAGE_ROOT, causlyHome, envFiles } from "./paths.js";
+import { FILE_MODE, chmodQuiet, homePrivacy, writeFileAtomic } from "./privateFiles.js";
 
 export const SERVER_NAME = "causly-server";
 export const CLIENTS = ["claude", "cursor", "windsurf"];
@@ -65,8 +66,9 @@ export function readJson(file) {
 }
 
 export function backup(file) {
+  // Other servers in an editor config often hold tokens, so the copy is owner-only.
   const copy = `${file}.backup-${Date.now()}`;
-  fs.copyFileSync(file, copy);
+  writeFileAtomic(copy, fs.readFileSync(file));
   return copy;
 }
 
@@ -79,7 +81,7 @@ export function upsertServerEntry(file, entry) {
   const had = SERVER_NAME in config.mcpServers;
   config.mcpServers[SERVER_NAME] = entry;
   fs.mkdirSync(path.dirname(file), { recursive: true });
-  fs.writeFileSync(file, `${JSON.stringify(config, null, 2)}\n`);
+  writeFileAtomic(file, `${JSON.stringify(config, null, 2)}\n`, { preserveMode: true });
   return { updated: had, created: !had, backup: backedUp, replacedBrokenFile: broken };
 }
 
@@ -88,7 +90,7 @@ export function removeServerEntry(file) {
   if (!existed || broken || !config.mcpServers || !(SERVER_NAME in config.mcpServers)) return { removed: false };
   const copy = backup(file);
   delete config.mcpServers[SERVER_NAME];
-  fs.writeFileSync(file, `${JSON.stringify(config, null, 2)}\n`);
+  writeFileAtomic(file, `${JSON.stringify(config, null, 2)}\n`, { preserveMode: true });
   return { removed: true, backup: copy };
 }
 
@@ -127,9 +129,10 @@ export function runInit({ client, workspace, toolsets, platform, home, env, root
   const checkoutEnv = path.join(root, ".env");
   let envPath = fs.existsSync(checkoutEnv) ? checkoutEnv : envFile;
   if (!fs.existsSync(envPath)) {
-    fs.mkdirSync(path.dirname(envFile), { recursive: true });
+    fs.mkdirSync(path.dirname(envFile), { recursive: true, mode: 0o700 });
     if (fs.existsSync(template)) fs.copyFileSync(template, envFile);
-    else fs.writeFileSync(envFile, "# causly-server settings: KEY=value, one per line\n");
+    else fs.writeFileSync(envFile, "# causly-server settings: KEY=value, one per line\n", { mode: FILE_MODE });
+    chmodQuiet(envFile, FILE_MODE); // your keys go in this file: owner only (macOS/Linux)
     lines.push(`Created ${envFile} (add your API keys there)`);
   } else {
     lines.push(`Using existing ${envPath}`);
@@ -220,6 +223,8 @@ export async function runDoctor({ env = process.env, exec = execFile, nodeVersio
   const ff = await probe(exec, "ffmpeg", ["-version"]);
   add("ffmpeg (large recordings)", Boolean(ff), ff ? ff.slice(0, 40) : "not found; only needed for recordings over 25 MB");
 
+  const privacy = homePrivacy();
+  add("Private data folder", privacy.ok, privacy.detail);
   add("Workspace limit", Boolean(env.CAUSLY_WORKSPACE), env.CAUSLY_WORKSPACE || "off: file tools can reach any folder (set with: causly-server init --workspace <folder>)");
 
   const where = { platform, home, env };

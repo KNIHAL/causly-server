@@ -8,7 +8,7 @@ const LOG_DIR = path.join(dataDir(), "logs");
 const LOG_FILE = path.join(LOG_DIR, "activity.log");
 
 if (!fs.existsSync(LOG_DIR)) {
-  fs.mkdirSync(LOG_DIR, { recursive: true });
+  fs.mkdirSync(LOG_DIR, { recursive: true, mode: 0o700 }); // owner only (macOS/Linux); P1-02
 }
 
 /**
@@ -37,7 +37,7 @@ export function logActivity(toolName, input, status, details = "", durationMs = 
       details: redactSecretsInString(details),
       duration_ms: durationMs,
     };
-    fs.appendFileSync(LOG_FILE, JSON.stringify(entry) + "\n", "utf8");
+    fs.appendFileSync(LOG_FILE, JSON.stringify(entry) + "\n", { encoding: "utf8", mode: 0o600 });
     return entry;
   } catch (err) {
     // Swallow logging errors — never let logging break the actual tool call.

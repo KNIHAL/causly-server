@@ -5,6 +5,7 @@ import fs from "fs";
 import path from "path";
 import { dbPath } from "./store.js";
 import { causlyHome } from "./paths.js";
+import { FILE_MODE, chmodQuiet, ensurePrivateDir } from "./privateFiles.js";
 
 const stamp = (d) => d.toISOString().replace(/[-:]/g, "").replace(/\..+$/, "").replace("T", "-");
 
@@ -24,12 +25,27 @@ export async function runBackup({ file, dbFile = dbPath(), now = new Date() } = 
   if (!fs.existsSync(dbFile)) throw new Error("Nothing to back up yet: no pipeline, meeting or reminder data has been saved on this computer.");
   const target = path.resolve(file || path.join(backupDir(), `causly-${stamp(now)}.db`));
   if (fs.existsSync(target)) throw new Error(`${target} already exists. Choose another name; backups are never overwritten.`);
-  fs.mkdirSync(path.dirname(target), { recursive: true });
-  const db = await openDb(dbFile);
+  const dir = path.dirname(target);
+  if (dir === path.resolve(backupDir())) ensurePrivateDir(dir);
+  else fs.mkdirSync(dir, { recursive: true });
+  // Build the copy under a temporary name, owner-only from the first byte, and rename it when it is
+  // complete: a crash leaves no half-written file with a real backup name. SQLite accepts an
+  // existing empty file as the VACUUM INTO target.
+  const partial = `${target}.partial-${process.pid}`;
+  fs.closeSync(fs.openSync(partial, "wx", FILE_MODE));
   try {
-    db.exec(`VACUUM INTO '${target.replace(/'/g, "''")}'`);
-  } finally {
-    db.close();
+    const db = await openDb(dbFile);
+    try {
+      db.exec(`VACUUM INTO '${partial.replace(/'/g, "''")}'`);
+    } finally {
+      db.close();
+    }
+    chmodQuiet(partial, FILE_MODE);
+    if (fs.existsSync(target)) throw new Error(`${target} already exists. Choose another name; backups are never overwritten.`);
+    fs.renameSync(partial, target);
+  } catch (err) {
+    fs.rmSync(partial, { force: true });
+    throw err;
   }
   return { file: target, bytes: fs.statSync(target).size };
 }
@@ -62,6 +78,7 @@ export async function runRestore({ file, dbFile = dbPath(), now = new Date() } =
   fs.mkdirSync(path.dirname(dbFile), { recursive: true });
   const tmp = `${dbFile}.restoring`;
   fs.copyFileSync(source, tmp);
+  chmodQuiet(tmp, FILE_MODE); // the restored data file is owner-only, whatever mode the backup had
   try {
     for (const suffix of ["-wal", "-shm"]) fs.rmSync(`${dbFile}${suffix}`, { force: true });
     fs.renameSync(tmp, dbFile);
