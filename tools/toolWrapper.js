@@ -1,5 +1,6 @@
 import crypto from "crypto";
-import { checkApproval, redactSecretsInString } from "./security.js";
+import { redactSecretsInString } from "./security.js";
+import { resolveApproval } from "./operatorApproval.js";
 import { logActivity } from "./logger.js";
 import { checkWorkspace } from "./workspace.js";
 import { emitBoundaryAttestReceipt } from "./boundaryAttest.js";
@@ -11,7 +12,7 @@ function reportAttestationFailure(toolName, operationId, err) {
 }
 
 export function createToolWrapper({
-  approvalCheck = checkApproval,
+  approvalCheck = resolveApproval,
   workspaceCheck = checkWorkspace,
   activityLogger = logActivity,
   receiptEmitter = emitBoundaryAttestReceipt,
@@ -34,7 +35,7 @@ export function createToolWrapper({
         attest({ status: "BLOCKED", error: workspace.reason });
         return { content: [{ type: "text", text: `Blocked: ${workspace.reason}` }], isError: true };
       }
-      const approval = approvalCheck(toolName, input);
+      const approval = await approvalCheck(toolName, input);
       if (!approval.allowed) {
         activityLogger(toolName, input, "BLOCKED", approval.reason, null, operationId);
         attest({ status: "BLOCKED", error: approval.reason });

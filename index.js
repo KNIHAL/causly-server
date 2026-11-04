@@ -9,6 +9,7 @@ import * as gitOps from "./tools/gitOps.js";
 import * as projectOps from "./tools/projectOps.js";
 import { initPacks } from "./packs/loader.js";
 import { registerCofounderPrompts } from "./prompts/cofounder.js";
+import { setOperatorPrompt, createElicitationPrompt } from "./tools/operatorApproval.js";
 
 const PACKAGE_VERSION = JSON.parse(fs.readFileSync(new URL("./package.json", import.meta.url), "utf8")).version;
 
@@ -217,6 +218,7 @@ registerCofounderPrompts(server);
 
 async function main() {
   const transport = new StdioServerTransport();
+  setOperatorPrompt(createElicitationPrompt(server.server));
   await initPacks(server);
 
   await server.connect(transport);
