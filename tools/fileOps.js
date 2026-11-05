@@ -1,6 +1,7 @@
 import fs from "fs/promises";
 import path from "path";
 import { assertPathAllowed } from "./pathGuard.js";
+import { limit } from "./limits.js";
 
 /**
  * mkdir(recursive: true) that tolerates Windows quirks where the target
@@ -15,29 +16,71 @@ async function safeMkdir(dirPath) {
   }
 }
 
-/** Read a single file's full text content. */
+/**
+ * Read at most `max` bytes of a file. Returns the text plus, when the file was longer, a
+ * truncation marker. Never loads more than `max` bytes into memory.
+ */
+async function readCapped(filePath, encoding, max) {
+  const fh = await fs.open(filePath, "r");
+  try {
+    const st = await fh.stat();
+    const want = Math.min(max, st.size > 0 ? st.size : max);
+    const buf = Buffer.allocUnsafe(want);
+    let got = 0;
+    while (got < want) {
+      const { bytesRead } = await fh.read(buf, got, want - got, got);
+      if (bytesRead === 0) break;
+      got += bytesRead;
+    }
+    const truncated = st.size > got;
+    let slice = buf.subarray(0, got);
+    if (truncated && encoding === "base64") slice = slice.subarray(0, got - (got % 3));
+    let content = slice.toString(encoding);
+    if (truncated && /^utf-?8$/i.test(encoding)) content = content.replace(/�$/, "");
+    return { content, bytes: got, size: st.size, truncated };
+  } finally {
+    await fh.close();
+  }
+}
+
+function truncationFields(r) {
+  return r.truncated ? { truncated: true, size_bytes: r.size, bytes_returned: r.bytes } : {};
+}
+
+/** Read a single file's text content, up to CAUSLY_MAX_READ_BYTES (default 2 MB). */
 export async function readFile({ path: filePath, encoding = "utf8" }) {
   assertPathAllowed(filePath, "read");
-  const content = await fs.readFile(filePath, encoding);
-  return { path: filePath, content };
+  const r = await readCapped(filePath, encoding, limit("CAUSLY_MAX_READ_BYTES"));
+  return { path: filePath, content: r.content, ...truncationFields(r) };
 }
 
-/** Read multiple files in one call — avoids repeated round trips. */
+/**
+ * Read multiple files in one call. Each file is capped at CAUSLY_MAX_READ_BYTES and the whole call
+ * at CAUSLY_MAX_BATCH_BYTES; files after the budget is spent are reported as skipped.
+ */
 export async function readMultipleFiles({ paths, encoding = "utf8" }) {
-  const results = await Promise.all(
-    paths.map(async (p) => {
-      try {
-        assertPathAllowed(p, "read");
-        const content = await fs.readFile(p, encoding);
-        return { path: p, content, success: true };
-      } catch (err) {
-        return { path: p, error: err.message, success: false };
+  const perFile = limit("CAUSLY_MAX_READ_BYTES");
+  let budget = limit("CAUSLY_MAX_BATCH_BYTES");
+  const results = [];
+  let truncated = false;
+  for (const p of paths) {
+    try {
+      assertPathAllowed(p, "read");
+      if (budget <= 0) {
+        truncated = true;
+        results.push({ path: p, success: false, skipped: true, error: "Skipped: the total size limit for one call was reached. Read this file on its own." });
+        continue;
       }
-    })
-  );
-  return { results };
+      const r = await readCapped(p, encoding, Math.min(perFile, budget));
+      budget -= r.bytes;
+      if (r.truncated) truncated = true;
+      results.push({ path: p, content: r.content, success: true, ...truncationFields(r) });
+    } catch (err) {
+      results.push({ path: p, error: err.message, success: false });
+    }
+  }
+  return truncated ? { results, truncated: true } : { results };
 }
-
 /** Create a brand-new file. Fails if the file already exists (safety). */
 export async function createFile({ path: filePath, content = "" }) {
   assertPathAllowed(filePath);

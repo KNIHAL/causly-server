@@ -8,7 +8,7 @@ export default function register(server) {
 server.registerTool(
   "list_directory",
   {
-    description: "List the immediate files and subfolders inside a directory.",
+    description: "List the immediate files and subfolders inside a directory. Returns the first 2000 entries and truncated: true for a larger folder.",
     inputSchema: { path: z.string() },
   },
   wrap("list_directory", dirOps.listDirectory)
@@ -17,7 +17,7 @@ server.registerTool(
 server.registerTool(
   "directory_tree",
   {
-    description: "Recursively build a tree view of a directory's contents (skips node_modules and .git).",
+    description: "Recursively build a tree view of a directory's contents (skips node_modules and .git). Depth is at most 20 and the tree stops after 5000 entries, marking the cut with truncated: true.",
     inputSchema: {
       path: z.string(),
       max_depth: z.number().optional().describe("Maximum recursion depth, default 5"),
@@ -51,7 +51,7 @@ server.registerTool(
 server.registerTool(
   "search_files",
   {
-    description: "Recursively search for files/folders whose name contains a given pattern (case-insensitive).",
+    description: "Recursively search for files/folders whose name contains a given pattern (case-insensitive). Stops at max_results (at most 1000) or after 100000 entries looked at, and says truncated: true.",
     inputSchema: {
       root_path: z.string(),
       pattern: z.string(),

@@ -1,26 +1,100 @@
 import pg from "pg";
 import mysql from "mysql2/promise";
+import { limit } from "./limits.js";
 
 const { Pool: PgPool } = pg;
 
-// Connection pools cached by connection_string so repeated calls reuse them.
-const pgPools = new Map();
+// Connection pools cached by connection_string so repeated calls reuse them. The cache holds at most
+// CAUSLY_MAX_DB_POOLS pools (least recently used is closed first) and closes a pool that has not been
+// used for CAUSLY_DB_POOL_IDLE_MS.
+const pgPools = new Map(); // key -> { pool, last }
 const mysqlPools = new Map();
+let sweeper = null;
+
+function closePool(entry) {
+  Promise.resolve()
+    .then(() => entry.pool.end())
+    .catch(() => {});
+}
+
+function sweepIdle(now = Date.now()) {
+  const idle = limit("CAUSLY_DB_POOL_IDLE_MS");
+  for (const cache of [pgPools, mysqlPools]) {
+    for (const [key, entry] of cache) {
+      if (now - entry.last > idle) {
+        cache.delete(key);
+        closePool(entry);
+      }
+    }
+  }
+  if (pgPools.size + mysqlPools.size === 0 && sweeper) {
+    clearInterval(sweeper);
+    sweeper = null;
+  }
+}
+
+function ensureSweeper() {
+  if (sweeper) return;
+  const every = Math.max(1000, Math.min(limit("CAUSLY_DB_POOL_IDLE_MS") / 2, 60_000));
+  sweeper = setInterval(() => sweepIdle(), every);
+  sweeper.unref?.();
+}
+
+function cachedPool(cache, key, create) {
+  const hit = cache.get(key);
+  if (hit) {
+    hit.last = Date.now();
+    // re-insert so Map order is least-recently-used first
+    cache.delete(key);
+    cache.set(key, hit);
+    return hit.pool;
+  }
+  const max = limit("CAUSLY_MAX_DB_POOLS");
+  while (pgPools.size + mysqlPools.size >= max) {
+    const victim = oldestEntry();
+    if (!victim) break;
+    victim.cache.delete(victim.key);
+    closePool(victim.entry);
+  }
+  const entry = { pool: create(), last: Date.now() };
+  cache.set(key, entry);
+  ensureSweeper();
+  return entry.pool;
+}
+
+function oldestEntry() {
+  let best = null;
+  for (const cache of [pgPools, mysqlPools]) {
+    for (const [key, entry] of cache) {
+      if (!best || entry.last < best.entry.last) best = { cache, key, entry };
+      break; // first entry of each Map is its least recently used
+    }
+  }
+  return best;
+}
 
 function getPgPool(connection_string) {
-  if (!pgPools.has(connection_string)) {
-    pgPools.set(connection_string, new PgPool({ connectionString: connection_string, max: 5 }));
-  }
-  return pgPools.get(connection_string);
+  return cachedPool(pgPools, connection_string, () => new PgPool({ connectionString: connection_string, max: 5 }));
 }
 
 function getMysqlPool(connection_string) {
-  if (!mysqlPools.has(connection_string)) {
-    mysqlPools.set(connection_string, mysql.createPool(connection_string));
-  }
-  return mysqlPools.get(connection_string);
+  return cachedPool(mysqlPools, connection_string, () => mysql.createPool(connection_string));
 }
 
+/** Close every cached pool (tests and exit cleanup). */
+export async function closeAllPools() {
+  const all = [...pgPools.values(), ...mysqlPools.values()];
+  pgPools.clear();
+  mysqlPools.clear();
+  if (sweeper) {
+    clearInterval(sweeper);
+    sweeper = null;
+  }
+  await Promise.allSettled(all.map((e) => e.pool.end()));
+}
+
+/** Pool count and a manual idle sweep, for tests. */
+export const _pools = { size: () => pgPools.size + mysqlPools.size, sweepIdle };
 function requireConnString(connection_string) {
   if (!connection_string) {
     throw new Error(

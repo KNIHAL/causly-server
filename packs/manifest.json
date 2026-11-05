@@ -6,11 +6,11 @@
       "tools": [
         {
           "name": "read_file",
-          "description": "Read the full text content of a single file."
+          "description": "Read the text content of a single file, up to 2 MB (CAUSLY_MAX_READ_BYTES). A longer file is cut and the result says truncated: true with its full size."
         },
         {
           "name": "read_multiple_files",
-          "description": "Read multiple files in a single call. Failures on individual files do not stop the batch."
+          "description": "Read multiple files in a single call. Failures on individual files do not stop the batch. Each file is capped at 2 MB and the whole call at 8 MB; files past the budget are skipped and the result says truncated: true."
         },
         {
           "name": "create_file",
@@ -48,11 +48,11 @@
       "tools": [
         {
           "name": "list_directory",
-          "description": "List the immediate files and subfolders inside a directory."
+          "description": "List the immediate files and subfolders inside a directory. Returns the first 2000 entries and truncated: true for a larger folder."
         },
         {
           "name": "directory_tree",
-          "description": "Recursively build a tree view of a directory's contents (skips node_modules and .git)."
+          "description": "Recursively build a tree view of a directory's contents (skips node_modules and .git). Depth is at most 20 and the tree stops after 5000 entries, marking the cut with truncated: true."
         },
         {
           "name": "create_directory",
@@ -64,7 +64,7 @@
         },
         {
           "name": "search_files",
-          "description": "Recursively search for files/folders whose name contains a given pattern (case-insensitive)."
+          "description": "Recursively search for files/folders whose name contains a given pattern (case-insensitive). Stops at max_results (at most 1000) or after 100000 entries looked at, and says truncated: true."
         }
       ]
     },

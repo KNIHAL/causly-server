@@ -8,7 +8,7 @@ export default function register(server) {
 server.registerTool(
   "read_file",
   {
-    description: "Read the full text content of a single file.",
+    description: "Read the text content of a single file, up to 2 MB (CAUSLY_MAX_READ_BYTES). A longer file is cut and the result says truncated: true with its full size.",
     inputSchema: {
       path: z.string().describe("Absolute path to the file"),
       encoding: z.string().optional().describe("Text encoding, defaults to utf8"),
@@ -20,7 +20,7 @@ server.registerTool(
 server.registerTool(
   "read_multiple_files",
   {
-    description: "Read multiple files in a single call. Failures on individual files do not stop the batch.",
+    description: "Read multiple files in a single call. Failures on individual files do not stop the batch. Each file is capped at 2 MB and the whole call at 8 MB; files past the budget are skipped and the result says truncated: true.",
     inputSchema: {
       paths: z.array(z.string()).describe("Array of absolute file paths"),
       encoding: z.string().optional(),
