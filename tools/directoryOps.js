@@ -28,16 +28,24 @@ export async function listDirectory({ path: dirPath }) {
 }
 
 const MAX_TREE_DEPTH = 20;
+const DEFAULT_TREE_DEPTH = 3;
+
+// Folders that are dependencies or build output: large, regenerated, and rarely what the agent wants
+// to read. directory_tree lists their names under `skipped` instead of walking into them.
+const TREE_IGNORED = new Set([
+  "node_modules", ".git", "build", "dist", ".next", ".docusaurus", ".venv", "venv", "__pycache__", ".turbo", "coverage",
+]);
 
 /**
- * Recursively build a tree view of a directory, up to max_depth (at most 20) and
- * CAUSLY_MAX_TREE_ENTRIES (default 5000) entries in total. Where a limit cuts the tree short the
- * node carries `truncated: true`.
+ * Recursively build a tree view of a directory, up to max_depth (default 3, at most 20) and
+ * CAUSLY_MAX_TREE_ENTRIES (default 1000) entries in total. Where a limit cuts the tree short the
+ * node carries `truncated: true`. Dependency and build folders are not walked; their names appear in
+ * `skipped`, unless include_ignored is true.
  */
-export async function directoryTree({ path: dirPath, max_depth = 5 }) {
+export async function directoryTree({ path: dirPath, max_depth = DEFAULT_TREE_DEPTH, include_ignored = false }) {
   assertPathAllowed(dirPath, "read");
-  const depthLimit = Math.max(1, Math.min(Number(max_depth) || 5, MAX_TREE_DEPTH));
-  const state = { left: limit("CAUSLY_MAX_TREE_ENTRIES"), cut: false };
+  const depthLimit = Math.max(1, Math.min(Number(max_depth) || DEFAULT_TREE_DEPTH, MAX_TREE_DEPTH));
+  const state = { left: limit("CAUSLY_MAX_TREE_ENTRIES"), include: include_ignored === true };
   return walkTree(dirPath, depthLimit, 0, state);
 }
 
@@ -47,15 +55,18 @@ async function walkTree(dirPath, maxDepth, depth, state) {
   }
 
   const children = [];
+  const skipped = [];
   let truncated = false;
   const dir = await fs.opendir(dirPath);
   try {
     for await (const entry of dir) {
-      // Skip common noise directories.
-      if (entry.name === "node_modules" || entry.name === ".git") continue;
+      // Skip dependency and build folders (named in `skipped`).
+      if (!state.include && entry.isDirectory() && TREE_IGNORED.has(entry.name)) {
+        skipped.push(entry.name);
+        continue;
+      }
       if (state.left <= 0) {
         truncated = true;
-        state.cut = true;
         break;
       }
       const fullPath = path.join(dirPath, entry.name);
@@ -73,6 +84,7 @@ async function walkTree(dirPath, maxDepth, depth, state) {
   }
 
   const node = { name: path.basename(dirPath), type: "directory", children };
+  if (skipped.length) node.skipped = skipped;
   if (truncated) node.truncated = true;
   return node;
 }

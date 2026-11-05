@@ -17,10 +17,11 @@ server.registerTool(
 server.registerTool(
   "directory_tree",
   {
-    description: "Recursively build a tree view of a directory's contents (skips node_modules and .git). Depth is at most 20 and the tree stops after 5000 entries, marking the cut with truncated: true.",
+    description: "Recursively build a tree view of a directory's contents (dependency and build folders such as node_modules, .git, build, dist, .next, .docusaurus and .venv are listed by name under `skipped`, not walked). Default depth 3, at most 20; stops after 1000 entries, marking the cut with truncated: true.",
     inputSchema: {
       path: z.string(),
-      max_depth: z.number().optional().describe("Maximum recursion depth, default 5"),
+      max_depth: z.number().optional().describe("Maximum recursion depth, default 3"),
+      include_ignored: z.boolean().optional().describe("Also walk node_modules, build, dist and the other skipped folders"),
     },
   },
   wrap("directory_tree", dirOps.directoryTree)

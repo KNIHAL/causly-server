@@ -163,7 +163,7 @@ describe("run{Tests,Lint,Typecheck,Build} — command resolution", () => {
     runCommand.mockResolvedValueOnce({ stdout: "ok", stderr: "", exit_code: 0 });
     const result = await runTests({ repo_path: testDir });
     expect(runCommand).toHaveBeenCalledWith({ command: "npm run test", cwd: testDir, timeout_ms: undefined });
-    expect(result).toEqual({ repo_path: testDir, action: "test", ran: true, command: "npm run test", stdout: "ok", stderr: "", exit_code: 0 });
+    expect(result).toEqual({ ran: true, command: "npm run test", stdout: "ok", stderr: "", exit_code: 0 });
   });
 
   it("runLint checks both 'lint' script name candidates in order", async () => {

@@ -140,6 +140,11 @@ function truncate(str) {
     : str;
 }
 
+/** The risk note is only worth tokens when the command was flagged; a plain LOW result omits it. */
+function riskField(info) {
+  return info && info.risk !== "LOW" ? { risk: info } : {};
+}
+
 /**
  * Run a shell command in a given working directory.
  * Blocks a short list of catastrophic patterns; everything else is allowed
@@ -200,24 +205,20 @@ export async function runCommand({ command, cwd, timeout_ms = DEFAULT_TIMEOUT_MS
     const { stdout, stderr } = IS_WINDOWS ? await runOnWindows() : await execAsync(command, runOpts);
 
     return {
-      command,
-      cwd,
       stdout: truncate(stdout),
       stderr: truncate(stderr),
       exit_code: 0,
-      risk: riskInfo,
+      ...riskField(riskInfo),
     };
   } catch (err) {
     // exec/execFile reject on non-zero exit code — surface it as data, not
     // a hard throw, so the caller can see stdout/stderr even on failure.
     return {
-      command,
-      cwd,
       stdout: truncate(err.stdout || ""),
       stderr: truncate(err.stderr || err.message),
       exit_code: err.code ?? 1,
       timed_out: err.killed && err.signal === "SIGTERM",
-      risk: riskInfo,
+      ...riskField(riskInfo),
     };
   }
 }
