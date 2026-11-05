@@ -1,5 +1,7 @@
 const { execFile } = await import("child_process");
 const { promisify } = await import("util");
+import { buildChildEnv } from "./childEnv.js";
+
 const execFileAsync = promisify(execFile);
 
 /** Converts a Windows path (D:\foo\bar) to its WSL equivalent (/mnt/d/foo/bar). Leaves non-Windows-style paths untouched. */
@@ -39,6 +41,7 @@ async function runDocker(args, { timeout_ms = 60000, cwd, wslArgs, wslCwd } = {}
     try {
       const { stdout, stderr } = await execFileAsync(cmd, cmdArgs, {
         cwd: cmdCwd,
+        env: buildChildEnv({ profile: "docker" }),
         timeout: timeout_ms,
         maxBuffer: 1024 * 1024 * 20,
       });
@@ -264,6 +267,7 @@ export async function dockerComposeConfig({ project_dir }) {
   if (result.exit_code !== 0 && result.notFound && process.platform === "win32") {
     try {
       const { stdout, stderr } = await execFileAsync("wsl", wslComposeArgs(toWslPath(project_dir), configArgs), {
+        env: buildChildEnv({ profile: "docker" }),
         timeout: 30000,
         maxBuffer: 1024 * 1024 * 20,
       });
@@ -291,6 +295,7 @@ export async function dockerComposeUp({ project_dir, detach = true, confirm }) {
   const composeArgs = ["compose", "up", ...(detach ? ["-d"] : [])];
   try {
     const { stdout, stderr } = await execFileAsync("wsl", wslComposeArgs(wslDir, composeArgs), {
+      env: buildChildEnv({ profile: "docker" }),
       timeout: 300000,
       maxBuffer: 1024 * 1024 * 20,
     });
@@ -309,6 +314,7 @@ export async function dockerComposeDown({ project_dir, confirm }) {
   const composeArgs = ["compose", "down"];
   try {
     const { stdout, stderr } = await execFileAsync("wsl", wslComposeArgs(wslDir, composeArgs), {
+      env: buildChildEnv({ profile: "docker" }),
       timeout: 120000,
       maxBuffer: 1024 * 1024 * 20,
     });

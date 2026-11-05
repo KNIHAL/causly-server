@@ -3,6 +3,7 @@ import { promisify } from "util";
 import os from "os";
 import path from "path";
 import { classifyCommandRisk } from "./security.js";
+import { buildChildEnv } from "./childEnv.js";
 
 const execAsync = promisify(exec);
 const execFileAsync = promisify(execFile);
@@ -112,8 +113,9 @@ export function buildWindowsEnv(baseEnv, { execPath = process.execPath, homedir 
 }
 
 function buildEnv() {
-  if (!IS_WINDOWS) return process.env;
-  return buildWindowsEnv(process.env);
+  const base = buildChildEnv({ profile: "command" });
+  if (!IS_WINDOWS) return base;
+  return buildWindowsEnv(base);
 }
 
 // Commands containing these patterns are blocked outright — no override.

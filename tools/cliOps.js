@@ -5,6 +5,7 @@ import os from "os";
 import path from "path";
 import { execFile } from "child_process";
 import { PACKAGE_ROOT, causlyHome, envFiles } from "./paths.js";
+import { describeChildEnv } from "./childEnv.js";
 import { FILE_MODE, chmodQuiet, homePrivacy, writeFileAtomic } from "./privateFiles.js";
 
 export const SERVER_NAME = "causly-server";
@@ -225,6 +226,7 @@ export async function runDoctor({ env = process.env, exec = execFile, nodeVersio
 
   const privacy = homePrivacy();
   add("Private data folder", privacy.ok, privacy.detail);
+  add("Child process env", !/(^|[,;\s])\*($|[,;\s])/.test(env.CAUSLY_PASSTHROUGH_ENV || ""), describeChildEnv(env));
   add("Workspace limit", Boolean(env.CAUSLY_WORKSPACE), env.CAUSLY_WORKSPACE || "off: file tools can reach any folder (set with: causly-server init --workspace <folder>)");
 
   const where = { platform, home, env };
