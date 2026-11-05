@@ -35,8 +35,8 @@ server.registerTool(
 server.registerTool(
   "run_tests",
   {
-    description: "Detect and run the project's test command, returning stdout/stderr/exit_code.",
-    inputSchema: { repo_path: z.string(), timeout_ms: z.number().optional() },
+    description: "Detect and run the project's test command, returning stdout/stderr/exit_code. This runs the project's own scripts (for example package.json), so a hostile project can run anything. LOW risk by default; with CAUSLY_STRICT_PROJECT_COMMANDS=true it is HIGH and requires confirm: true.",
+    inputSchema: { repo_path: z.string(), timeout_ms: z.number().optional(), confirm: z.boolean().optional().describe("Only needed when CAUSLY_STRICT_PROJECT_COMMANDS is on") },
   },
   wrap("run_tests", projectOps.runTests)
 );
@@ -44,8 +44,8 @@ server.registerTool(
 server.registerTool(
   "run_lint",
   {
-    description: "Detect and run the project's lint command, returning stdout/stderr/exit_code.",
-    inputSchema: { repo_path: z.string(), timeout_ms: z.number().optional() },
+    description: "Detect and run the project's lint command, returning stdout/stderr/exit_code. This runs the project's own scripts (for example package.json), so a hostile project can run anything. LOW risk by default; with CAUSLY_STRICT_PROJECT_COMMANDS=true it is HIGH and requires confirm: true.",
+    inputSchema: { repo_path: z.string(), timeout_ms: z.number().optional(), confirm: z.boolean().optional().describe("Only needed when CAUSLY_STRICT_PROJECT_COMMANDS is on") },
   },
   wrap("run_lint", projectOps.runLint)
 );
@@ -53,8 +53,8 @@ server.registerTool(
 server.registerTool(
   "run_typecheck",
   {
-    description: "Detect and run the project's typecheck command, returning stdout/stderr/exit_code.",
-    inputSchema: { repo_path: z.string(), timeout_ms: z.number().optional() },
+    description: "Detect and run the project's typecheck command, returning stdout/stderr/exit_code. This runs the project's own scripts (for example package.json), so a hostile project can run anything. LOW risk by default; with CAUSLY_STRICT_PROJECT_COMMANDS=true it is HIGH and requires confirm: true.",
+    inputSchema: { repo_path: z.string(), timeout_ms: z.number().optional(), confirm: z.boolean().optional().describe("Only needed when CAUSLY_STRICT_PROJECT_COMMANDS is on") },
   },
   wrap("run_typecheck", projectOps.runTypecheck)
 );
@@ -62,8 +62,8 @@ server.registerTool(
 server.registerTool(
   "run_build",
   {
-    description: "Detect and run the project's build command, returning stdout/stderr/exit_code.",
-    inputSchema: { repo_path: z.string(), timeout_ms: z.number().optional() },
+    description: "Detect and run the project's build command, returning stdout/stderr/exit_code. This runs the project's own scripts (for example package.json), so a hostile project can run anything. LOW risk by default; with CAUSLY_STRICT_PROJECT_COMMANDS=true it is HIGH and requires confirm: true.",
+    inputSchema: { repo_path: z.string(), timeout_ms: z.number().optional(), confirm: z.boolean().optional().describe("Only needed when CAUSLY_STRICT_PROJECT_COMMANDS is on") },
   },
   wrap("run_build", projectOps.runBuild)
 );
