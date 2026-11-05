@@ -136,7 +136,7 @@ describe("calendarOps — credentials", () => {
 
   it("maps a 404 to a clear message", async () => {
     const { deps } = stub(() => ({ __status: 404 }));
-    await expect(cal.getEvent({ event_id: "nope" }, deps)).rejects.toThrow(/Not found/);
+    await expect(cal.getEvent({ event_id: "nope" }, deps)).rejects.toThrow(/could not find that \(404\)/);
   });
 });
 

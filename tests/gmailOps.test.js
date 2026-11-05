@@ -72,7 +72,7 @@ describe("gmailOps — OAuth token handling", () => {
       tokenRes(undefined, undefined, false, { error: "invalid_grant", error_description: "Token has been expired or revoked" })
     );
     await expect(gmailOps.gmailGetProfile()).rejects.toThrow(
-      /Gmail OAuth refresh error: Token has been expired or revoked/
+      /Gmail refresh token is expired or revoked.*Token has been expired or revoked/
     );
   });
 
@@ -107,7 +107,7 @@ describe("gmailOps — OAuth token handling", () => {
 
   it("throws a formatted Gmail API error using error.message from the body", async () => {
     global.fetch.mockReturnValueOnce(tokenRes()).mockReturnValueOnce(apiRes({ error: { message: "Invalid query" } }, false, 400));
-    await expect(gmailOps.gmailSearch({ query: "bad:::query" })).rejects.toThrow(/Gmail API error \(400\): Invalid query/);
+    await expect(gmailOps.gmailSearch({ query: "bad:::query" })).rejects.toThrow(/Gmail returned an error \(400\): Invalid query/);
   });
 });
 

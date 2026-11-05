@@ -1,3 +1,4 @@
+import { httpFetch, readBody, failureFromResponse, malformedReply } from "./httpErrors.js";
 const GITHUB_API = "https://api.github.com";
 
 function getToken() {
@@ -10,34 +11,40 @@ function getToken() {
   return token;
 }
 
-async function githubFetch(path, options = {}) {
+async function githubRequest(path, options = {}) {
   const token = getToken();
-  const res = await fetch(`${GITHUB_API}${path}`, {
-    ...options,
-    headers: {
-      Authorization: `Bearer ${token}`,
-      Accept: "application/vnd.github+json",
-      "X-GitHub-Api-Version": "2022-11-28",
-      "User-Agent": "causly-server",
-      ...(options.body ? { "Content-Type": "application/json" } : {}),
-      ...options.headers,
+  const res = await httpFetch(
+    "github",
+    fetch,
+    `${GITHUB_API}${path}`,
+    {
+      ...options,
+      headers: {
+        Authorization: `Bearer ${token}`,
+        Accept: "application/vnd.github+json",
+        "X-GitHub-Api-Version": "2022-11-28",
+        "User-Agent": "causly-server",
+        ...(options.body ? { "Content-Type": "application/json" } : {}),
+        ...options.headers,
+      },
     },
-  });
+    { secrets: [token] }
+  );
+  const body = await readBody(res);
+  if (!res.ok) throw failureFromResponse("github", res, body, { secrets: [token] });
+  return { res, body };
+}
 
-  const text = await res.text();
-  let data;
-  try {
-    data = text ? JSON.parse(text) : null;
-  } catch {
-    data = text;
-  }
+async function githubFetch(path, options = {}) {
+  const { res, body } = await githubRequest(path, options);
+  if (body.malformed) throw malformedReply("github", res.status);
+  return body.data;
+}
 
-  if (!res.ok) {
-    const message = data?.message || res.statusText;
-    throw new Error(`GitHub API error (${res.status}): ${message}`);
-  }
-
-  return data;
+/** A call whose success body is plain text (a diff or a log), not JSON. */
+async function githubText(path, options = {}) {
+  const { body } = await githubRequest(path, options);
+  return body.text ?? "";
 }
 
 /** Get the authenticated user's profile — useful as a connectivity/auth check. */
@@ -225,19 +232,9 @@ export async function githubGetPullRequestFiles({ owner, repo, pull_number, per_
 
 /** Get the raw diff of a pull request. */
 export async function githubGetPullRequestDiff({ owner, repo, pull_number }) {
-  const token = getToken();
-  const res = await fetch(`${GITHUB_API}/repos/${owner}/${repo}/pulls/${pull_number}`, {
-    headers: {
-      Authorization: `Bearer ${token}`,
-      Accept: "application/vnd.github.v3.diff",
-      "X-GitHub-Api-Version": "2022-11-28",
-      "User-Agent": "causly-server",
-    },
+  const diff = await githubText(`/repos/${owner}/${repo}/pulls/${pull_number}`, {
+    headers: { Accept: "application/vnd.github.v3.diff" },
   });
-  if (!res.ok) {
-    throw new Error(`GitHub API error (${res.status}): ${res.statusText}`);
-  }
-  const diff = await res.text();
   return { owner, repo, pull_number, diff };
 }
 
@@ -341,20 +338,7 @@ export async function githubGetWorkflowRunJobs({ owner, repo, run_id }) {
 
 /** Get the raw log text for a job. */
 export async function githubGetJobLogs({ owner, repo, job_id }) {
-  const token = getToken();
-  const res = await fetch(`${GITHUB_API}/repos/${owner}/${repo}/actions/jobs/${job_id}/logs`, {
-    headers: {
-      Authorization: `Bearer ${token}`,
-      Accept: "application/vnd.github+json",
-      "X-GitHub-Api-Version": "2022-11-28",
-      "User-Agent": "causly-server",
-    },
-    redirect: "follow",
-  });
-  if (!res.ok) {
-    throw new Error(`GitHub API error (${res.status}): ${res.statusText}`);
-  }
-  const logs = await res.text();
+  const logs = await githubText(`/repos/${owner}/${repo}/actions/jobs/${job_id}/logs`, { redirect: "follow" });
   return { owner, repo, job_id, logs };
 }
 

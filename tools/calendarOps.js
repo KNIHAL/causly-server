@@ -1,3 +1,4 @@
+import { httpFetch, readBody, failureFromResponse, malformedReply } from "./httpErrors.js";
 // Google Calendar tools. No new dependencies: Calendar REST API v3 over fetch.
 //
 //   calendar_list_calendars  calendars this account can see
@@ -162,27 +163,21 @@ function client(deps = {}) {
     }
     const pairs = Object.entries(query ?? {}).filter(([, v]) => v !== undefined && v !== null && v !== "");
     const qs = pairs.length ? `?${new URLSearchParams(pairs.map(([k, v]) => [k, String(v)]))}` : "";
-    const res = await fetchFn(`${API}${path}${qs}`, {
+    const res = await httpFetch("calendar", fetchFn, `${API}${path}${qs}`, {
       method,
       headers: { authorization: `Bearer ${token}`, ...(body ? { "content-type": "application/json" } : {}) },
       body: body ? JSON.stringify(body) : undefined,
-      signal: AbortSignal.timeout(20_000),
-    });
+    }, { secrets: [token] });
     if (res.status === 204) return null;
-    const data = await res.json().catch(() => ({}));
+    const parsed = await readBody(res);
     if (!res.ok) {
-      const message = data?.error?.message || `HTTP ${res.status}`;
-      if (res.status === 401) throw new Error("Google rejected the access token. Check CALENDAR_REFRESH_TOKEN.");
-      if (res.status === 403) {
-        throw new Error(
-          `Google Calendar refused the request: ${message}. The refresh token needs the calendar.events and calendar.readonly scopes, and the Calendar API must be enabled in the Google Cloud project.`
-        );
-      }
-      if (res.status === 404) throw new Error("Not found. Check the event id and calendar id.");
       if (res.status === 410) throw new Error("That event was already deleted.");
-      throw new Error(`Google Calendar error: ${message}`);
+      const used = token;
+      if (res.status === 401) token = undefined; // the cached access token died; refresh on the next call
+      throw failureFromResponse("calendar", res, parsed, { secrets: [used] });
     }
-    return data;
+    if (parsed.malformed) throw malformedReply("calendar", res.status);
+    return parsed.data ?? {};
   };
 }
 

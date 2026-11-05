@@ -40,10 +40,10 @@ describe("telegramOps — setup and errors", () => {
   });
 
   it("maps 401, 403, 409 and 429 to clear messages", async () => {
-    await expect(tg.getMe({}, stub(() => ({ __error: 401, description: "Unauthorized" })).deps)).rejects.toThrow(/rejected the bot token/);
+    await expect(tg.getMe({}, stub(() => ({ __error: 401, description: "Unauthorized" })).deps)).rejects.toThrow(/rejected the credentials/);
     await expect(tg.sendMessage({ chat_id: "9", text: "hi" }, stub(() => ({ __error: 403, description: "bot was blocked by the user" })).deps)).rejects.toThrow(/press Start/);
     await expect(tg.getUpdates({}, stub(() => ({ __error: 409, description: "Conflict: can't use getUpdates while webhook is active" })).deps)).rejects.toThrow(/webhook/);
-    await expect(tg.notify({ text: "x" }, stub(() => ({ __error: 429, description: "Too Many Requests", parameters: { retry_after: 7 } })).deps)).rejects.toThrow(/retry in 7s/);
+    await expect(tg.notify({ text: "x" }, stub(() => ({ __error: 429, description: "Too Many Requests", parameters: { retry_after: 7 } })).deps)).rejects.toThrow(/Try again in 7s/);
   });
 
   it("never leaks the token in an error", async () => {

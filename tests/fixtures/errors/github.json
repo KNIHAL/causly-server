@@ -1,0 +1,91 @@
+{
+    "service":  "github",
+    "secrets":  [
+                    "ghp_SECRETTOKEN123"
+                ],
+    "cases":  {
+                  "401":  {
+                              "response":  {
+                                               "body":  {
+                                                            "message":  "Bad credentials"
+                                                        },
+                                               "status":  401
+                                           },
+                              "match":  "rejected the credentials \\(401\\).*causly-server setup github"
+                          },
+                  "403_scope":  {
+                                    "response":  {
+                                                     "body":  {
+                                                                  "message":  "Resource not accessible by personal access token"
+                                                              },
+                                                     "status":  403
+                                                 },
+                                    "match":  "refused the request \\(403\\).*Resource not accessible.*permission.*causly-server setup github"
+                                },
+                  "403_rate_limit":  {
+                                         "response":  {
+                                                          "status":  403,
+                                                          "body":  {
+                                                                       "message":  "API rate limit exceeded for user ID 1."
+                                                                   },
+                                                          "headers":  {
+                                                                          "x-ratelimit-remaining":  "0",
+                                                                          "x-ratelimit-reset":  "SOON_60"
+                                                                      }
+                                                      },
+                                         "match":  "rate limit reached.*Try again in (5\\d|6\\d)s"
+                                     },
+                  "404":  {
+                              "response":  {
+                                               "body":  {
+                                                            "message":  "Not Found"
+                                                        },
+                                               "status":  404
+                                           },
+                              "match":  "could not find that \\(404\\)"
+                          },
+                  "429":  {
+                              "response":  {
+                                               "status":  429,
+                                               "body":  {
+                                                            "message":  "Too many requests"
+                                                        },
+                                               "headers":  {
+                                                               "retry-after":  "42"
+                                                           }
+                                           },
+                              "match":  "rate limit reached \\(429\\). Try again in 42s"
+                          },
+                  "5xx":  {
+                              "response":  {
+                                               "status":  502,
+                                               "rawBody":  "\u003chtml\u003e\u003cbody\u003e\u003ch1\u003e502 Bad Gateway\u003c/h1\u003e\u003c/body\u003e\u003c/html\u003e"
+                                           },
+                              "match":  "having problems \\(HTTP 502\\)"
+                          },
+                  "timeout":  {
+                                  "match":  "did not answer within 20s",
+                                  "throws":  "TimeoutError"
+                              },
+                  "network":  {
+                                  "match":  "Could not reach GitHub \\(ECONNRESET\\)",
+                                  "throws":  "ECONNRESET"
+                              },
+                  "malformed_json":  {
+                                         "response":  {
+                                                          "status":  200,
+                                                          "rawBody":  "\u003chtml\u003elogin page\u003c/html\u003e"
+                                                      },
+                                         "match":  "could not be read \\(HTTP 200, not valid JSON\\)"
+                                     },
+                  "secret_in_message":  {
+                                            "response":  {
+                                                             "body":  {
+                                                                          "message":  "Validation failed for token ghp_SECRETTOKEN123"
+                                                                      },
+                                                             "status":  422
+                                                         },
+                                            "match":  "returned an error \\(422\\)"
+                                        }
+              }
+}

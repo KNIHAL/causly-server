@@ -1,3 +1,4 @@
+import { httpFetch, readBody, malformedReply, httpFailure, retryAfterSeconds } from "./httpErrors.js";
 // Telegram Bot API tools. No new dependencies; a bot token is all that is needed.
 //
 //   telegram_get_me        check the bot token, show the bot's name
@@ -27,30 +28,25 @@ const scrub = (text, t) => String(text).split(t).join("[REDACTED]");
 async function call(method, params, deps = {}) {
   const fetchFn = deps.fetch ?? globalThis.fetch;
   const t = token();
-  let res;
-  try {
-    res = await fetchFn(`${API}/bot${t}/${method}`, {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify(params ?? {}),
-      signal: AbortSignal.timeout(20_000),
-    });
-  } catch (err) {
-    throw new Error(`Could not reach Telegram: ${scrub(err.message, t)}`);
-  }
-  const data = await res.json().catch(() => ({}));
+  const res = await httpFetch("telegram", fetchFn, `${API}/bot${t}/${method}`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(params ?? {}),
+  }, { secrets: [t] });
+  const parsed = await readBody(res);
+  const data = parsed.data && typeof parsed.data === "object" ? parsed.data : {};
   if (data.ok) return data.result;
+  if (parsed.malformed && res.ok) throw malformedReply("telegram", res.status);
 
-  const why = scrub(data.description || `HTTP ${res.status}`, t);
+  const why = scrub(data.description || (parsed.malformed ? "" : `HTTP ${res.status}`), t);
   const code = data.error_code ?? res.status;
-  if (code === 401) throw new Error("Telegram rejected the bot token. Check TELEGRAM_BOT_TOKEN.");
   if (code === 409) throw new Error("This bot has a webhook set, which blocks reading updates here. Remove the webhook (deleteWebhook) to use telegram_get_updates.");
-  if (code === 403) throw new Error(`Telegram refused: ${why}. For a person, they must open the bot and press Start first; for a group or channel, add the bot to it.`);
-  if (code === 429) {
-    const wait = data.parameters?.retry_after;
-    throw new Error(`Telegram rate limit hit${wait ? `; retry in ${wait}s` : ""}.`);
-  }
-  throw new Error(`Telegram error: ${why}`);
+  throw httpFailure("telegram", {
+    status: code,
+    why,
+    retryAfter: data.parameters?.retry_after ?? retryAfterSeconds(res.headers?.get?.("retry-after")),
+    secrets: [t],
+  });
 }
 
 function checkChatId(id, label = "chat_id") {

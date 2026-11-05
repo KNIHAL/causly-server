@@ -1,3 +1,5 @@
+import { httpFetch, readBody, failureFromResponse, malformedReply, httpFailure, retryAfterSeconds } from "./httpErrors.js";
+
 const SLACK_API = "https://slack.com/api";
 
 function getToken() {
@@ -13,6 +15,7 @@ function getToken() {
 async function slackFetch(method, body = {}, useGet = false) {
   const token = getToken();
 
+  const secrets = [token];
   let res;
   if (useGet) {
     const query = new URLSearchParams(
@@ -21,25 +24,49 @@ async function slackFetch(method, body = {}, useGet = false) {
         return acc;
       }, {})
     ).toString();
-    res = await fetch(`${SLACK_API}/${method}${query ? `?${query}` : ""}`, {
+    res = await httpFetch("slack", fetch, `${SLACK_API}/${method}${query ? `?${query}` : ""}`, {
       headers: { Authorization: `Bearer ${token}` },
-    });
+    }, { secrets });
   } else {
-    res = await fetch(`${SLACK_API}/${method}`, {
+    res = await httpFetch("slack", fetch, `${SLACK_API}/${method}`, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${token}`,
         "Content-Type": "application/json; charset=utf-8",
       },
       body: JSON.stringify(body),
-    });
+    }, { secrets });
   }
 
-  const data = await res.json();
-  if (!data.ok) {
-    throw new Error(`Slack API error (${method}): ${data.error || "unknown_error"}`);
-  }
+  const parsed = await readBody(res);
+  if (!res.ok) throw failureFromResponse("slack", res, parsed, { secrets });
+  if (parsed.malformed || !parsed.data || typeof parsed.data !== "object") throw malformedReply("slack", res.status);
+  const data = parsed.data;
+  if (!data.ok) throw slackApiError(method, data, res);
   return data;
+}
+
+const SLACK_AUTH = new Set(["invalid_auth", "not_authed", "token_revoked", "token_expired", "account_inactive"]);
+const SLACK_MISSING = new Set(["channel_not_found", "user_not_found", "message_not_found", "users_not_found"]);
+const SLACK_DOWN = new Set(["fatal_error", "internal_error", "service_unavailable", "request_timeout"]);
+
+/** Slack reports most failures as HTTP 200 with { ok: false, error }. Map them to the shared classes. */
+function slackApiError(method, data, res) {
+  const code = data.error || "unknown_error";
+  if (SLACK_AUTH.has(code)) return httpFailure("slack", { status: 401, why: code });
+  if (code === "missing_scope") {
+    const needed = data.needed ? ` the "${data.needed}" scope` : " a scope";
+    return httpFailure("slack", {
+      status: 403,
+      why: code,
+      forbidden: `The Slack app needs${needed}. Add it under OAuth & Permissions, reinstall the app, then copy the new token.`,
+    });
+  }
+  if (code === "not_in_channel") return httpFailure("slack", { status: 403, why: code, forbidden: "The bot is not in that channel. Invite it there with /invite @yourbot." });
+  if (SLACK_MISSING.has(code)) return httpFailure("slack", { status: 404, why: code });
+  if (code === "ratelimited") return httpFailure("slack", { status: 429, retryAfter: retryAfterSeconds(res.headers?.get?.("retry-after")) });
+  if (SLACK_DOWN.has(code)) return httpFailure("slack", { status: 503 });
+  return new Error(`Slack API error (${method}): ${code}`);
 }
 
 /** Look up a Slack user's info by user ID. */

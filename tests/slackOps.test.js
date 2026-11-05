@@ -10,7 +10,7 @@ import {
   slackCreateChannel,
 } from "../tools/slackOps.js";
 
-const jsonRes = (data) => Promise.resolve({ json: () => Promise.resolve(data) });
+const jsonRes = (data) => Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve(data) });
 
 beforeEach(() => {
   process.env.SLACK_BOT_TOKEN = "xoxb-test";
@@ -30,7 +30,7 @@ describe("slackOps — auth & error handling", () => {
 
   it("throws a formatted error when Slack responds with ok: false", async () => {
     global.fetch.mockReturnValueOnce(jsonRes({ ok: false, error: "user_not_found" }));
-    await expect(slackGetUser({ user_id: "U1" })).rejects.toThrow(/Slack API error \(users\.info\): user_not_found/);
+    await expect(slackGetUser({ user_id: "U1" })).rejects.toThrow(/Slack could not find that \(404\): user_not_found/);
   });
 
   it("defaults to 'unknown_error' when Slack omits the error field", async () => {
