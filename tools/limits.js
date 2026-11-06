@@ -9,6 +9,8 @@ const DEFAULTS = {
   CAUSLY_MAX_SCAN_ENTRIES: 100000, // search_files, entries looked at
   CAUSLY_MAX_DB_POOLS: 8, // cached database pools per process
   CAUSLY_DB_POOL_IDLE_MS: 5 * 60_000, // close a pool unused this long
+  CAUSLY_LOG_MAX_BYTES: 10 * 1024 * 1024, // activity.log rotates past this size
+  CAUSLY_LOG_KEEP: 5, // rotated files kept (activity.log.1 ... .N)
 };
 
 export function limit(name, env = process.env) {
