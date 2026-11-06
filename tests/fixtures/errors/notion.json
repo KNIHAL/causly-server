@@ -1,0 +1,91 @@
+{
+  "service": "notion",
+  "secrets": [
+    "secret_NOTIONTOKEN"
+  ],
+  "cases": {
+    "401": {
+      "response": {
+        "status": 401,
+        "body": {
+          "object": "error",
+          "code": "unauthorized",
+          "message": "API token is invalid."
+        }
+      },
+      "match": "rejected the credentials \\(401\\).*causly-server setup notion"
+    },
+    "404": {
+      "response": {
+        "status": 404,
+        "body": {
+          "object": "error",
+          "code": "object_not_found",
+          "message": "Could not find page with ID: x."
+        }
+      },
+      "match": "Could not find page.*Connections"
+    },
+    "429": {
+      "response": {
+        "status": 429,
+        "headers": {
+          "retry-after": "12"
+        },
+        "body": {
+          "object": "error",
+          "code": "rate_limited",
+          "message": "rate limited"
+        }
+      },
+      "match": "rate limit reached \\(429\\). Try again in 12s"
+    },
+    "403_scope": {
+      "response": {
+        "status": 403,
+        "body": {
+          "object": "error",
+          "code": "restricted_resource",
+          "message": "Insufficient permissions for this endpoint."
+        }
+      },
+      "match": "refused the request \\(403\\).*Insufficient permissions"
+    },
+    "403_rate_limit": {
+      "response": {
+        "status": 429,
+        "headers": {
+          "retry-after": "12"
+        },
+        "body": {
+          "object": "error",
+          "code": "rate_limited",
+          "message": "rate limited"
+        }
+      },
+      "match": "rate limit reached.*Try again in 12s"
+    },
+    "5xx": {
+      "response": {
+        "status": 502,
+        "rawBody": "<html><body><h1>502 Bad Gateway</h1></body></html>"
+      },
+      "match": "having problems \\(HTTP 502\\)"
+    },
+    "timeout": {
+      "throws": "TimeoutError",
+      "match": "did not answer within 20s"
+    },
+    "network": {
+      "throws": "ECONNRESET",
+      "match": "Could not reach Notion \\(ECONNRESET\\)"
+    },
+    "malformed_json": {
+      "response": {
+        "status": 200,
+        "rawBody": "<html>maintenance</html>"
+      },
+      "match": "could not be read \\(HTTP 200, not valid JSON\\)"
+    }
+  }
+}

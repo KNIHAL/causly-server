@@ -38,7 +38,7 @@ describe("vercelOps — auth & error handling", () => {
 
   it("throws a formatted error using error.message from the response body", async () => {
     global.fetch.mockReturnValueOnce(jsonRes({ error: { message: "Invalid token" } }, false, 403));
-    await expect(vercelGetAuthenticatedUser()).rejects.toThrow(/Vercel API error \(403\): Invalid token/);
+    await expect(vercelGetAuthenticatedUser()).rejects.toThrow(/Vercel refused the request \(403\): Invalid token/);
   });
 
   it("falls back to statusText when no error message is present", async () => {
@@ -48,7 +48,7 @@ describe("vercelOps — auth & error handling", () => {
       statusText: "Internal Server Error",
       text: () => Promise.resolve(""),
     });
-    await expect(vercelGetAuthenticatedUser()).rejects.toThrow(/Vercel API error \(500\): Internal Server Error/);
+    await expect(vercelGetAuthenticatedUser()).rejects.toThrow(/Vercel is having problems \(HTTP 500\)/);
   });
 
   it("sends bearer auth header", async () => {

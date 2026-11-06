@@ -1,3 +1,4 @@
+import { httpFetch, readBody, failureFromResponse, malformedReply } from "./httpErrors.js";
 import { guardedRequest } from "./netGuard.js";
 
 const VERCEL_API = "https://api.vercel.com";
@@ -15,29 +16,19 @@ function getToken() {
 
 async function vercelFetch(path, options = {}) {
   const token = getToken();
-  const res = await fetch(`${VERCEL_API}${path}`, {
+  const res = await httpFetch("vercel", fetch, `${VERCEL_API}${path}`, {
     ...options,
     headers: {
       Authorization: `Bearer ${token}`,
       ...(options.body ? { "Content-Type": "application/json" } : {}),
       ...options.headers,
     },
-  });
+  }, { secrets: [token] });
 
-  const text = await res.text();
-  let data;
-  try {
-    data = text ? JSON.parse(text) : null;
-  } catch {
-    data = text;
-  }
-
-  if (!res.ok) {
-    const message = data?.error?.message || res.statusText;
-    throw new Error(`Vercel API error (${res.status}): ${message}`);
-  }
-
-  return data;
+  const parsed = await readBody(res);
+  if (!res.ok) throw failureFromResponse("vercel", res, parsed, { secrets: [token] });
+  if (parsed.malformed) throw malformedReply("vercel", res.status);
+  return parsed.data;
 }
 
 /** Get the authenticated Vercel user/team — connectivity/auth check. */

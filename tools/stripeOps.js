@@ -1,3 +1,4 @@
+import { httpFetch, readBody, failureFromResponse, malformedReply } from "./httpErrors.js";
 // Stripe tools over the REST API. No new dependencies.
 //
 //   stripe_get_account         balance, and whether the key is test or live
@@ -75,27 +76,20 @@ function client(deps = {}, env = process.env) {
   const call = async (method, path, params) => {
     const form = params ? encode(params) : undefined;
     const url = `${API}${path}${method === "GET" && form && [...form].length ? `?${form}` : ""}`;
-    let res;
-    try {
-      res = await fetchFn(url, {
-        method,
-        headers: {
-          authorization: `Bearer ${key}`,
-          ...(method === "POST" ? { "content-type": "application/x-www-form-urlencoded", "idempotency-key": crypto.randomUUID() } : {}),
-        },
-        body: method === "POST" ? (form ?? new URLSearchParams()).toString() : undefined,
-        signal: AbortSignal.timeout(25_000),
-      });
-    } catch (err) {
-      throw new Error(`Could not reach Stripe: ${scrub(err.message)}`);
+    const res = await httpFetch("stripe", fetchFn, url, {
+      method,
+      headers: {
+        authorization: `Bearer ${key}`,
+        ...(method === "POST" ? { "content-type": "application/x-www-form-urlencoded", "idempotency-key": crypto.randomUUID() } : {}),
+      },
+      body: method === "POST" ? (form ?? new URLSearchParams()).toString() : undefined,
+    }, { timeoutMs: 25_000, secrets: [key] });
+    const parsed = await readBody(res);
+    if (res.ok) {
+      if (parsed.malformed) throw malformedReply("stripe", res.status);
+      return parsed.data ?? {};
     }
-    const data = await res.json().catch(() => ({}));
-    if (res.ok) return data;
-    const e = data.error ?? {};
-    if (res.status === 401) throw new Error("Stripe rejected the API key. Check STRIPE_API_KEY.");
-    if (res.status === 403) throw new Error(`Stripe refused: ${scrub(e.message || "permission denied")}. A restricted key may be missing a permission for this action.`);
-    if (res.status === 429) throw new Error("Stripe rate limit hit. Wait a moment and try again.");
-    throw new Error(`Stripe error: ${scrub(e.message || `HTTP ${res.status}`)}`);
+    throw failureFromResponse("stripe", res, parsed, { secrets: [key] });
   };
   call.mode = mode;
   return call;

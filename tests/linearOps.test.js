@@ -71,7 +71,7 @@ describe("linearOps — setup and errors", () => {
   });
 
   it("maps auth and rate-limit failures", async () => {
-    await expect(lin.getViewer({}, stub(null, { status: 401, errors: [{ message: "x" }] }).deps)).rejects.toThrow(/rejected the API key/);
+    await expect(lin.getViewer({}, stub(null, { status: 401, errors: [{ message: "x" }] }).deps)).rejects.toThrow(/rejected the credentials/);
     await expect(lin.getViewer({}, stub(null, { status: 429, errors: [{ message: "x" }] }).deps)).rejects.toThrow(/rate limit/);
     await expect(lin.getViewer({}, stub(null, { errors: [{ message: "x", extensions: { code: "RATELIMITED" } }] }).deps)).rejects.toThrow(/rate limit/);
   });

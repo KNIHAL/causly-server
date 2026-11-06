@@ -21,6 +21,44 @@ export const SERVICE_INFO = {
     forbidden: "The refresh token needs the calendar.events and calendar.readonly scopes, and the Calendar API must be enabled in the Google Cloud project.",
     notFound: "Check the event id and calendar id.",
   },
+  notion: {
+    label: "Notion",
+    fix: "causly-server setup notion",
+    forbidden: "The integration does not have the capability for this action, or no access to this page or database.",
+    notFound: "Share the page or database with your integration: open it, then ... > Connections.",
+  },
+  linear: {
+    label: "Linear",
+    fix: "causly-server setup linear",
+    forbidden: "The API key does not allow this action.",
+  },
+  stripe: {
+    label: "Stripe",
+    fix: "causly-server setup stripe",
+    forbidden: "A restricted key may be missing a permission for this action.",
+  },
+  sentry: {
+    label: "Sentry",
+    fix: "causly-server setup sentry",
+    forbidden: "The token is missing a scope for this action (resolving, ignoring or commenting needs event:write).",
+    notFound: "Check the organization, project and issue id. Causly tries both sentry.io and de.sentry.io.",
+  },
+  vercel: {
+    label: "Vercel",
+    fix: "causly-server setup vercel",
+    forbidden: "The token cannot access this team or project, or lacks the permission for this action.",
+  },
+  supabase: {
+    label: "Supabase",
+    fix: "causly-server setup supabase",
+    forbidden: "The token may not allow this action (some personal access tokens restrict raw SQL) or this project.",
+  },
+  discord: {
+    label: "Discord",
+    fix: "causly-server setup discord",
+    forbidden: "The bot is missing access or a permission there: check its role and the channel's permissions (View Channel, Read Message History, Send Messages).",
+    notFound: "Check the id, and that the bot is in that server.",
+  },
   google: {
     label: "Google sign-in",
     fix: 'causly-server login google',
@@ -57,6 +95,7 @@ export function whyFrom(data) {
   const e = data.error;
   return (
     data.message ||
+    data.detail ||
     (e && typeof e === "object" ? e.message : "") ||
     data.error_description ||
     data.description ||

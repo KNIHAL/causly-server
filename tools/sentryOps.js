@@ -1,3 +1,4 @@
+import { httpFetch, readBody, failureFromResponse, malformedReply } from "./httpErrors.js";
 const SENTRY_HOSTS = ["https://sentry.io/api/0", "https://de.sentry.io/api/0"];
 
 function getToken() {
@@ -12,17 +13,16 @@ function getToken() {
 
 async function sentryFetchOnHost(host, path, { method = "GET", body } = {}) {
   const token = getToken();
-  const res = await fetch(`${host}${path}`, {
+  const res = await httpFetch("sentry", fetch, `${host}${path}`, {
     method,
     headers: {
       Authorization: `Bearer ${token}`,
       "Content-Type": "application/json",
     },
     body: body ? JSON.stringify(body) : undefined,
-  });
-  const text = await res.text();
-  const data = text ? JSON.parse(text) : {};
-  return { ok: res.ok, status: res.status, data };
+  }, { secrets: [token] });
+  const parsed = await readBody(res);
+  return { ok: res.ok, status: res.status, res, parsed };
 }
 
 /**
@@ -36,11 +36,14 @@ async function sentryFetch(path, opts = {}) {
   let last;
   for (const host of SENTRY_HOSTS) {
     const result = await sentryFetchOnHost(host, path, opts);
-    if (result.ok) return result.data;
+    if (result.ok) {
+      if (result.parsed.malformed) throw malformedReply("sentry", result.status);
+      return result.parsed.data ?? {};
+    }
     last = result;
     if (result.status !== 404) break;
   }
-  throw new Error(`Sentry API error (${path}): ${last.data.detail || last.status}`);
+  throw failureFromResponse("sentry", last.res, last.parsed, { secrets: [getToken()] });
 }
 
 function simplifyIssue(i) {

@@ -78,6 +78,59 @@ const SERVICES = {
       return tg.getMe({}, { fetch: replayFetch(c) });
     },
   },
+  notion: {
+    env: { NOTION_API_KEY: "secret_NOTIONTOKEN" },
+    async run(c) {
+      global.fetch = replayFetch(c);
+      const m = await import("../tools/notionOps.js");
+      return m.notionGetPage({ page_id: "p1" });
+    },
+  },
+  linear: {
+    env: { LINEAR_API_KEY: "lin_api_SECRETKEY" },
+    async run(c) {
+      const m = await import("../tools/linearOps.js");
+      return m.getViewer({}, { fetch: replayFetch(c) });
+    },
+  },
+  stripe: {
+    env: { STRIPE_API_KEY: "sk_test_SECRETKEY" },
+    async run(c) {
+      const m = await import("../tools/stripeOps.js");
+      return m.getAccount({}, { fetch: replayFetch(c) });
+    },
+  },
+  sentry: {
+    env: { SENTRY_AUTH_TOKEN: "sntrys_SECRETTOKEN" },
+    async run(c) {
+      global.fetch = replayFetch(c);
+      const m = await import("../tools/sentryOps.js");
+      return m.sentryGetIssue({ issue_id: "1" });
+    },
+  },
+  vercel: {
+    env: { VERCEL_TOKEN: "vcl_SECRETTOKEN" },
+    async run(c) {
+      global.fetch = replayFetch(c);
+      const m = await import("../tools/vercelOps.js");
+      return m.vercelGetAuthenticatedUser();
+    },
+  },
+  supabase: {
+    env: { SUPABASE_ACCESS_TOKEN: "sbp_SECRETTOKEN" },
+    async run(c) {
+      global.fetch = replayFetch(c);
+      const m = await import("../tools/supabaseOps.js");
+      return m.supabaseListProjects();
+    },
+  },
+  discord: {
+    env: { DISCORD_BOT_TOKEN: "discord-SECRET.TOKEN" },
+    async run(c) {
+      const m = await import("../tools/discordOps.js");
+      return m.getMe({}, { fetch: replayFetch(c) });
+    },
+  },
 };
 
 const saved = { ...process.env };

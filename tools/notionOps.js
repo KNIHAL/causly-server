@@ -1,3 +1,4 @@
+import { httpFetch, readBody, failureFromResponse, malformedReply } from "./httpErrors.js";
 const NOTION_API = "https://api.notion.com/v1";
 const NOTION_VERSION = "2022-06-28";
 
@@ -13,7 +14,7 @@ function getToken() {
 
 async function notionFetch(path, { method = "GET", body } = {}) {
   const token = getToken();
-  const res = await fetch(`${NOTION_API}${path}`, {
+  const res = await httpFetch("notion", fetch, `${NOTION_API}${path}`, {
     method,
     headers: {
       Authorization: `Bearer ${token}`,
@@ -21,13 +22,12 @@ async function notionFetch(path, { method = "GET", body } = {}) {
       "Content-Type": "application/json",
     },
     body: body ? JSON.stringify(body) : undefined,
-  });
+  }, { secrets: [token] });
 
-  const data = await res.json();
-  if (!res.ok) {
-    throw new Error(`Notion API error (${path}): ${data.message || data.code || "unknown_error"}`);
-  }
-  return data;
+  const parsed = await readBody(res);
+  if (!res.ok) throw failureFromResponse("notion", res, parsed, { secrets: [token] });
+  if (parsed.malformed || parsed.data === null) throw malformedReply("notion", res.status);
+  return parsed.data;
 }
 
 function simplifyPage(p) {

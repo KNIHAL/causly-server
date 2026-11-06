@@ -1,3 +1,4 @@
+import { httpFetch, readBody, malformedReply, httpFailure, retryAfterSeconds } from "./httpErrors.js";
 // Linear tools over the GraphQL API. No new dependencies; an API key is all that is needed.
 //
 //   linear_get_viewer    check the key, show who it belongs to
@@ -27,26 +28,24 @@ function client(deps = {}) {
   if (!apiKey) throw new Error("Linear is not set up. Missing: LINEAR_API_KEY (create a personal API key in Linear settings and add it to .env).");
   const scrub = (text) => String(text).split(apiKey).join("[REDACTED]");
   return async function gql(query, variables = {}) {
-    let res;
-    try {
-      res = await fetchFn(API, {
-        method: "POST",
-        headers: { "content-type": "application/json", authorization: apiKey.startsWith("lin_oauth_") ? `Bearer ${apiKey}` : apiKey },
-        body: JSON.stringify({ query, variables }),
-        signal: AbortSignal.timeout(20_000),
-      });
-    } catch (err) {
-      throw new Error(`Could not reach Linear: ${scrub(err.message)}`);
-    }
-    const data = await res.json().catch(() => ({}));
+    const res = await httpFetch("linear", fetchFn, API, {
+      method: "POST",
+      headers: { "content-type": "application/json", authorization: apiKey.startsWith("lin_oauth_") ? `Bearer ${apiKey}` : apiKey },
+      body: JSON.stringify({ query, variables }),
+    }, { secrets: [apiKey] });
+    const parsed = await readBody(res);
+    const data = parsed.data && typeof parsed.data === "object" ? parsed.data : {};
     const err = data.errors?.[0];
-    if (res.status === 401 || res.status === 403 || err?.extensions?.type === "authentication error") {
-      throw new Error("Linear rejected the API key. Check LINEAR_API_KEY.");
-    }
-    if (res.status === 429 || err?.extensions?.code === "RATELIMITED") throw new Error("Linear rate limit hit. Wait a minute and try again.");
+    const retryAfter = retryAfterSeconds(res.headers?.get?.("retry-after"));
+    const wait = retryAfter === null ? {} : { retryAfter };
+    if (res.status === 401 || err?.extensions?.type === "authentication error") throw httpFailure("linear", { status: 401, secrets: [apiKey] });
+    if (res.status === 403) throw httpFailure("linear", { status: 403, why: err?.message, secrets: [apiKey] });
+    if (res.status === 429 || err?.extensions?.code === "RATELIMITED") throw httpFailure("linear", { status: 429, ...wait });
+    if (res.status >= 500) throw httpFailure("linear", { status: res.status });
+    if (res.ok && parsed.malformed) throw malformedReply("linear", res.status);
     if (!res.ok || err) {
-      const msg = err?.extensions?.userPresentableMessage || err?.message || `HTTP ${res.status}`;
-      throw new Error(`Linear error: ${scrub(msg)}`);
+      const msg = err?.extensions?.userPresentableMessage || err?.message || (parsed.malformed ? "" : `HTTP ${res.status}`);
+      throw new Error(`Linear error: ${scrub(msg) || `HTTP ${res.status}`}`);
     }
     return data.data;
   };

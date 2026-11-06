@@ -1,3 +1,4 @@
+import { httpFetch, readBody, failureFromResponse, malformedReply } from "./httpErrors.js";
 // Discord tools over the REST API (v10). No new dependencies; a bot token is all that is needed.
 //
 //   discord_get_me         check the bot token, show the bot
@@ -32,30 +33,23 @@ async function call(method, path, { query, body } = {}, deps = {}) {
   const pairs = Object.entries(query ?? {}).filter(([, v]) => v !== undefined && v !== null && v !== "");
   const qs = pairs.length ? `?${new URLSearchParams(pairs.map(([k, v]) => [k, String(v)]))}` : "";
 
-  let res;
-  try {
-    res = await fetchFn(`${API}${path}${qs}`, {
-      method,
-      headers: {
-        authorization: `Bot ${token}`,
-        "user-agent": "DiscordBot (https://github.com/KNIHAL/causly-server, 1.0)",
-        ...(body ? { "content-type": "application/json" } : {}),
-      },
-      body: body ? JSON.stringify(body) : undefined,
-      signal: AbortSignal.timeout(20_000),
-    });
-  } catch (err) {
-    throw new Error(`Could not reach Discord: ${scrub(err.message)}`);
+  const res = await httpFetch("discord", fetchFn, `${API}${path}${qs}`, {
+    method,
+    headers: {
+      authorization: `Bot ${token}`,
+      "user-agent": "DiscordBot (https://github.com/KNIHAL/causly-server, 1.0)",
+      ...(body ? { "content-type": "application/json" } : {}),
+    },
+    body: body ? JSON.stringify(body) : undefined,
+  }, { secrets: [token] });
+  const parsed = await readBody(res);
+  if (res.ok) {
+    if (parsed.malformed) throw malformedReply("discord", res.status);
+    return parsed.data ?? {};
   }
-  const data = await res.json().catch(() => ({}));
-  if (res.ok) return data;
-
-  const why = scrub(data.message || `HTTP ${res.status}`);
-  if (res.status === 401) throw new Error("Discord rejected the bot token. Check DISCORD_BOT_TOKEN.");
-  if (res.status === 403) throw new Error(`Discord refused: ${why}. The bot is missing access or a permission there: check its role and the channel's permissions (View Channel, Read Message History, Send Messages).`);
-  if (res.status === 404) throw new Error(`Discord could not find that: ${why}. Check the id, and that the bot is in that server.`);
-  if (res.status === 429) throw new Error(`Discord rate limit hit${data.retry_after ? `; retry in ${Math.ceil(data.retry_after)}s` : ""}.`);
-  throw new Error(`Discord error: ${why}`);
+  // Discord puts the wait in the body (seconds, may be fractional) as well as the header.
+  const wait = Number(parsed.data?.retry_after);
+  throw failureFromResponse("discord", res, parsed, { secrets: [token], ...(wait > 0 ? { retryAfter: Math.ceil(wait) } : {}) });
 }
 
 // ---------------------------------------------------------------- tools

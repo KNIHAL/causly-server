@@ -56,7 +56,7 @@ describe("sentryOps", () => {
 
   it("does not fall back on non-404 errors", async () => {
     global.fetch.mockReturnValueOnce(FAIL(500, "server error"));
-    await expect(sentryGetIssue({ issue_id: "42" })).rejects.toThrow(/server error/);
+    await expect(sentryGetIssue({ issue_id: "42" })).rejects.toThrow(/having problems \(HTTP 500\)/);
     expect(global.fetch).toHaveBeenCalledTimes(1);
   });
 
