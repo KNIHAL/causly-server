@@ -1,5 +1,5 @@
 node_modules/
-logs/*.log
+logs/*.log*
 .env
 .causly-secrets.enc
 landing/.next/

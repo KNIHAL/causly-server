@@ -1,4 +1,5 @@
 import { httpFetch, readBody, failureFromResponse, malformedReply, scrubRemote } from "./httpErrors.js";
+import { UNTRUSTED_NOTICE } from "./webOps.js";
 const GMAIL_API = "https://gmail.googleapis.com/gmail/v1";
 const TOKEN_URL = "https://oauth2.googleapis.com/token";
 
@@ -158,6 +159,7 @@ export async function gmailGetMessage({ message_id }) {
     messageIdHeader: extractHeader(headers, "Message-ID"),
     snippet: data.snippet,
     body: extractBody(data.payload),
+    notice: UNTRUSTED_NOTICE,
     labelIds: data.labelIds,
   };
 }
@@ -167,6 +169,7 @@ export async function gmailGetThread({ thread_id }) {
   const data = await gmailFetch(`/users/me/threads/${thread_id}?format=full`);
   return {
     id: data.id,
+    notice: UNTRUSTED_NOTICE,
     messages: (data.messages || []).map((m) => {
       const headers = m.payload?.headers;
       return {

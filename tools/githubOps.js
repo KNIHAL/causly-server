@@ -1,4 +1,5 @@
 import { httpFetch, readBody, failureFromResponse, malformedReply } from "./httpErrors.js";
+import { UNTRUSTED_NOTICE } from "./webOps.js";
 const GITHUB_API = "https://api.github.com";
 
 function getToken() {
@@ -103,7 +104,7 @@ export async function githubListIssues({ owner, repo, state = "open", per_page =
     }
     if (data.length < PAGE) break;
   }
-  return { issues };
+  return { issues, notice: UNTRUSTED_NOTICE };
 }
 
 /** Create a pull request. */
@@ -156,6 +157,7 @@ export async function githubGetIssue({ owner, repo, issue_number }) {
     state: data.state,
     body: data.body,
     labels: data.labels?.map((l) => l.name),
+    notice: UNTRUSTED_NOTICE,
     html_url: data.html_url,
   };
 }
@@ -185,6 +187,7 @@ export async function githubGetPullRequest({ owner, repo, pull_number }) {
     head: data.head?.ref,
     base: data.base?.ref,
     mergeable: data.mergeable,
+    notice: UNTRUSTED_NOTICE,
     merged: data.merged,
     html_url: data.html_url,
   };
@@ -235,13 +238,14 @@ export async function githubGetPullRequestDiff({ owner, repo, pull_number }) {
   const diff = await githubText(`/repos/${owner}/${repo}/pulls/${pull_number}`, {
     headers: { Accept: "application/vnd.github.v3.diff" },
   });
-  return { owner, repo, pull_number, diff };
+  return { owner, repo, pull_number, diff, notice: UNTRUSTED_NOTICE };
 }
 
 /** List comments on a pull request (issue-style conversation comments). */
 export async function githubGetPullRequestComments({ owner, repo, pull_number, per_page = 30 }) {
   const data = await githubFetch(`/repos/${owner}/${repo}/issues/${pull_number}/comments?per_page=${per_page}`);
   return {
+    notice: UNTRUSTED_NOTICE,
     comments: data.map((c) => ({ id: c.id, user: c.user?.login, body: c.body, html_url: c.html_url })),
   };
 }
@@ -250,6 +254,7 @@ export async function githubGetPullRequestComments({ owner, repo, pull_number, p
 export async function githubGetPullRequestReviews({ owner, repo, pull_number, per_page = 30 }) {
   const data = await githubFetch(`/repos/${owner}/${repo}/pulls/${pull_number}/reviews?per_page=${per_page}`);
   return {
+    notice: UNTRUSTED_NOTICE,
     reviews: data.map((r) => ({ id: r.id, user: r.user?.login, state: r.state, body: r.body })),
   };
 }
