@@ -210,6 +210,7 @@ describe("causly's own folder (API keys, secrets store, database)", () => {
   });
 
   it("the secrets tools can still use their default store (it is not a file-tool argument)", async () => {
+    vi.stubEnv("CAUSLY_WORKSPACE", work); // a custom store_path must be inside the data folder or the workspace (P1-11)
     const store = path.join(work, "secrets.enc");
     await secretsOps.secretsSet({ name: "K", value: "v", store_path: store, confirm: true });
     expect((await secretsOps.secretsGet({ name: "K", store_path: store })).value).toBe("v");
@@ -244,6 +245,7 @@ describe("secrets store_path is guarded like any other path", () => {
   });
 
   it("still works with an ordinary custom store_path", async () => {
+    vi.stubEnv("CAUSLY_WORKSPACE", work); // a custom store_path must be inside the data folder or the workspace (P1-11)
     const store = path.join(work, "secrets.enc");
     await secretsOps.secretsSet({ name: "A", value: "b", store_path: store, confirm: true });
     expect((await secretsOps.secretsGet({ name: "A", store_path: store })).value).toBe("b");

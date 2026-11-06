@@ -16,11 +16,12 @@ const posix = process.platform !== "win32";
 const mode = (p) => (fs.statSync(p).mode & 0o777).toString(8);
 
 let dir;
-const saved = { SECRETS_MASTER_KEY: process.env.SECRETS_MASTER_KEY, CAUSLY_DB_PATH: process.env.CAUSLY_DB_PATH, CAUSLY_HOME: process.env.CAUSLY_HOME };
+const saved = { SECRETS_MASTER_KEY: process.env.SECRETS_MASTER_KEY, CAUSLY_DB_PATH: process.env.CAUSLY_DB_PATH, CAUSLY_HOME: process.env.CAUSLY_HOME, CAUSLY_WORKSPACE: process.env.CAUSLY_WORKSPACE };
 
 beforeEach(() => {
   dir = fs.mkdtempSync(path.join(os.tmpdir(), "causly-private-"));
   process.env.SECRETS_MASTER_KEY = crypto.randomBytes(32).toString("hex");
+  process.env.CAUSLY_WORKSPACE = dir; // a custom secrets store_path must sit inside the workspace (P1-11)
 });
 
 afterEach(() => {
