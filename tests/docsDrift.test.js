@@ -17,7 +17,7 @@ const docsAvailable = fs.existsSync(toolsDir);
 const required = /^(1|true|yes)$/i.test(process.env.CAUSLY_REQUIRE_DOCS || "");
 
 // Packs that are intentionally not documented yet.
-const UNDOCUMENTED_PACKS = ["stripe", "discord"];
+const UNDOCUMENTED_PACKS = [];
 const LEVELS = new Set(["READ", "LOW", "MEDIUM", "HIGH", "DESTRUCTIVE"]);
 const NAME = "[a-z][a-z0-9_]*";
 
