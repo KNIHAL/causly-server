@@ -874,11 +874,11 @@
         },
         {
           "name": "calendar_update_event",
-          "description": "Change an event: title, time, description, location, add guests, add a Meet link. Moving only the start keeps the length. If the event has guests or you add some, they get an update email, so it requires confirm: true (ask the user first). Times look like 2026-10-23T15:00 (read in the timezone), 2026-10-23T15:00:00+05:30, or 2026-10-23 for a whole day."
+          "description": "Change an event: title, time, description, location, add guests, add a Meet link. Moving only the start keeps the length. For a recurring event, scope says how much changes: this (one occurrence, the default for an occurrence id), following (this and later ones) or all (the whole series, the default for a series id). If the event has guests or you add some, they get an update email, so it requires confirm: true (ask the user first). Times look like 2026-10-23T15:00 (read in the timezone), 2026-10-23T15:00:00+05:30, or 2026-10-23 for a whole day."
         },
         {
           "name": "calendar_delete_event",
-          "description": "DESTRUCTIVE: delete an event. Guests are notified of the cancellation. Requires confirm: true."
+          "description": "DESTRUCTIVE: delete an event. Guests are notified of the cancellation. Requires confirm: true. For a recurring event, scope says how much goes: this (one occurrence, the default for an occurrence id), following (this and later ones) or all (the whole series, the default for a series id)."
         }
       ]
     },

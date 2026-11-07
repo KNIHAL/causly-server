@@ -5,6 +5,10 @@ import * as calendarOps from "../tools/calendarOps.js";
 const when = z.enum(["today", "tomorrow", "next_7_days"]);
 const tz = z.string().optional().describe("IANA timezone, e.g. Asia/Kolkata. Defaults to CAUSLY_TIMEZONE or the machine's zone");
 const calendarId = z.string().optional().describe("Calendar id, default 'primary'");
+const scope = z
+  .enum(["this", "following", "all"])
+  .optional()
+  .describe("Recurring events only. this: just that occurrence (default for an occurrence id). following: that one and every later one. all: the whole series (default for a series id)");
 const timeHelp = "Times look like 2026-10-23T15:00 (read in the timezone), 2026-10-23T15:00:00+05:30, or 2026-10-23 for a whole day.";
 
 export default function register(server) {
@@ -107,7 +111,7 @@ export default function register(server) {
   server.registerTool(
     "calendar_update_event",
     {
-      description: `Change an event: title, time, description, location, add guests, add a Meet link. Moving only the start keeps the length. If the event has guests or you add some, they get an update email, so it requires confirm: true (ask the user first). ${timeHelp}`,
+      description: `Change an event: title, time, description, location, add guests, add a Meet link. Moving only the start keeps the length. For a recurring event, scope says how much changes: this (one occurrence, the default for an occurrence id), following (this and later ones) or all (the whole series, the default for a series id). If the event has guests or you add some, they get an update email, so it requires confirm: true (ask the user first). ${timeHelp}`,
       inputSchema: {
         event_id: z.string(),
         title: z.string().optional(),
@@ -119,6 +123,7 @@ export default function register(server) {
         location: z.string().optional(),
         add_attendees: z.array(z.string()).optional(),
         add_meet_link: z.boolean().optional(),
+        scope,
         calendar_id: calendarId,
         confirm: z.boolean().optional().describe("Required when the event has guests or you add some"),
       },
@@ -129,9 +134,11 @@ export default function register(server) {
   server.registerTool(
     "calendar_delete_event",
     {
-      description: "DESTRUCTIVE: delete an event. Guests are notified of the cancellation. Requires confirm: true.",
+      description:
+        "DESTRUCTIVE: delete an event. Guests are notified of the cancellation. Requires confirm: true. For a recurring event, scope says how much goes: this (one occurrence, the default for an occurrence id), following (this and later ones) or all (the whole series, the default for a series id).",
       inputSchema: {
         event_id: z.string(),
+        scope,
         calendar_id: calendarId,
         confirm: z.boolean().optional().describe("Must be true to proceed"),
       },
