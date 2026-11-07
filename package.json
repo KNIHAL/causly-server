@@ -11,6 +11,8 @@
     "setup": "node bin/causly.js init",
     "doctor": "node bin/causly.js doctor",
     "build:manifest": "node scripts/build-manifest.mjs",
+    "check:licenses": "node scripts/check-licenses.mjs",
+    "sbom": "npm sbom --sbom-format cyclonedx --omit dev --package-lock-only",
     "test": "vitest run",
     "prepublishOnly": "npm run build:manifest && vitest run",
     "test:boundaryattest": "vitest run tests/boundaryAttest.test.js",

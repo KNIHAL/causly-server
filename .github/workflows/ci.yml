@@ -77,6 +77,9 @@ jobs:
       - name: Audit production dependencies (fails on high or critical)
         run: npm audit --omit=dev --audit-level=high
 
+      - name: Check licenses of production dependencies
+        run: npm run check:licenses
+
   # The docs live in the agenv repo. This job checks that the tool pages still match
   # packs/manifest.json and the permission levels in tools/security.js.
   docs-drift:
