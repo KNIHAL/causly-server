@@ -2,6 +2,32 @@
 
 All notable changes to this project are documented here.
 
+## [1.6.0] - unreleased
+
+### Behavior changes
+- Commands and other child processes (`run_command`, project commands, Docker, Terraform, git, ffmpeg) now get a minimal environment instead of every variable the server holds, so your API keys stay out of them. Add names with `CAUSLY_PASSTHROUGH_ENV` (`*` restores the old behavior).
+- `run_command` results no longer echo the command and folder. `directory_tree` skips build folders and defaults to depth 3 and 1000 entries.
+- Large results are cut at configurable limits (`CAUSLY_MAX_*`) and carry a `truncated` marker.
+- The workspace limit (`CAUSLY_WORKSPACE`) now also covers Docker volumes, Compose files and MCP project resources.
+- The secrets master key must be exactly 64 hex characters, and `store_path` is limited to the data folder or workspace and to real store files.
+- Calendar `update` and `delete` on recurring events take a `scope` of `this`, `following` or `all`.
+
+### Security
+- Operator approval: when the client supports MCP elicitation, `HIGH` and `DESTRUCTIVE` calls ask the operator, not the agent's `confirm` flag. An optional `~/.causly/policy.json` sets allow, ask or deny per tool or risk level, and a broken file fails closed.
+- Read-only mode: `CAUSLY_READ_ONLY=true` keeps only `READ` tools. The rest are hidden, refused by `use_tool` and refused by the approval gate, whatever `confirm` or the policy says.
+- `CAUSLY_STRICT_PROJECT_COMMANDS=true` makes `run_tests`, `run_lint`, `run_typecheck` and `run_build` need approval.
+- Causly's own files are owner-only and written atomically.
+- `activity.log` rotates (10 MB, keeps 5; `CAUSLY_LOG_MAX_BYTES`, `CAUSLY_LOG_KEEP`), writes one escaped JSON line per entry, and caps each entry at 16 KB.
+- Gmail and GitHub reads carry an untrusted-content notice, with prompt-injection tests.
+
+### Added
+- Google sign-in date is recorded; `status` and `doctor` warn from day 5. `CAUSLY_GOOGLE_PUBLISHED=true` silences it after you publish your Google app.
+- All 12 integrations share one error format for HTTP failures.
+- `npm run check:licenses` (license allowlist for production dependencies, run in CI and on publish), an SBOM attached to each GitHub release, signed-tag and bad-release steps in the docs.
+
+### Fixed
+- Calendar times such as `2026-02-30` were rolled over to March instead of being rejected (issue #42).
+
 ## [1.5.4]
 
 ### Security

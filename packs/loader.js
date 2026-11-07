@@ -3,6 +3,7 @@ import { z } from "zod";
 import { PACKS } from "./registry.js";
 import { wrap } from "../tools/toolWrapper.js";
 import { withAnnotations } from "../tools/annotations.js";
+import { readOnlyMode, allowedInReadOnly, readOnlyRefusal } from "../tools/readOnly.js";
 
 // Per-server state, so tests can use stub servers without sharing anything.
 const state = new WeakMap(); // server -> { loading: Map<name, Promise>, loaded: Set<name> }
@@ -15,6 +16,10 @@ function stateFor(server) {
     if (typeof server.registerTool === "function") {
       const original = server.registerTool.bind(server);
       server.registerTool = (name, config, cb) => {
+        if (readOnlyMode() && !allowedInReadOnly(name)) {
+          // Read-only mode: the tool is never registered, so it is not listed and use_tool cannot reach it.
+          return { enable() {}, disable() {}, update() {}, remove() {} };
+        }
         const annotated = withAnnotations(name, config);
         s.tools.set(name, { config: annotated, cb });
         return original(name, annotated, cb);
@@ -100,6 +105,7 @@ export function searchTools(server, query, limit = 15) {
   for (const [packName, pack] of Object.entries(manifest.packs || {})) {
     const packText = `${packName} ${pack.description}`.toLowerCase();
     for (const tool of pack.tools) {
+      if (readOnlyMode() && !allowedInReadOnly(tool.name)) continue;
       const name = tool.name.toLowerCase();
       const text = `${name} ${tool.description} ${packText}`.toLowerCase();
       let score = 0;
@@ -179,6 +185,7 @@ const text = (t, isError = false) => ({ content: [{ type: "text", text: t }], ..
 export async function useTool(server, { tool, arguments: args, describe }, extra) {
   const s = stateFor(server);
   const name = String(tool || "").trim();
+  if (readOnlyMode() && !allowedInReadOnly(name)) return text(readOnlyRefusal(name), true);
   let entry = s.tools.get(name);
   if (!entry) {
     const packName = packOfTool(name);

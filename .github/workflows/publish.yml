@@ -9,7 +9,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write # attaches the SBOM to the GitHub release
   id-token: write # required for provenance
 
 jobs:
@@ -40,8 +40,20 @@ jobs:
       - name: Audit production dependencies
         run: npm audit --omit=dev --audit-level=high
 
+      - name: Check licenses of production dependencies
+        run: npm run check:licenses
+
+      - name: Generate SBOM (CycloneDX, production dependencies)
+        run: npm sbom --sbom-format cyclonedx --omit dev > "causly-server-${GITHUB_REF_NAME:-manual}.cdx.json"
+
       - name: Publish with provenance
         # prepublishOnly rebuilds the pack manifest and runs the full test suite first.
         run: npm publish --provenance --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Attach SBOM to the GitHub release
+        if: github.event_name == 'release'
+        run: gh release upload "${GITHUB_REF_NAME}" causly-server-*.cdx.json --clobber
+        env:
+          GH_TOKEN: ${{ github.token }}

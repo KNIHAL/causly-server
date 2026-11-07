@@ -7,6 +7,7 @@ import fs from "fs";
 import path from "path";
 import { causlyHome } from "./paths.js";
 import { getPermissionLevel, redactSecrets, redactSecretsInString } from "./security.js";
+import { readOnlyMode, allowedInReadOnly, readOnlyRefusal } from "./readOnly.js";
 
 const DECISIONS = new Set(["allow", "ask", "deny"]);
 const LEVELS = new Set(["READ", "LOW", "MEDIUM", "HIGH", "DESTRUCTIVE"]);
@@ -131,6 +132,9 @@ function withTimeout(promise, ms) {
  *   flag does not count), otherwise the call needs `confirm: true`.
  */
 export async function resolveApproval(toolName, input) {
+  if (readOnlyMode() && !allowedInReadOnly(toolName)) {
+    return { allowed: false, level: getPermissionLevel(toolName, input), reason: readOnlyRefusal(toolName) };
+  }
   const { decision, level, source, reason } = decide(toolName, input);
   if (decision === "allow") return { allowed: true, level };
   if (decision === "deny") {
