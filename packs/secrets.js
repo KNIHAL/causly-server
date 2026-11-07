@@ -12,7 +12,7 @@ server.registerTool(
     inputSchema: {
       name: z.string(),
       value: z.string(),
-      store_path: z.string().optional().describe("Defaults to .causly-secrets.enc in the server's working directory"),
+      store_path: z.string().optional().describe("Defaults to .causly-secrets.enc in Causly's data folder. A custom path must be inside that folder or CAUSLY_WORKSPACE, and an existing file must already be a secrets store"),
       confirm: z.boolean().optional().describe("Must be true to proceed"),
     },
   },

@@ -40,10 +40,10 @@ describe("discordOps — setup and errors", () => {
   });
 
   it("maps 401, 403, 404 and 429", async () => {
-    await expect(discord.listGuilds({}, stub(() => ({ __error: 401 })).deps)).rejects.toThrow(/rejected the bot token/);
+    await expect(discord.listGuilds({}, stub(() => ({ __error: 401 })).deps)).rejects.toThrow(/rejected the credentials/);
     await expect(discord.listChannels({ guild_id: GUILD }, stub(() => ({ __error: 403, message: "Missing Access" })).deps)).rejects.toThrow(/Missing Access.*permission/);
     await expect(discord.listChannels({ guild_id: GUILD }, stub(() => ({ __error: 404, message: "Unknown Guild" })).deps)).rejects.toThrow(/Unknown Guild/);
-    await expect(discord.readMessages({ channel_id: CHAN }, stub(() => ({ __error: 429, retry_after: 2.3 })).deps)).rejects.toThrow(/retry in 3s/);
+    await expect(discord.readMessages({ channel_id: CHAN }, stub(() => ({ __error: 429, retry_after: 2.3 })).deps)).rejects.toThrow(/Try again in 3s/);
   });
 
   it("never leaks the token in an error", async () => {

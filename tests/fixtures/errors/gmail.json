@@ -1,0 +1,104 @@
+{
+    "service":  "gmail",
+    "secrets":  [
+                    "ya29.ACCESSTOKEN",
+                    "test-refresh-token"
+                ],
+    "cases":  {
+                  "401":  {
+                              "response":  {
+                                               "body":  {
+                                                            "error":  {
+                                                                          "code":  401,
+                                                                          "message":  "Invalid Credentials"
+                                                                      }
+                                                        },
+                                               "status":  401
+                                           },
+                              "match":  "rejected the credentials \\(401\\).*causly-server login google"
+                          },
+                  "403_scope":  {
+                                    "response":  {
+                                                     "body":  {
+                                                                  "error":  {
+                                                                                "code":  403,
+                                                                                "message":  "Request had insufficient authentication scopes."
+                                                                            }
+                                                              },
+                                                     "status":  403
+                                                 },
+                                    "match":  "refused the request \\(403\\).*insufficient authentication scopes.*Gmail permission.*causly-server login google"
+                                },
+                  "403_rate_limit":  {
+                                         "response":  {
+                                                          "status":  403,
+                                                          "body":  {
+                                                                       "error":  {
+                                                                                     "message":  "User-rate limit exceeded."
+                                                                                 }
+                                                                   },
+                                                          "headers":  {
+                                                                          "retry-after":  "30"
+                                                                      }
+                                                      },
+                                         "match":  "rate limit reached.*Try again in 30s"
+                                     },
+                  "404":  {
+                              "response":  {
+                                               "body":  {
+                                                            "error":  {
+                                                                          "message":  "Requested entity was not found."
+                                                                      }
+                                                        },
+                                               "status":  404
+                                           },
+                              "match":  "could not find that \\(404\\)"
+                          },
+                  "429":  {
+                              "response":  {
+                                               "status":  429,
+                                               "body":  {
+                                                            "error":  {
+                                                                          "message":  "Quota exceeded"
+                                                                      }
+                                                        },
+                                               "headers":  {
+                                                               "retry-after":  "Wed, 21 Oct 2026 07:28:00 GMT"
+                                                           }
+                                           },
+                              "match":  "rate limit reached \\(429\\)"
+                          },
+                  "5xx":  {
+                              "response":  {
+                                               "status":  503,
+                                               "rawBody":  "\u003chtml\u003e\u003cbody\u003e\u003ch1\u003e502 Bad Gateway\u003c/h1\u003e\u003c/body\u003e\u003c/html\u003e"
+                                           },
+                              "match":  "having problems \\(HTTP 503\\)"
+                          },
+                  "timeout":  {
+                                  "match":  "did not answer within 20s",
+                                  "throws":  "TimeoutError"
+                              },
+                  "network":  {
+                                  "match":  "Could not reach Gmail \\(ENOTFOUND\\)",
+                                  "throws":  "ENOTFOUND"
+                              },
+                  "malformed_json":  {
+                                         "response":  {
+                                                          "status":  200,
+                                                          "rawBody":  "{\"messages\": [ {\"id\":"
+                                                      },
+                                         "match":  "could not be read \\(HTTP 200, not valid JSON\\)"
+                                     },
+                  "token_expired":  {
+                                        "tokenResponse":  {
+                                                              "body":  {
+                                                                           "error":  "invalid_grant",
+                                                                           "error_description":  "Token has been expired or revoked."
+                                                                       },
+                                                              "status":  400
+                                                          },
+                                        "match":  "refresh token is expired or revoked.*causly-server login google"
+                                    }
+              }
+}

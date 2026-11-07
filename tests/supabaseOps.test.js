@@ -33,7 +33,7 @@ describe("supabaseOps — auth & error handling", () => {
 
   it("throws a formatted error using the message field on failure", async () => {
     global.fetch.mockReturnValueOnce(jsonRes({ message: "Invalid token" }, false, 401));
-    await expect(supabaseListOrganizations()).rejects.toThrow(/Supabase API error \(401\): Invalid token/);
+    await expect(supabaseListOrganizations()).rejects.toThrow(/Supabase rejected the credentials \(401\)/);
   });
 
   it("falls back to statusText when no message field is present", async () => {
@@ -43,7 +43,7 @@ describe("supabaseOps — auth & error handling", () => {
       statusText: "Internal Server Error",
       text: () => Promise.resolve(""),
     });
-    await expect(supabaseListOrganizations()).rejects.toThrow(/Supabase API error \(500\): Internal Server Error/);
+    await expect(supabaseListOrganizations()).rejects.toThrow(/Supabase is having problems \(HTTP 500\)/);
   });
 
   it("sends bearer auth header", async () => {

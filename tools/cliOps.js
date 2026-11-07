@@ -5,6 +5,9 @@ import os from "os";
 import path from "path";
 import { execFile } from "child_process";
 import { PACKAGE_ROOT, causlyHome, envFiles } from "./paths.js";
+import { describeChildEnv } from "./childEnv.js";
+import { GOOGLE_TOKEN_ENVS, googleSignIns, markedPublished } from "./googleToken.js";
+import { FILE_MODE, chmodQuiet, homePrivacy, writeFileAtomic } from "./privateFiles.js";
 
 export const SERVER_NAME = "causly-server";
 export const CLIENTS = ["claude", "cursor", "windsurf"];
@@ -65,8 +68,9 @@ export function readJson(file) {
 }
 
 export function backup(file) {
+  // Other servers in an editor config often hold tokens, so the copy is owner-only.
   const copy = `${file}.backup-${Date.now()}`;
-  fs.copyFileSync(file, copy);
+  writeFileAtomic(copy, fs.readFileSync(file));
   return copy;
 }
 
@@ -79,7 +83,7 @@ export function upsertServerEntry(file, entry) {
   const had = SERVER_NAME in config.mcpServers;
   config.mcpServers[SERVER_NAME] = entry;
   fs.mkdirSync(path.dirname(file), { recursive: true });
-  fs.writeFileSync(file, `${JSON.stringify(config, null, 2)}\n`);
+  writeFileAtomic(file, `${JSON.stringify(config, null, 2)}\n`, { preserveMode: true });
   return { updated: had, created: !had, backup: backedUp, replacedBrokenFile: broken };
 }
 
@@ -88,7 +92,7 @@ export function removeServerEntry(file) {
   if (!existed || broken || !config.mcpServers || !(SERVER_NAME in config.mcpServers)) return { removed: false };
   const copy = backup(file);
   delete config.mcpServers[SERVER_NAME];
-  fs.writeFileSync(file, `${JSON.stringify(config, null, 2)}\n`);
+  writeFileAtomic(file, `${JSON.stringify(config, null, 2)}\n`, { preserveMode: true });
   return { removed: true, backup: copy };
 }
 
@@ -127,9 +131,10 @@ export function runInit({ client, workspace, toolsets, platform, home, env, root
   const checkoutEnv = path.join(root, ".env");
   let envPath = fs.existsSync(checkoutEnv) ? checkoutEnv : envFile;
   if (!fs.existsSync(envPath)) {
-    fs.mkdirSync(path.dirname(envFile), { recursive: true });
+    fs.mkdirSync(path.dirname(envFile), { recursive: true, mode: 0o700 });
     if (fs.existsSync(template)) fs.copyFileSync(template, envFile);
-    else fs.writeFileSync(envFile, "# causly-server settings: KEY=value, one per line\n");
+    else fs.writeFileSync(envFile, "# causly-server settings: KEY=value, one per line\n", { mode: FILE_MODE });
+    chmodQuiet(envFile, FILE_MODE); // your keys go in this file: owner only (macOS/Linux)
     lines.push(`Created ${envFile} (add your API keys there)`);
   } else {
     lines.push(`Using existing ${envPath}`);
@@ -203,7 +208,7 @@ function probe(exec, cmd, args) {
   return new Promise((resolve) => exec(cmd, args, { timeout: 8000, windowsHide: true }, (err, stdout) => resolve(err ? null : String(stdout).split("\n")[0].trim())));
 }
 
-export async function runDoctor({ env = process.env, exec = execFile, nodeVersion = process.versions.node, platform, home } = {}) {
+export async function runDoctor({ env = process.env, exec = execFile, nodeVersion = process.versions.node, platform, home, now = new Date() } = {}) {
   const checks = [];
   const add = (name, ok, detail) => checks.push({ name, ok, detail });
 
@@ -217,9 +222,19 @@ export async function runDoctor({ env = process.env, exec = execFile, nodeVersio
   const missing = SERVICES.filter(([, keys]) => !loaded(keys)).map(([n]) => n);
   add("Integrations configured", configured.length > 0, configured.length ? configured.join(", ") : "none yet (add keys to the settings file)");
 
+  // Google expires a Testing-status app's sign-in after 7 days: say so before it happens
+  if (markedPublished(env)) {
+    if (Object.keys(GOOGLE_TOKEN_ENVS).some((k) => env[k])) add("Google sign-in", true, "marked as published (CAUSLY_GOOGLE_PUBLISHED), so no 7-day expiry warnings");
+  } else {
+    for (const s of googleSignIns({ env, now })) add("Google sign-in", s.level === "ok", s.text);
+  }
+
   const ff = await probe(exec, "ffmpeg", ["-version"]);
   add("ffmpeg (large recordings)", Boolean(ff), ff ? ff.slice(0, 40) : "not found; only needed for recordings over 25 MB");
 
+  const privacy = homePrivacy();
+  add("Private data folder", privacy.ok, privacy.detail);
+  add("Child process env", !/(^|[,;\s])\*($|[,;\s])/.test(env.CAUSLY_PASSTHROUGH_ENV || ""), describeChildEnv(env));
   add("Workspace limit", Boolean(env.CAUSLY_WORKSPACE), env.CAUSLY_WORKSPACE || "off: file tools can reach any folder (set with: causly-server init --workspace <folder>)");
 
   const where = { platform, home, env };

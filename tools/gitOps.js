@@ -1,7 +1,8 @@
 import { simpleGit } from "simple-git";
+import { buildChildEnv } from "./childEnv.js";
 
 function getGit(repoPath) {
-  return simpleGit({ baseDir: repoPath });
+  return simpleGit({ baseDir: repoPath }).env(buildChildEnv({ profile: "git" }));
 }
 
 export async function gitInit({ repo_path }) {

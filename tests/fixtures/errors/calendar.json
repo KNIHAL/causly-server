@@ -1,0 +1,101 @@
+{
+    "service":  "calendar",
+    "secrets":  [
+                    "ya29.ACCESSTOKEN"
+                ],
+    "cases":  {
+                  "401":  {
+                              "response":  {
+                                               "body":  {
+                                                            "error":  {
+                                                                          "message":  "Invalid Credentials"
+                                                                      }
+                                                        },
+                                               "status":  401
+                                           },
+                              "match":  "rejected the credentials \\(401\\).*causly-server login google"
+                          },
+                  "403_scope":  {
+                                    "response":  {
+                                                     "body":  {
+                                                                  "error":  {
+                                                                                "message":  "Insufficient Permission"
+                                                                            }
+                                                              },
+                                                     "status":  403
+                                                 },
+                                    "match":  "refused the request \\(403\\).*calendar\\.events and calendar\\.readonly.*causly-server login google"
+                                },
+                  "403_rate_limit":  {
+                                         "response":  {
+                                                          "status":  403,
+                                                          "body":  {
+                                                                       "error":  {
+                                                                                     "message":  "Rate Limit Exceeded"
+                                                                                 }
+                                                                   },
+                                                          "headers":  {
+                                                                          "retry-after":  "20"
+                                                                      }
+                                                      },
+                                         "match":  "rate limit reached.*Try again in 20s"
+                                     },
+                  "404":  {
+                              "response":  {
+                                               "body":  {
+                                                            "error":  {
+                                                                          "message":  "Not Found"
+                                                                      }
+                                                        },
+                                               "status":  404
+                                           },
+                              "match":  "could not find that \\(404\\).*event id and calendar id"
+                          },
+                  "429":  {
+                              "response":  {
+                                               "status":  429,
+                                               "body":  {
+                                                            "error":  {
+                                                                          "message":  "Too Many Requests"
+                                                                      }
+                                                        },
+                                               "headers":  {
+                                                               "retry-after":  "9"
+                                                           }
+                                           },
+                              "match":  "rate limit reached \\(429\\). Try again in 9s"
+                          },
+                  "5xx":  {
+                              "response":  {
+                                               "status":  500,
+                                               "rawBody":  "\u003chtml\u003e\u003cbody\u003e\u003ch1\u003e502 Bad Gateway\u003c/h1\u003e\u003c/body\u003e\u003c/html\u003e"
+                                           },
+                              "match":  "having problems \\(HTTP 500\\)"
+                          },
+                  "timeout":  {
+                                  "match":  "did not answer within 20s",
+                                  "throws":  "TimeoutError"
+                              },
+                  "network":  {
+                                  "match":  "Could not reach Google Calendar \\(ECONNRESET\\)",
+                                  "throws":  "ECONNRESET"
+                              },
+                  "malformed_json":  {
+                                         "response":  {
+                                                          "status":  200,
+                                                          "rawBody":  "\u003c!doctype html\u003e\u003ctitle\u003eSign in\u003c/title\u003e"
+                                                      },
+                                         "match":  "could not be read \\(HTTP 200, not valid JSON\\)"
+                                     },
+                  "token_expired":  {
+                                        "tokenResponse":  {
+                                                              "body":  {
+                                                                           "error":  "invalid_grant",
+                                                                           "error_description":  "Token has been expired or revoked."
+                                                                       },
+                                                              "status":  400
+                                                          },
+                                        "match":  "Google sign-in failed.*invalid_grant.*causly-server login google"
+                                    }
+              }
+}

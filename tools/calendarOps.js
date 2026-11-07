@@ -1,3 +1,4 @@
+import { httpFetch, readBody, failureFromResponse, malformedReply } from "./httpErrors.js";
 // Google Calendar tools. No new dependencies: Calendar REST API v3 over fetch.
 //
 //   calendar_list_calendars  calendars this account can see
@@ -8,6 +9,8 @@
 //   calendar_create_event    create an event (inviting people needs confirm: true)
 //   calendar_update_event    change an event (events with guests need confirm: true)
 //   calendar_delete_event    delete an event (DESTRUCTIVE)
+//
+// calendar_update_event and calendar_delete_event take scope: this | following | all for recurring events.
 //
 // Credentials: CALENDAR_REFRESH_TOKEN plus the OAuth client from CALENDAR_CLIENT_ID /
 // CALENDAR_CLIENT_SECRET (or the GMAIL_CLIENT_ID / GMAIL_CLIENT_SECRET of the same client).
@@ -108,9 +111,11 @@ export function parseTime(value, tz, label = "time") {
   const bad = () => new Error(`${label} must look like 2026-10-23, 2026-10-23T15:00 or 2026-10-23T15:00:00+05:30 (got "${s}").`);
   if (!r) throw bad();
   const [, Y, Mo, D, H, Mi, S, off] = r;
-  if (Number(Mo) < 1 || Number(Mo) > 12 || Number(D) < 1 || Number(D) > 31) throw bad();
+  // The day must exist in that month (2026-02-30 and 2026-04-31 are not dates). Without this the
+  // local-time path rolled them over to the next month while the offset path rejected them (issue #42).
+  if (Number(Mo) < 1 || Number(Mo) > 12 || Number(D) < 1 || Number(D) > daysInMonth(Number(Y), Number(Mo))) throw bad();
   const dateOnly = H === undefined;
-  if (!dateOnly && (Number(H) > 23 || Number(Mi) > 59)) throw bad();
+  if (!dateOnly && (Number(H) > 23 || Number(Mi) > 59 || (S !== undefined && Number(S) > 59))) throw bad();
   let ms;
   if (!dateOnly && off) {
     const zone = off.toUpperCase() === "Z" ? "Z" : off.includes(":") ? off : `${off.slice(0, 3)}:${off.slice(3)}`;
@@ -120,6 +125,13 @@ export function parseTime(value, tz, label = "time") {
   }
   if (!Number.isFinite(ms)) throw bad();
   return { ms, dateOnly };
+}
+
+/** Days in a month (m is 1-12), leap years included. setUTCFullYear keeps years 0-99 from being read as 1900-1999. */
+function daysInMonth(y, m) {
+  const t = new Date(0);
+  t.setUTCFullYear(y, m, 0);
+  return t.getUTCDate();
 }
 
 /** Turns when / from / to into [start, end) in ms. */
@@ -162,27 +174,21 @@ function client(deps = {}) {
     }
     const pairs = Object.entries(query ?? {}).filter(([, v]) => v !== undefined && v !== null && v !== "");
     const qs = pairs.length ? `?${new URLSearchParams(pairs.map(([k, v]) => [k, String(v)]))}` : "";
-    const res = await fetchFn(`${API}${path}${qs}`, {
+    const res = await httpFetch("calendar", fetchFn, `${API}${path}${qs}`, {
       method,
       headers: { authorization: `Bearer ${token}`, ...(body ? { "content-type": "application/json" } : {}) },
       body: body ? JSON.stringify(body) : undefined,
-      signal: AbortSignal.timeout(20_000),
-    });
+    }, { secrets: [token] });
     if (res.status === 204) return null;
-    const data = await res.json().catch(() => ({}));
+    const parsed = await readBody(res);
     if (!res.ok) {
-      const message = data?.error?.message || `HTTP ${res.status}`;
-      if (res.status === 401) throw new Error("Google rejected the access token. Check CALENDAR_REFRESH_TOKEN.");
-      if (res.status === 403) {
-        throw new Error(
-          `Google Calendar refused the request: ${message}. The refresh token needs the calendar.events and calendar.readonly scopes, and the Calendar API must be enabled in the Google Cloud project.`
-        );
-      }
-      if (res.status === 404) throw new Error("Not found. Check the event id and calendar id.");
       if (res.status === 410) throw new Error("That event was already deleted.");
-      throw new Error(`Google Calendar error: ${message}`);
+      const used = token;
+      if (res.status === 401) token = undefined; // the cached access token died; refresh on the next call
+      throw failureFromResponse("calendar", res, parsed, { secrets: [used] });
     }
-    return data;
+    if (parsed.malformed) throw malformedReply("calendar", res.status);
+    return parsed.data ?? {};
   };
 }
 
@@ -481,24 +487,155 @@ export async function createEvent(
   return { created: true, invited: guests.length, event: simplify(data), ...(overlaps.length ? { overlaps_with: overlaps } : {}) };
 }
 
+// ---------------------------------------------------------------- recurring events: scope
+//
+// A recurring event is a series (one event that holds the `recurrence` rule) plus its occurrences
+// (each with its own id and a `recurringEventId` that points at the series).
+//
+//   scope "this"       only the occurrence whose id was given (the default for an occurrence id)
+//   scope "following"  that occurrence and every later one: the series is cut just before it and,
+//                      for an update, a new series starts at it
+//   scope "all"        the whole series: the change goes to the series event (the default for a
+//                      series id)
+
+const SCOPES = ["this", "following", "all"];
+const RECURRING_HINT =
+  'This is one occurrence of a recurring series. Pass scope: "all" to change the whole series, or scope: "following" to change this and later occurrences.';
+
+const eventPath = (calendar_id, id) => `/calendars/${enc(calendar_id)}/events/${enc(id)}`;
+const startOf = (e) => e?.start?.dateTime || e?.start?.date;
+const endOf = (e) => e?.end?.dateTime || e?.end?.date;
+const isSeries = (e) => Array.isArray(e?.recurrence) && e.recurrence.length > 0;
+const isOccurrence = (e) => Boolean(e?.recurringEventId);
+const originalStart = (e) => e.originalStartTime?.dateTime || e.originalStartTime?.date || startOf(e);
+const sameMoment = (a, b) => Boolean(a && b) && (a === b || Date.parse(a) === Date.parse(b));
+const dateOnlyString = (ms) => new Date(ms).toISOString().slice(0, 10);
+const daysBetween = (a, b) => Math.round((Date.parse(b) - Date.parse(a)) / DAY);
+
+function readScope(scope) {
+  if (scope === undefined || scope === null || scope === "") return undefined;
+  if (!SCOPES.includes(scope)) throw new Error('scope must be "this", "following" or "all".');
+  return scope;
+}
+
+/**
+ * Works out what a change touches. Returns { mode, recurring, master }, where `mode` is "this",
+ * "following" or "all" and `master` is the series event (for "following" and "all").
+ */
+async function resolveScope(call, existing, requested, calendar_id) {
+  if (!isSeries(existing) && !isOccurrence(existing)) return { mode: "this", recurring: false, master: null };
+  if (isSeries(existing)) {
+    if (requested === "this") {
+      throw new Error(
+        'That id is the whole recurring series. Pass the id of one occurrence (from calendar_list_events) to change only that one, or use scope: "all".'
+      );
+    }
+    if (requested === "following") {
+      throw new Error(
+        'That id is the whole recurring series, so there is no "following" part. Pass the id of the occurrence to start from, or use scope: "all".'
+      );
+    }
+    return { mode: "all", recurring: true, master: existing };
+  }
+  const chosen = requested ?? "this";
+  if (chosen === "this") return { mode: "this", recurring: true, master: null };
+  const master = await call(eventPath(calendar_id, existing.recurringEventId));
+  // "this and following" from the very first occurrence is the whole series
+  if (chosen === "following" && sameMoment(originalStart(existing), startOf(master))) return { mode: "all", recurring: true, master };
+  return { mode: chosen, recurring: true, master };
+}
+
+const rrulePrefix = /^RRULE:/i;
+const stripCountAndUntil = (r) => r.slice(6).split(";").filter((p) => !/^(UNTIL|COUNT)=/i.test(p));
+
+/** The series rules with UNTIL set (and COUNT removed: the two cannot be used together). */
+const withUntil = (rules, until) =>
+  rules.map((r) => (rrulePrefix.test(r) ? `RRULE:${[...stripCountAndUntil(r), `UNTIL=${until}`].join(";")}` : r));
+
+/** The series rules with COUNT set to n (and UNTIL removed). */
+const withCount = (rules, n) =>
+  rules.map((r) => (rrulePrefix.test(r) ? `RRULE:${[...stripCountAndUntil(r), `COUNT=${n}`].join(";")}` : r));
+
+const countOf = (rules) => {
+  for (const r of rules) {
+    const m = rrulePrefix.test(r) ? /(?:^|;)COUNT=(\d+)/i.exec(r) : null;
+    if (m) return Number(m[1]);
+  }
+  return undefined;
+};
+
+/** Ends the series just before `cut` (the start of the first occurrence that should go). */
+async function endSeriesBefore({ call, master, cut, allDay, notify, calendar_id }) {
+  const until = allDay
+    ? dateOnlyString(Date.parse(cut) - DAY).replace(/-/g, "")
+    : new Date(Date.parse(cut) - 1000).toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, "");
+  await call(eventPath(calendar_id, master.id), {
+    method: "PATCH",
+    query: { sendUpdates: notify ? "all" : "none" },
+    body: { recurrence: withUntil(master.recurrence, until) },
+  });
+  return { until };
+}
+
+/** How many occurrences of the series start before `cut` (cancelled ones count toward COUNT). */
+async function occurrencesBefore(call, master, cut, calendar_id) {
+  const data = await call(`${eventPath(calendar_id, master.id)}/instances`, {
+    query: { timeMax: new Date(Date.parse(cut)).toISOString(), showDeleted: "true", maxResults: 250 },
+  });
+  return (data.items || []).length;
+}
+
+/** Wall-clock arithmetic for moving a whole series: shift the series by what the occurrence moved by. */
+function seriesTimes(master, occurrence, times, tz) {
+  if (occurrence === master) return { start: times.start, end: times.end };
+  const allDay = Boolean(master.start?.date);
+  if (allDay !== times.allDay) {
+    throw new Error('A recurring series cannot switch between all-day and timed with scope "all". Use scope "this", or change it from its first occurrence.');
+  }
+  if (allDay) {
+    const shift = daysBetween(startOf(occurrence), times.start.date);
+    const span = daysBetween(times.start.date, times.end.date);
+    const s = dateOnlyString(Date.parse(master.start.date) + shift * DAY);
+    return { start: { date: s }, end: { date: dateOnlyString(Date.parse(s) + span * DAY) } };
+  }
+  const local = (ms) => {
+    const p = zonedParts(ms, tz);
+    return Date.UTC(p.y, p.m - 1, p.d, p.hh, p.mm);
+  };
+  const fromLocal = (lms) => {
+    const t = new Date(lms);
+    return zonedToInstant({ y: t.getUTCFullYear(), m: t.getUTCMonth() + 1, d: t.getUTCDate(), hh: t.getUTCHours(), mm: t.getUTCMinutes() }, tz);
+  };
+  const shift = local(times.startMs) - local(Date.parse(startOf(occurrence)));
+  const newStart = fromLocal(local(Date.parse(startOf(master))) + shift);
+  const length = times.endMs - times.startMs;
+  return {
+    start: { dateTime: new Date(newStart).toISOString(), timeZone: tz },
+    end: { dateTime: new Date(newStart + length).toISOString(), timeZone: tz },
+  };
+}
+
 // ---------------------------------------------------------------- calendar_update_event
 
 export async function updateEvent(
-  { event_id, title, start, end, duration_minutes, timezone, description, location, add_attendees, add_meet_link, calendar_id = "primary", confirm } = {},
+  { event_id, title, start, end, duration_minutes, timezone, description, location, add_attendees, add_meet_link, scope, calendar_id = "primary", confirm } = {},
   deps = {}
 ) {
   if (!event_id) throw new Error("event_id is required.");
+  const requested = readScope(scope);
   const tz = checkTimezone(timezone || defaultTimezone());
   const newGuests = cleanEmails(add_attendees, "add_attendees");
   const call = client(deps);
-  const path = `/calendars/${enc(calendar_id)}/events/${enc(event_id)}`;
+  const path = eventPath(calendar_id, event_id);
   const existing = await call(path);
+  const { mode, recurring, master } = await resolveScope(call, existing, requested, calendar_id);
+  const subject = mode === "all" ? master : existing; // the event whose guests are told
 
-  const notify = hasGuests(existing) || newGuests.length > 0;
+  const notify = hasGuests(subject) || newGuests.length > 0;
   if (notify && confirm !== true) {
     throw needsConfirm(
       newGuests.length
-        ? `This change would invite ${newGuests.join(", ")}${hasGuests(existing) ? " and notify the current guests" : ""}.`
+        ? `This change would invite ${newGuests.join(", ")}${hasGuests(subject) ? " and notify the current guests" : ""}.`
         : "This event has guests, so they would get an update email."
     );
   }
@@ -508,56 +645,108 @@ export async function updateEvent(
   if (description !== undefined) body.description = String(description);
   if (location !== undefined) body.location = String(location);
 
+  let times;
   if (start !== undefined || end !== undefined || duration_minutes !== undefined) {
-    const oldStart = existing.start?.dateTime || existing.start?.date;
-    const oldEnd = existing.end?.dateTime || existing.end?.date;
-    const spanMs = Date.parse(oldEnd) - Date.parse(oldStart);
+    const oldStart = startOf(existing);
+    const spanMs = Date.parse(endOf(existing)) - Date.parse(oldStart);
     const newStart = start ?? oldStart;
     // an explicit end or duration wins; moving only the start keeps the old length
-    const times = buildTimes(
+    times = buildTimes(
       { start: newStart, end, duration_minutes },
       tz,
       Number.isFinite(spanMs) && spanMs > 0 ? spanMs : 30 * MIN,
       Math.max(1, Math.round(spanMs / DAY) || 1)
     );
-    body.start = times.start;
-    body.end = times.end;
   }
 
   if (newGuests.length) {
-    const have = new Set((existing.attendees || []).map((a) => String(a.email).toLowerCase()));
-    body.attendees = [...(existing.attendees || []), ...newGuests.filter((e) => !have.has(e)).map((email) => ({ email }))];
+    const have = new Set((subject.attendees || []).map((a) => String(a.email).toLowerCase()));
+    body.attendees = [...(subject.attendees || []), ...newGuests.filter((e) => !have.has(e)).map((email) => ({ email }))];
   }
-  if (add_meet_link && !existing.hangoutLink) {
+  if (add_meet_link && !subject.hangoutLink) {
     body.conferenceData = { createRequest: { requestId: crypto.randomUUID(), conferenceSolutionKey: { type: "hangoutsMeet" } } };
   }
-  if (!Object.keys(body).length) throw new Error("Nothing to change. Pass title, start, end, description, location, add_attendees or add_meet_link.");
+  if (!Object.keys(body).length && !times) {
+    throw new Error("Nothing to change. Pass title, start, end, description, location, add_attendees or add_meet_link.");
+  }
+  const query = { sendUpdates: notify ? "all" : "none", ...(body.conferenceData ? { conferenceDataVersion: 1 } : {}) };
+  const hint = recurring && !requested && mode === "this" ? { note: RECURRING_HINT } : {};
 
-  const data = await call(path, {
-    method: "PATCH",
-    query: { sendUpdates: notify ? "all" : "none", ...(body.conferenceData ? { conferenceDataVersion: 1 } : {}) },
-    body,
-  });
-  return {
-    updated: true,
-    event: simplify(data),
-    ...(existing.recurringEventId || existing.recurrence ? { note: "This is part of a recurring series; the change was applied to this event id only as given." } : {}),
-  };
+  if (mode === "following") {
+    // Start a new series at this occurrence, then end the old one just before it. The new one is
+    // made first, so a failure never leaves the later occurrences without a series.
+    const allDay = Boolean(master.start?.date);
+    const cut = originalStart(existing);
+    const before = countOf(master.recurrence) !== undefined ? await occurrencesBefore(call, master, cut, calendar_id) : 0;
+    const rules = countOf(master.recurrence) !== undefined ? withCount(master.recurrence, Math.max(1, countOf(master.recurrence) - before)) : master.recurrence;
+    const newSeries = {
+      summary: body.summary ?? existing.summary,
+      ...((body.description ?? existing.description) ? { description: body.description ?? existing.description } : {}),
+      ...((body.location ?? existing.location) ? { location: body.location ?? existing.location } : {}),
+      start: times ? times.start : existing.start,
+      end: times ? times.end : existing.end,
+      recurrence: rules,
+      ...((body.attendees ?? subject.attendees)?.length
+        ? { attendees: (body.attendees ?? subject.attendees).map((a) => ({ email: a.email })) }
+        : {}),
+      ...(body.conferenceData ? { conferenceData: body.conferenceData } : {}),
+    };
+    const created = await call(`/calendars/${enc(calendar_id)}/events`, { method: "POST", query, body: newSeries });
+    let ended;
+    try {
+      ended = await endSeriesBefore({ call, master, cut, allDay, notify, calendar_id });
+    } catch (err) {
+      await call(eventPath(calendar_id, created.id), { method: "DELETE", query: { sendUpdates: "none" } }).catch(() => {});
+      throw err;
+    }
+    return {
+      updated: true,
+      scope: "following",
+      event: simplify(created),
+      previous_series_ended: ended.until,
+      note: "This and the following occurrences are now a new series. Guests are invited to it again, so their earlier replies do not carry over.",
+    };
+  }
+
+  if (mode === "all") {
+    if (times) Object.assign(body, seriesTimes(master, existing, times, tz));
+    const data = await call(eventPath(calendar_id, master.id), { method: "PATCH", query, body });
+    return { updated: true, scope: "all", event: simplify(data) };
+  }
+
+  if (times) {
+    body.start = times.start;
+    body.end = times.end;
+  }
+  const data = await call(path, { method: "PATCH", query, body });
+  return { updated: true, ...(recurring ? { scope: "this" } : {}), event: simplify(data), ...hint };
 }
 
 // ---------------------------------------------------------------- calendar_delete_event
 
-export async function deleteEvent({ event_id, calendar_id = "primary" } = {}, deps = {}) {
+export async function deleteEvent({ event_id, scope, calendar_id = "primary" } = {}, deps = {}) {
   if (!event_id) throw new Error("event_id is required.");
+  const requested = readScope(scope);
   const call = client(deps);
-  const path = `/calendars/${enc(calendar_id)}/events/${enc(event_id)}`;
+  const path = eventPath(calendar_id, event_id);
   const existing = await call(path);
-  const notify = hasGuests(existing);
-  await call(path, { method: "DELETE", query: { sendUpdates: notify ? "all" : "none" } });
+  const { mode, recurring, master } = await resolveScope(call, existing, requested, calendar_id);
+  const subject = mode === "all" ? master : existing;
+  const notify = hasGuests(subject);
+
+  let ended;
+  if (mode === "following") {
+    ended = await endSeriesBefore({ call, master, cut: originalStart(existing), allDay: Boolean(master.start?.date), notify, calendar_id });
+  } else {
+    await call(mode === "all" ? eventPath(calendar_id, master.id) : path, { method: "DELETE", query: { sendUpdates: notify ? "all" : "none" } });
+  }
   return {
     deleted: true,
-    title: existing.summary || "(no title)",
-    start: existing.start?.dateTime || existing.start?.date,
+    ...(recurring ? { scope: mode } : {}),
+    title: subject.summary || "(no title)",
+    start: startOf(subject),
+    ...(ended ? { series_ended: ended.until } : {}),
     ...(notify ? { guests_notified: true } : {}),
+    ...(recurring && !requested && mode === "this" ? { note: RECURRING_HINT } : {}),
   };
 }

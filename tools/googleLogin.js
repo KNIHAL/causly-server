@@ -10,6 +10,7 @@ import { randomBytes } from "crypto";
 import { setEnvValue } from "./envFile.js";
 import { envWritePath } from "./paths.js";
 import { findService, checkService } from "./services.js";
+import { issuedName, loginExpiryNote } from "./googleToken.js";
 
 const AUTH_URL = "https://accounts.google.com/o/oauth2/v2/auth";
 const TOKEN_URL = "https://oauth2.googleapis.com/token";
@@ -25,7 +26,7 @@ export const DEFAULT_GOOGLE_TARGETS = ["gmail", "calendar"];
 
 const CLIENT_SETUP_STEPS = [
   "Open console.cloud.google.com, create a project (or pick one) and enable the Gmail API, Google Calendar API and (optional) Search Console API.",
-  "OAuth consent screen: choose External, add your own Google account as a test user. Then press Publish app, otherwise Google expires the token after 7 days.",
+  "OAuth consent screen: choose External and fill in the Branding page (app name, support email, developer contact email). Then press Publish app (Audience page), otherwise Google expires the token after 7 days. Until then, add your own Google account as a test user.",
   "Credentials, Create credentials, OAuth client ID, type Desktop app. Copy the Client ID and Client secret.",
 ];
 
@@ -147,6 +148,7 @@ export async function runGoogleLogin({
   fetch: fetchFn = globalThis.fetch,
   open = openBrowser,
   timeoutMs,
+  now = new Date(),
 } = {}) {
   const say = (t = "") => term.write(`${t}\n`);
   const chosen = parseTargets(Array.isArray(targets) ? targets.join(",") : targets);
@@ -213,6 +215,9 @@ export async function runGoogleLogin({
     }
     setEnvValue(file, target.tokenEnv, refreshToken);
     env[target.tokenEnv] = refreshToken;
+    // when it was saved, so status and doctor can warn before a Testing-status token expires
+    setEnvValue(file, issuedName(target.tokenEnv), now.toISOString());
+    env[issuedName(target.tokenEnv)] = now.toISOString();
     result.saved.push(t);
   }
 
@@ -225,6 +230,10 @@ export async function runGoogleLogin({
     result.checks.push(r);
     say(`${r.ok ? "ok  " : "FAIL"}  ${GOOGLE_TARGETS[t].label}: ${r.detail}`);
   }
-  if (result.saved.length) say(`\nSaved to ${file}. Running tools pick it up on their next call.`);
+  if (result.saved.length) {
+    say(`\nSaved to ${file}. Running tools pick it up on their next call.`);
+    const note = loginExpiryNote(now, env);
+    if (note) say(`\n${note}`);
+  }
   return result;
 }

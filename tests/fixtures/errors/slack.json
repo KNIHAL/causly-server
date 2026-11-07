@@ -1,0 +1,98 @@
+{
+    "service":  "slack",
+    "secrets":  [
+                    "xoxb-test"
+                ],
+    "cases":  {
+                  "401":  {
+                              "response":  {
+                                               "body":  {
+                                                            "error":  "invalid_auth",
+                                                            "ok":  false
+                                                        },
+                                               "status":  200
+                                           },
+                              "match":  "rejected the credentials \\(401\\).*causly-server setup slack"
+                          },
+                  "403_scope":  {
+                                    "response":  {
+                                                     "body":  {
+                                                                  "needed":  "channels:history",
+                                                                  "ok":  false,
+                                                                  "error":  "missing_scope",
+                                                                  "provided":  "chat:write"
+                                                              },
+                                                     "status":  200
+                                                 },
+                                    "match":  "refused the request \\(403\\).*\"channels:history\" scope.*causly-server setup slack"
+                                },
+                  "403_rate_limit":  {
+                                         "response":  {
+                                                          "status":  429,
+                                                          "body":  {
+                                                                       "error":  "ratelimited",
+                                                                       "ok":  false
+                                                                   },
+                                                          "headers":  {
+                                                                          "retry-after":  "15"
+                                                                      }
+                                                      },
+                                         "match":  "rate limit reached.*Try again in 15s"
+                                     },
+                  "404":  {
+                              "response":  {
+                                               "body":  {
+                                                            "error":  "channel_not_found",
+                                                            "ok":  false
+                                                        },
+                                               "status":  200
+                                           },
+                              "match":  "could not find that \\(404\\): channel_not_found"
+                          },
+                  "429":  {
+                              "response":  {
+                                               "status":  200,
+                                               "body":  {
+                                                            "error":  "ratelimited",
+                                                            "ok":  false
+                                                        },
+                                               "headers":  {
+                                                               "retry-after":  "8"
+                                                           }
+                                           },
+                              "match":  "rate limit reached \\(429\\). Try again in 8s"
+                          },
+                  "5xx":  {
+                              "response":  {
+                                               "status":  503,
+                                               "rawBody":  "\u003chtml\u003e\u003cbody\u003e\u003ch1\u003e502 Bad Gateway\u003c/h1\u003e\u003c/body\u003e\u003c/html\u003e"
+                                           },
+                              "match":  "having problems \\(HTTP 503\\)"
+                          },
+                  "timeout":  {
+                                  "match":  "did not answer within 20s",
+                                  "throws":  "TimeoutError"
+                              },
+                  "network":  {
+                                  "match":  "Could not reach Slack \\(ECONNRESET\\)",
+                                  "throws":  "ECONNRESET"
+                              },
+                  "malformed_json":  {
+                                         "response":  {
+                                                          "status":  200,
+                                                          "rawBody":  "\u003chtml\u003emaintenance\u003c/html\u003e"
+                                                      },
+                                         "match":  "could not be read \\(HTTP 200, not valid JSON\\)"
+                                     },
+                  "unknown_error":  {
+                                        "response":  {
+                                                         "body":  {
+                                                                      "error":  "is_archived",
+                                                                      "ok":  false
+                                                                  },
+                                                         "status":  200
+                                                     },
+                                        "match":  "Slack API error \\(users\\.info\\): is_archived"
+                                    }
+              }
+}

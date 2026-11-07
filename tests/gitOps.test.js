@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 
 const mockGit = {
+  env: vi.fn(function () { return this; }),
   init: vi.fn(),
   status: vi.fn(),
   add: vi.fn(),

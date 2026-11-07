@@ -98,7 +98,7 @@ describe("stripeOps — safety and errors", () => {
   });
 
   it("maps 401, 403, 429 and API errors, and never leaks the key", async () => {
-    await expect(stripe.getAccount({}, stub(() => ({ __error: 401 })).deps)).rejects.toThrow(/rejected the API key/);
+    await expect(stripe.getAccount({}, stub(() => ({ __error: 401 })).deps)).rejects.toThrow(/rejected the credentials/);
     await expect(stripe.getAccount({}, stub(() => ({ __error: 403, message: "no perm" })).deps)).rejects.toThrow(/restricted key/);
     await expect(stripe.getAccount({}, stub(() => ({ __error: 429 })).deps)).rejects.toThrow(/rate limit/);
     await expect(stripe.getAccount({}, stub(() => ({ __error: 400, message: `Invalid ${KEY}` })).deps)).rejects.toThrow(/\[REDACTED\]/);

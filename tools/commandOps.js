@@ -3,6 +3,7 @@ import { promisify } from "util";
 import os from "os";
 import path from "path";
 import { classifyCommandRisk } from "./security.js";
+import { buildChildEnv } from "./childEnv.js";
 
 const execAsync = promisify(exec);
 const execFileAsync = promisify(execFile);
@@ -112,8 +113,9 @@ export function buildWindowsEnv(baseEnv, { execPath = process.execPath, homedir 
 }
 
 function buildEnv() {
-  if (!IS_WINDOWS) return process.env;
-  return buildWindowsEnv(process.env);
+  const base = buildChildEnv({ profile: "command" });
+  if (!IS_WINDOWS) return base;
+  return buildWindowsEnv(base);
 }
 
 // Commands containing these patterns are blocked outright — no override.
@@ -136,6 +138,11 @@ function truncate(str) {
   return str.length > MAX_OUTPUT_CHARS
     ? str.slice(0, MAX_OUTPUT_CHARS) + `\n... [truncated, ${str.length - MAX_OUTPUT_CHARS} more chars]`
     : str;
+}
+
+/** The risk note is only worth tokens when the command was flagged; a plain LOW result omits it. */
+function riskField(info) {
+  return info && info.risk !== "LOW" ? { risk: info } : {};
 }
 
 /**
@@ -198,24 +205,20 @@ export async function runCommand({ command, cwd, timeout_ms = DEFAULT_TIMEOUT_MS
     const { stdout, stderr } = IS_WINDOWS ? await runOnWindows() : await execAsync(command, runOpts);
 
     return {
-      command,
-      cwd,
       stdout: truncate(stdout),
       stderr: truncate(stderr),
       exit_code: 0,
-      risk: riskInfo,
+      ...riskField(riskInfo),
     };
   } catch (err) {
     // exec/execFile reject on non-zero exit code — surface it as data, not
     // a hard throw, so the caller can see stdout/stderr even on failure.
     return {
-      command,
-      cwd,
       stdout: truncate(err.stdout || ""),
       stderr: truncate(err.stderr || err.message),
       exit_code: err.code ?? 1,
       timed_out: err.killed && err.signal === "SIGTERM",
-      risk: riskInfo,
+      ...riskField(riskInfo),
     };
   }
 }

@@ -473,7 +473,14 @@ export const ACTION_LEVELS = {
  * in the input. A tool without an entry gets MEDIUM (a safe default; tests/permissionLevels.test.js
  * fails when a shipped tool is missing from PERMISSION_LEVELS).
  */
+export const PROJECT_COMMAND_TOOLS = ["run_tests", "run_lint", "run_typecheck", "run_build"];
+
+export function strictProjectCommands(env = process.env) {
+  return /^(1|true|yes|on)$/i.test(String(env.CAUSLY_STRICT_PROJECT_COMMANDS ?? "").trim());
+}
+
 export function getPermissionLevel(toolName, input) {
+  if (PROJECT_COMMAND_TOOLS.includes(toolName) && strictProjectCommands()) return "HIGH";
   const base = PERMISSION_LEVELS[toolName] || "MEDIUM";
   const rule = ACTION_LEVELS[toolName];
   if (rule && input && typeof input === "object" && typeof input[rule.field] === "string") {

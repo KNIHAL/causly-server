@@ -18,12 +18,18 @@ beforeAll(() => {
   process.env.SECRETS_MASTER_KEY = crypto.randomBytes(32).toString("hex");
 });
 
+let workDir;
+
 beforeEach(async () => {
-  storePath = path.join(os.tmpdir(), `causly-secrets-test-${Date.now()}-${Math.random()}.enc`);
+  // A custom store_path must sit inside the data folder or a CAUSLY_WORKSPACE folder (P1-11).
+  workDir = await fs.mkdtemp(path.join(os.tmpdir(), "causly-secrets-test-"));
+  process.env.CAUSLY_WORKSPACE = workDir;
+  storePath = path.join(workDir, "store.enc");
 });
 
 afterEach(async () => {
-  await fs.rm(storePath, { force: true });
+  await fs.rm(workDir, { recursive: true, force: true });
+  delete process.env.CAUSLY_WORKSPACE;
   delete process.env.SECRETS_MASTER_KEY_NEW;
 });
 

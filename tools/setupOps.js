@@ -7,6 +7,16 @@ import { execFile } from "child_process";
 import os from "os";
 import { SERVICES, findService, serviceState, checkService, allNames } from "./services.js";
 import { setEnvValue, unsetEnvValue, readEnvValues, describeSecret, isValidName, checkValue } from "./envFile.js";
+import { GOOGLE_TOKEN_ENVS, isGoogleToken, issuedName } from "./googleToken.js";
+
+// A saved Google refresh token also gets a NAME_ISSUED date, so status and doctor can warn before a
+// Testing-status token expires. A stale date would give false warnings, so it follows the token.
+function stampGoogleToken(file, env, name) {
+  if (!isGoogleToken(name)) return;
+  const now = new Date().toISOString();
+  setEnvValue(file, issuedName(name), now);
+  env[issuedName(name)] = now;
+}
 import { envWritePath } from "./paths.js";
 import { runGoogleLogin } from "./googleLogin.js";
 
@@ -132,6 +142,7 @@ export async function runSetup({ service, term, env = process.env, file = envWri
     for (const [name, value] of Object.entries(pending)) {
       setEnvValue(file, name, value);
       env[name] = value;
+      stampGoogleToken(file, env, name);
     }
     say(`Saved to ${file}. Running tools pick it up on their next call.`);
     (untested ? result.saved_untested : result.saved).push(svc.id);
@@ -167,6 +178,7 @@ export async function runSetup({ service, term, env = process.env, file = envWri
 
 export function keysList({ env = process.env, file = envWritePath(), services = SERVICES } = {}) {
   const known = new Set(allNames(services));
+  for (const n of Object.keys(GOOGLE_TOKEN_ENVS)) known.add(issuedName(n)); // bookkeeping, not a key to manage
   const rows = [];
   for (const s of services) {
     for (const v of s.env) {
@@ -205,6 +217,7 @@ export async function keysSet({ name, term, file = envWritePath(), env = process
   v = checkValue(v);
   const r = setEnvValue(file, name, v);
   env[name] = v;
+  stampGoogleToken(file, env, name);
   const notes = [];
   if (!allNames(services).includes(name) && !name.startsWith("CAUSLY_")) notes.push(`${name} is not a setting this server knows; saved anyway.`);
   if (launchEnv[name] !== undefined && launchEnv[name] !== v) notes.push(`${name} is also set in the environment your editor or terminal starts with, and that value takes priority over this file.`);
@@ -214,6 +227,10 @@ export async function keysSet({ name, term, file = envWritePath(), env = process
 export function keysUnset({ name, file = envWritePath(), env = process.env, launchEnv = {} } = {}) {
   if (!name || !isValidName(name)) throw new Error("Give a setting name in capital letters, for example: causly-server keys unset TELEGRAM_BOT_TOKEN");
   const removed = unsetEnvValue(file, name);
+  if (isGoogleToken(name)) {
+    unsetEnvValue(file, issuedName(name));
+    if (launchEnv[issuedName(name)] === undefined) delete env[issuedName(name)];
+  }
   if (removed && launchEnv[name] === undefined) delete env[name];
   const notes = launchEnv[name] !== undefined ? [`${name} is still set in the environment your editor or terminal starts with.`] : [];
   return { name, file, removed, notes };

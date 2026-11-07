@@ -1,0 +1,96 @@
+{
+  "service": "vercel",
+  "secrets": [
+    "vcl_SECRETTOKEN"
+  ],
+  "cases": {
+    "401": {
+      "response": {
+        "status": 401,
+        "body": {
+          "error": {
+            "code": "forbidden",
+            "message": "Not authorized"
+          }
+        }
+      },
+      "match": "rejected the credentials \\(401\\).*causly-server setup vercel"
+    },
+    "404": {
+      "response": {
+        "status": 404,
+        "body": {
+          "error": {
+            "code": "not_found",
+            "message": "Project not found"
+          }
+        }
+      },
+      "match": "Project not found"
+    },
+    "429": {
+      "response": {
+        "status": 429,
+        "headers": {
+          "retry-after": "12"
+        },
+        "body": {
+          "error": {
+            "code": "rate_limited",
+            "message": "Rate limited"
+          }
+        }
+      },
+      "match": "rate limit reached \\(429\\). Try again in 12s"
+    },
+    "403_scope": {
+      "response": {
+        "status": 403,
+        "body": {
+          "error": {
+            "code": "forbidden",
+            "message": "Not authorized: missing scope"
+          }
+        }
+      },
+      "match": "refused the request \\(403\\).*missing scope"
+    },
+    "403_rate_limit": {
+      "response": {
+        "status": 429,
+        "headers": {
+          "retry-after": "12"
+        },
+        "body": {
+          "error": {
+            "code": "rate_limited",
+            "message": "Rate limited"
+          }
+        }
+      },
+      "match": "rate limit reached.*Try again in 12s"
+    },
+    "5xx": {
+      "response": {
+        "status": 502,
+        "rawBody": "<html><body><h1>502 Bad Gateway</h1></body></html>"
+      },
+      "match": "having problems \\(HTTP 502\\)"
+    },
+    "timeout": {
+      "throws": "TimeoutError",
+      "match": "did not answer within 20s"
+    },
+    "network": {
+      "throws": "ECONNRESET",
+      "match": "Could not reach Vercel \\(ECONNRESET\\)"
+    },
+    "malformed_json": {
+      "response": {
+        "status": 200,
+        "rawBody": "<html>maintenance</html>"
+      },
+      "match": "could not be read \\(HTTP 200, not valid JSON\\)"
+    }
+  }
+}

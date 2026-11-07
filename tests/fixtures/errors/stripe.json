@@ -1,0 +1,91 @@
+{
+  "service": "stripe",
+  "secrets": [
+    "sk_test_SECRETKEY"
+  ],
+  "cases": {
+    "401": {
+      "response": {
+        "status": 401,
+        "body": {
+          "error": {
+            "message": "Invalid API Key provided: sk_test_***KEY"
+          }
+        }
+      },
+      "match": "rejected the credentials \\(401\\).*causly-server setup stripe"
+    },
+    "404": {
+      "response": {
+        "status": 404,
+        "body": {
+          "error": {
+            "message": "No such customer: cus_x"
+          }
+        }
+      },
+      "match": "No such customer"
+    },
+    "429": {
+      "response": {
+        "status": 429,
+        "headers": {
+          "retry-after": "12"
+        },
+        "body": {
+          "error": {
+            "message": "Too many requests"
+          }
+        }
+      },
+      "match": "rate limit reached \\(429\\). Try again in 12s"
+    },
+    "403_scope": {
+      "response": {
+        "status": 403,
+        "body": {
+          "error": {
+            "message": "The provided key does not have the required permissions."
+          }
+        }
+      },
+      "match": "refused the request \\(403\\).*required permissions"
+    },
+    "403_rate_limit": {
+      "response": {
+        "status": 429,
+        "headers": {
+          "retry-after": "12"
+        },
+        "body": {
+          "error": {
+            "message": "Too many requests"
+          }
+        }
+      },
+      "match": "rate limit reached.*Try again in 12s"
+    },
+    "5xx": {
+      "response": {
+        "status": 502,
+        "rawBody": "<html><body><h1>502 Bad Gateway</h1></body></html>"
+      },
+      "match": "having problems \\(HTTP 502\\)"
+    },
+    "timeout": {
+      "throws": "TimeoutError",
+      "match": "did not answer within 25s"
+    },
+    "network": {
+      "throws": "ECONNRESET",
+      "match": "Could not reach Stripe \\(ECONNRESET\\)"
+    },
+    "malformed_json": {
+      "response": {
+        "status": 200,
+        "rawBody": "<html>maintenance</html>"
+      },
+      "match": "could not be read \\(HTTP 200, not valid JSON\\)"
+    }
+  }
+}

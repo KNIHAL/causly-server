@@ -38,7 +38,7 @@ describe("notionOps", () => {
 
   it("throws a descriptive error on a failed API call", async () => {
     global.fetch.mockReturnValueOnce(FAIL({ message: "Unauthorized", code: "unauthorized" }, 401));
-    await expect(notionSearch({})).rejects.toThrow(/Unauthorized/);
+    await expect(notionSearch({})).rejects.toThrow(/rejected the credentials \(401\)/);
   });
 
   it("sends Notion-Version and bearer auth headers", async () => {

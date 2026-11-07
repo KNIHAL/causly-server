@@ -1,0 +1,116 @@
+{
+  "service": "linear",
+  "secrets": [
+    "lin_api_SECRETKEY"
+  ],
+  "cases": {
+    "401": {
+      "response": {
+        "status": 401,
+        "body": {
+          "errors": [
+            {
+              "message": "Authentication required",
+              "extensions": {
+                "type": "authentication error"
+              }
+            }
+          ]
+        }
+      },
+      "match": "rejected the credentials \\(401\\).*causly-server setup linear"
+    },
+    "404": {
+      "response": {
+        "status": 404,
+        "body": {
+          "errors": [
+            {
+              "message": "Entity not found: Issue",
+              "extensions": {
+                "type": "invalid input"
+              }
+            }
+          ]
+        }
+      },
+      "match": "Entity not found"
+    },
+    "429": {
+      "response": {
+        "status": 429,
+        "headers": {
+          "retry-after": "12"
+        },
+        "body": {
+          "errors": [
+            {
+              "message": "Rate limit exceeded",
+              "extensions": {
+                "code": "RATELIMITED"
+              }
+            }
+          ]
+        }
+      },
+      "match": "rate limit reached \\(429\\). Try again in 12s"
+    },
+    "403_scope": {
+      "response": {
+        "status": 403,
+        "body": {
+          "errors": [
+            {
+              "message": "Forbidden: missing scope",
+              "extensions": {
+                "type": "forbidden"
+              }
+            }
+          ]
+        }
+      },
+      "match": "refused the request \\(403\\).*missing scope"
+    },
+    "403_rate_limit": {
+      "response": {
+        "status": 429,
+        "headers": {
+          "retry-after": "12"
+        },
+        "body": {
+          "errors": [
+            {
+              "message": "Rate limit exceeded",
+              "extensions": {
+                "code": "RATELIMITED"
+              }
+            }
+          ]
+        }
+      },
+      "match": "rate limit reached.*Try again in 12s"
+    },
+    "5xx": {
+      "response": {
+        "status": 502,
+        "rawBody": "<html><body><h1>502 Bad Gateway</h1></body></html>"
+      },
+      "match": "having problems \\(HTTP 502\\)"
+    },
+    "timeout": {
+      "throws": "TimeoutError",
+      "match": "did not answer within 20s"
+    },
+    "network": {
+      "throws": "ECONNRESET",
+      "match": "Could not reach Linear \\(ECONNRESET\\)"
+    },
+    "malformed_json": {
+      "response": {
+        "status": 200,
+        "rawBody": "<html>maintenance</html>"
+      },
+      "match": "could not be read \\(HTTP 200, not valid JSON\\)"
+    }
+  }
+}

@@ -16,6 +16,7 @@ import os from "os";
 import path from "path";
 import crypto from "crypto";
 import { execFile } from "child_process";
+import { buildChildEnv } from "./childEnv.js";
 
 const GROQ_URL = "https://api.groq.com/openai/v1/audio/transcriptions";
 const DEFAULT_MODEL = "whisper-large-v3-turbo";
@@ -102,7 +103,7 @@ export function parseTranscriptFile(file) {
 
 function run(exec, cmd, args, timeout) {
   return new Promise((resolve, reject) => {
-    exec(cmd, args, { timeout, windowsHide: true, maxBuffer: 1024 * 1024 }, (err, stdout, stderr) => {
+    exec(cmd, args, { timeout, windowsHide: true, maxBuffer: 1024 * 1024, env: buildChildEnv({ profile: "media" }) }, (err, stdout, stderr) => {
       if (err) reject(Object.assign(err, { stderr }));
       else resolve({ stdout, stderr });
     });

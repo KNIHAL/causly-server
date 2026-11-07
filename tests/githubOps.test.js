@@ -60,7 +60,7 @@ describe("githubOps — auth & error handling", () => {
 
   it("throws a formatted error including the API message on failure", async () => {
     global.fetch.mockReturnValueOnce(jsonRes({ message: "Bad credentials" }, false, 401));
-    await expect(githubGetAuthenticatedUser()).rejects.toThrow(/GitHub API error \(401\): Bad credentials/);
+    await expect(githubGetAuthenticatedUser()).rejects.toThrow(/GitHub rejected the credentials \(401\)/);
   });
 
   it("sends bearer auth and required GitHub headers", async () => {
@@ -257,7 +257,7 @@ describe("githubOps — pull requests", () => {
   it("getPullRequestDiff throws on a failed response", async () => {
     global.fetch.mockReturnValueOnce(textRes("", false, 404));
     await expect(githubGetPullRequestDiff({ owner: "acme", repo: "infra", pull_number: 5 })).rejects.toThrow(
-      /GitHub API error \(404\)/
+      /GitHub could not find that \(404\)/
     );
   });
 

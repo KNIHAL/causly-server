@@ -2,12 +2,15 @@ import { execFile } from "child_process";
 import { promisify } from "util";
 import * as githubOps from "./githubOps.js";
 
+import { buildChildEnv } from "./childEnv.js";
+
 const execFileAsync = promisify(execFile);
 
 async function runTerraform(args, cwd, timeout_ms = 120000) {
   try {
     const { stdout, stderr } = await execFileAsync("terraform", args, {
       cwd,
+      env: buildChildEnv({ profile: "terraform" }),
       timeout: timeout_ms,
       maxBuffer: 1024 * 1024 * 20,
     });

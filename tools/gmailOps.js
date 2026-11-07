@@ -1,3 +1,5 @@
+import { httpFetch, readBody, failureFromResponse, malformedReply, scrubRemote } from "./httpErrors.js";
+import { UNTRUSTED_NOTICE } from "./webOps.js";
 const GMAIL_API = "https://gmail.googleapis.com/gmail/v1";
 const TOKEN_URL = "https://oauth2.googleapis.com/token";
 
@@ -22,50 +24,64 @@ async function getAccessToken() {
     return cachedAccessToken;
   }
   const { client_id, client_secret, refresh_token } = getCreds();
-  const res = await fetch(TOKEN_URL, {
-    method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body: new URLSearchParams({
-      client_id,
-      client_secret,
-      refresh_token,
-      grant_type: "refresh_token",
-    }),
-  });
-  const data = await res.json();
+  const secrets = [client_secret, refresh_token];
+  const res = await httpFetch(
+    "gmail",
+    fetch,
+    TOKEN_URL,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({
+        client_id,
+        client_secret,
+        refresh_token,
+        grant_type: "refresh_token",
+      }),
+    },
+    { timeoutMs: 15_000, secrets }
+  );
+  const body = await readBody(res);
   if (!res.ok) {
-    throw new Error(`Gmail OAuth refresh error: ${data.error_description || data.error || res.statusText}`);
+    const code = body.data?.error;
+    if (res.status === 429 || res.status >= 500) throw failureFromResponse("gmail", res, body, { secrets });
+    const why = scrubRemote(body.data?.error_description || code || "", secrets);
+    if (code === "invalid_grant") {
+      throw new Error(`Google says the Gmail refresh token is expired or revoked${why ? ` (${why})` : ""}. If your Google Cloud app is in Testing mode, tokens expire after 7 days. Fix: run "causly-server login google" in a terminal.`);
+    }
+    throw new Error(`Google refused the Gmail sign-in${why ? ` (${why})` : ` (HTTP ${res.status})`}. Check GMAIL_CLIENT_ID, GMAIL_CLIENT_SECRET and GMAIL_REFRESH_TOKEN.`);
   }
+  if (body.malformed || !body.data?.access_token) throw malformedReply("gmail", res.status);
+  const data = body.data;
   cachedAccessToken = data.access_token;
-  cachedExpiry = Date.now() + data.expires_in * 1000;
+  cachedExpiry = Date.now() + (Number(data.expires_in) || 3600) * 1000;
   return cachedAccessToken;
 }
 
 async function gmailFetch(path, options = {}) {
   const token = await getAccessToken();
-  const res = await fetch(`${GMAIL_API}${path}`, {
-    ...options,
-    headers: {
-      Authorization: `Bearer ${token}`,
-      ...(options.body ? { "Content-Type": "application/json" } : {}),
-      ...options.headers,
+  const res = await httpFetch(
+    "gmail",
+    fetch,
+    `${GMAIL_API}${path}`,
+    {
+      ...options,
+      headers: {
+        Authorization: `Bearer ${token}`,
+        ...(options.body ? { "Content-Type": "application/json" } : {}),
+        ...options.headers,
+      },
     },
-  });
-
-  const text = await res.text();
-  let data;
-  try {
-    data = text ? JSON.parse(text) : null;
-  } catch {
-    data = text;
-  }
-
+    { secrets: [token] }
+  );
+  const body = await readBody(res);
   if (!res.ok) {
-    const message = data?.error?.message || res.statusText;
-    throw new Error(`Gmail API error (${res.status}): ${message}`);
+    // A 401 here means the cached access token died; drop it so the next call refreshes.
+    if (res.status === 401) cachedAccessToken = null;
+    throw failureFromResponse("gmail", res, body, { secrets: [token] });
   }
-
-  return data;
+  if (body.malformed) throw malformedReply("gmail", res.status);
+  return body.data;
 }
 
 function base64UrlEncode(str) {
@@ -143,6 +159,7 @@ export async function gmailGetMessage({ message_id }) {
     messageIdHeader: extractHeader(headers, "Message-ID"),
     snippet: data.snippet,
     body: extractBody(data.payload),
+    notice: UNTRUSTED_NOTICE,
     labelIds: data.labelIds,
   };
 }
@@ -152,6 +169,7 @@ export async function gmailGetThread({ thread_id }) {
   const data = await gmailFetch(`/users/me/threads/${thread_id}?format=full`);
   return {
     id: data.id,
+    notice: UNTRUSTED_NOTICE,
     messages: (data.messages || []).map((m) => {
       const headers = m.payload?.headers;
       return {

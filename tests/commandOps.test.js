@@ -96,8 +96,8 @@ describe.skipIf(process.platform !== "win32")("runCommand - Windows execution ch
     const result = await runCommand({ command: "echo hello" });
     expect(result.exit_code).toBe(0);
     expect(result.stdout).toBe("hello");
-    expect(result.command).toBe("echo hello");
-    expect(result.risk).toEqual({ risk: "LOW", signals: [] });
+    expect(result.command).toBeUndefined();
+    expect(result.risk).toBeUndefined();
     expect(execFile.mock.calls[0][0]).toMatch(/powershell\.exe$/i);
     expect(execFile.mock.calls[0][1]).toEqual(["-NoProfile", "-NonInteractive", "-Command", "echo hello"]);
   });

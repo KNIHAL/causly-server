@@ -55,7 +55,7 @@ server.registerTool(
       name: z.string().optional(),
       ports: z.array(z.string()).optional().describe("e.g. ['8080:80']"),
       env: z.record(z.string()).optional(),
-      volumes: z.array(z.string()).optional().describe("e.g. ['/host/path:/container/path']"),
+      volumes: z.array(z.string()).optional().describe("e.g. ['/host/path:/container/path']. With CAUSLY_WORKSPACE set, host folders must be inside it; named volumes are fine"),
       detach: z.boolean().optional().describe("Defaults to true"),
       command: z.string().optional().describe("Override command to run in the container"),
       confirm: z.boolean().optional().describe("Must be true to proceed"),
@@ -178,7 +178,7 @@ server.registerTool(
 server.registerTool(
   "docker_compose_up",
   {
-    description: "Run docker compose up for a project directory. HIGH risk — requires confirm: true.",
+    description: "Run docker compose up for a project directory. HIGH risk — requires confirm: true. With CAUSLY_WORKSPACE set, the Compose file's host mounts, build contexts and secret/config files must be inside it.",
     inputSchema: {
       project_dir: z.string().describe("Directory containing docker-compose.yml"),
       detach: z.boolean().optional().describe("Defaults to true"),

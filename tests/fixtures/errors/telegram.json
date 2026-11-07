@@ -1,0 +1,105 @@
+{
+    "service":  "telegram",
+    "secrets":  [
+                    "123456:SECRET-abc"
+                ],
+    "cases":  {
+                  "401":  {
+                              "response":  {
+                                               "body":  {
+                                                            "ok":  false,
+                                                            "description":  "Unauthorized",
+                                                            "error_code":  401
+                                                        },
+                                               "status":  401
+                                           },
+                              "match":  "rejected the credentials \\(401\\).*causly-server setup telegram"
+                          },
+                  "403_scope":  {
+                                    "response":  {
+                                                     "body":  {
+                                                                  "ok":  false,
+                                                                  "description":  "Forbidden: bot was blocked by the user",
+                                                                  "error_code":  403
+                                                              },
+                                                     "status":  403
+                                                 },
+                                    "match":  "refused the request \\(403\\).*blocked by the user.*press Start"
+                                },
+                  "403_rate_limit":  {
+                                         "response":  {
+                                                          "status":  429,
+                                                          "body":  {
+                                                                       "ok":  false,
+                                                                       "description":  "Too Many Requests: retry after 3",
+                                                                       "parameters":  {
+                                                                                          "retry_after":  3
+                                                                                      },
+                                                                       "error_code":  429
+                                                                   },
+                                                          "headers":  {
+                                                                          "retry-after":  "3"
+                                                                      }
+                                                      },
+                                         "match":  "rate limit reached.*Try again in 3s"
+                                     },
+                  "404":  {
+                              "response":  {
+                                               "body":  {
+                                                            "ok":  false,
+                                                            "description":  "Not Found",
+                                                            "error_code":  404
+                                                        },
+                                               "status":  404
+                                           },
+                              "match":  "could not find that \\(404\\)"
+                          },
+                  "429":  {
+                              "response":  {
+                                               "body":  {
+                                                            "ok":  false,
+                                                            "description":  "Too Many Requests: retry after 7",
+                                                            "parameters":  {
+                                                                               "retry_after":  7
+                                                                           },
+                                                            "error_code":  429
+                                                        },
+                                               "status":  429
+                                           },
+                              "match":  "rate limit reached \\(429\\). Try again in 7s"
+                          },
+                  "5xx":  {
+                              "response":  {
+                                               "status":  502,
+                                               "rawBody":  "\u003chtml\u003e\u003cbody\u003e\u003ch1\u003e502 Bad Gateway\u003c/h1\u003e\u003c/body\u003e\u003c/html\u003e"
+                                           },
+                              "match":  "having problems \\(HTTP 502\\)"
+                          },
+                  "timeout":  {
+                                  "match":  "did not answer within 20s",
+                                  "throws":  "TimeoutError"
+                              },
+                  "network":  {
+                                  "match":  "Could not reach Telegram \\(ECONNREFUSED\\)",
+                                  "throws":  "ECONNREFUSED"
+                              },
+                  "malformed_json":  {
+                                         "response":  {
+                                                          "status":  200,
+                                                          "rawBody":  "not json at all"
+                                                      },
+                                         "match":  "could not be read \\(HTTP 200, not valid JSON\\)"
+                                     },
+                  "secret_in_message":  {
+                                            "response":  {
+                                                             "body":  {
+                                                                          "ok":  false,
+                                                                          "description":  "Bad Request: bad token 123456:SECRET-abc",
+                                                                          "error_code":  400
+                                                                      },
+                                                             "status":  400
+                                                         },
+                                            "match":  "returned an error \\(400\\)"
+                                        }
+              }
+}

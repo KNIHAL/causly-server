@@ -113,7 +113,8 @@ async function runSemantic({ repo_path, action, timeout_ms }) {
     };
   }
   const result = await runCommand({ command, cwd: repo_path, timeout_ms });
-  return { repo_path, action, ran: true, command, ...result };
+  // `command` is the script Causly resolved for this action, not an echo of the input.
+  return { ran: true, command, ...result };
 }
 
 export async function runTests({ repo_path, timeout_ms }) {

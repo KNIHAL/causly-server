@@ -12,6 +12,7 @@ import fs from "fs";
 import os from "os";
 import path from "path";
 import { causlyHome } from "./paths.js";
+import { chmodQuiet } from "./privateFiles.js";
 
 const migrations = new Map(); // namespace -> SQL statements, in order
 const applied = new Map(); // namespace -> highest applied version, for the open db
@@ -47,10 +48,11 @@ async function openDatabase(file) {
   } catch {
     throw new Error(`The local store needs Node 22.13 or newer (this is ${process.version}).`);
   }
-  if (file !== ":memory:") fs.mkdirSync(path.dirname(file), { recursive: true });
+  if (file !== ":memory:") fs.mkdirSync(path.dirname(file), { recursive: true, mode: 0o700 });
   let handle;
   try {
     handle = new sqlite.DatabaseSync(file);
+    if (file !== ":memory:") chmodQuiet(file, 0o600); // owner only (macOS/Linux); -wal and -shm copy this mode
     handle.exec("PRAGMA busy_timeout = 5000;"); // set first, so the WAL switch below also waits for other processes
     handle.exec("PRAGMA journal_mode = WAL; PRAGMA foreign_keys = ON;"); // wait for another process's write instead of failing
     handle.exec(

@@ -1,0 +1,81 @@
+{
+  "service": "supabase",
+  "secrets": [
+    "sbp_SECRETTOKEN"
+  ],
+  "cases": {
+    "401": {
+      "response": {
+        "status": 401,
+        "body": {
+          "message": "Invalid access token format."
+        }
+      },
+      "match": "rejected the credentials \\(401\\).*causly-server setup supabase"
+    },
+    "404": {
+      "response": {
+        "status": 404,
+        "body": {
+          "message": "Project not found"
+        }
+      },
+      "match": "Project not found"
+    },
+    "429": {
+      "response": {
+        "status": 429,
+        "headers": {
+          "retry-after": "12"
+        },
+        "body": {
+          "message": "Too many requests"
+        }
+      },
+      "match": "rate limit reached \\(429\\). Try again in 12s"
+    },
+    "403_scope": {
+      "response": {
+        "status": 403,
+        "body": {
+          "message": "Your account does not have the necessary privileges."
+        }
+      },
+      "match": "refused the request \\(403\\).*necessary privileges"
+    },
+    "403_rate_limit": {
+      "response": {
+        "status": 429,
+        "headers": {
+          "retry-after": "12"
+        },
+        "body": {
+          "message": "Too many requests"
+        }
+      },
+      "match": "rate limit reached.*Try again in 12s"
+    },
+    "5xx": {
+      "response": {
+        "status": 502,
+        "rawBody": "<html><body><h1>502 Bad Gateway</h1></body></html>"
+      },
+      "match": "having problems \\(HTTP 502\\)"
+    },
+    "timeout": {
+      "throws": "TimeoutError",
+      "match": "did not answer within 20s"
+    },
+    "network": {
+      "throws": "ECONNRESET",
+      "match": "Could not reach Supabase \\(ECONNRESET\\)"
+    },
+    "malformed_json": {
+      "response": {
+        "status": 200,
+        "rawBody": "<html>maintenance</html>"
+      },
+      "match": "could not be read \\(HTTP 200, not valid JSON\\)"
+    }
+  }
+}

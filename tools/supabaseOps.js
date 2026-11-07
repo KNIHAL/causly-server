@@ -1,3 +1,4 @@
+import { httpFetch, readBody, failureFromResponse, malformedReply } from "./httpErrors.js";
 const SUPABASE_API = "https://api.supabase.com/v1";
 
 function getToken() {
@@ -12,29 +13,19 @@ function getToken() {
 
 async function supabaseFetch(path, options = {}) {
   const token = getToken();
-  const res = await fetch(`${SUPABASE_API}${path}`, {
+  const res = await httpFetch("supabase", fetch, `${SUPABASE_API}${path}`, {
     ...options,
     headers: {
       Authorization: `Bearer ${token}`,
       ...(options.body ? { "Content-Type": "application/json" } : {}),
       ...options.headers,
     },
-  });
+  }, { secrets: [token] });
 
-  const text = await res.text();
-  let data;
-  try {
-    data = text ? JSON.parse(text) : null;
-  } catch {
-    data = text;
-  }
-
-  if (!res.ok) {
-    const message = data?.message || res.statusText;
-    throw new Error(`Supabase API error (${res.status}): ${message}`);
-  }
-
-  return data;
+  const parsed = await readBody(res);
+  if (!res.ok) throw failureFromResponse("supabase", res, parsed, { secrets: [token] });
+  if (parsed.malformed) throw malformedReply("supabase", res.status);
+  return parsed.data;
 }
 
 /** List organizations the authenticated account belongs to. Needed to create a new project. */
