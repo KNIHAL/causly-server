@@ -6,6 +6,7 @@ import path from "path";
 import { execFile } from "child_process";
 import { PACKAGE_ROOT, causlyHome, envFiles } from "./paths.js";
 import { describeChildEnv } from "./childEnv.js";
+import { GOOGLE_TOKEN_ENVS, googleSignIns, markedPublished } from "./googleToken.js";
 import { FILE_MODE, chmodQuiet, homePrivacy, writeFileAtomic } from "./privateFiles.js";
 
 export const SERVER_NAME = "causly-server";
@@ -207,7 +208,7 @@ function probe(exec, cmd, args) {
   return new Promise((resolve) => exec(cmd, args, { timeout: 8000, windowsHide: true }, (err, stdout) => resolve(err ? null : String(stdout).split("\n")[0].trim())));
 }
 
-export async function runDoctor({ env = process.env, exec = execFile, nodeVersion = process.versions.node, platform, home } = {}) {
+export async function runDoctor({ env = process.env, exec = execFile, nodeVersion = process.versions.node, platform, home, now = new Date() } = {}) {
   const checks = [];
   const add = (name, ok, detail) => checks.push({ name, ok, detail });
 
@@ -220,6 +221,13 @@ export async function runDoctor({ env = process.env, exec = execFile, nodeVersio
   const configured = SERVICES.filter(([, keys]) => loaded(keys)).map(([n]) => n);
   const missing = SERVICES.filter(([, keys]) => !loaded(keys)).map(([n]) => n);
   add("Integrations configured", configured.length > 0, configured.length ? configured.join(", ") : "none yet (add keys to the settings file)");
+
+  // Google expires a Testing-status app's sign-in after 7 days: say so before it happens
+  if (markedPublished(env)) {
+    if (Object.keys(GOOGLE_TOKEN_ENVS).some((k) => env[k])) add("Google sign-in", true, "marked as published (CAUSLY_GOOGLE_PUBLISHED), so no 7-day expiry warnings");
+  } else {
+    for (const s of googleSignIns({ env, now })) add("Google sign-in", s.level === "ok", s.text);
+  }
 
   const ff = await probe(exec, "ffmpeg", ["-version"]);
   add("ffmpeg (large recordings)", Boolean(ff), ff ? ff.slice(0, 40) : "not found; only needed for recordings over 25 MB");

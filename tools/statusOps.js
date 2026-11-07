@@ -5,6 +5,7 @@ import { CLIENTS, SERVER_NAME, clientConfigPath, readJson } from "./cliOps.js";
 import { dbPath } from "./store.js";
 import { latestBackup } from "./backupOps.js";
 import { checkForUpdate, updateMessage } from "./updateCheck.js";
+import { googleWarnings } from "./googleToken.js";
 import { PACKS } from "../packs/registry.js";
 
 const CLIENT_LABEL = { claude: "Claude Desktop", cursor: "Cursor", windsurf: "Windsurf" };
@@ -77,6 +78,8 @@ export async function runStatus({ env = process.env, version, platform, home, db
   lines.push(`Keys:      ${ready.length ? `${ready.length} ready (${ready.join(", ")})` : "none yet"}`);
   if (partial.length) lines.push(`           incomplete: ${partial.join(", ")}`);
   lines.push('           add or fix with "causly-server setup", test with "causly-server doctor --test"');
+  const google = googleWarnings({ env, now });
+  for (const g of google) lines.push(`Google:    ${g.text}`);
 
   // data
   const data = await readData(dbFile, now);
@@ -100,5 +103,5 @@ export async function runStatus({ env = process.env, version, platform, home, db
     const msg = updateMessage(await checkForUpdate({ current: version, fetch: fetchFn, env }));
     if (msg) lines.push("", msg);
   }
-  return { lines, editors: editors.map((e) => e.client), ready, partial, data, backup };
+  return { lines, editors: editors.map((e) => e.client), ready, partial, google, data, backup };
 }
