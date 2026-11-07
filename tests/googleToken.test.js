@@ -192,6 +192,19 @@ describe("doctor and status", () => {
   const where = () => ({ platform: "linux", home: path.join(dir, "home"), exec, nodeVersion: "22.14.0", now: NOW });
   const googleCheck = (r) => r.checks.filter((c) => c.name === "Google sign-in");
 
+  // doctor's overall ok needs a settings file. A developer checkout has a .env, a CI runner does not,
+  // so point it at a file of our own to make the result the same everywhere.
+  let savedEnvFile;
+  beforeEach(() => {
+    savedEnvFile = process.env.CAUSLY_ENV_FILE;
+    fs.writeFileSync(file, "# test settings\n");
+    process.env.CAUSLY_ENV_FILE = file;
+  });
+  afterEach(() => {
+    if (savedEnvFile === undefined) delete process.env.CAUSLY_ENV_FILE;
+    else process.env.CAUSLY_ENV_FILE = savedEnvFile;
+  });
+
   it("doctor warns from day 5, with the days left and the fix", async () => {
     const r = await runDoctor({ ...where(), env: withToken(5) });
     const [c] = googleCheck(r);
