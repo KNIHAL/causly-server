@@ -30,7 +30,6 @@ jobs:
           find . -name "*.js" \
             -not -path "./node_modules/*" \
             -not -path "./website/*" \
-            -not -path "./docs/*" \
             -print0 | \
             xargs -0 -n1 node --check
 

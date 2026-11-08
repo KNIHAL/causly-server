@@ -1,7 +1,7 @@
 {
   "name": "causly-server",
   "mcpName": "io.github.KNIHAL/causly-server",
-  "version": "1.5.4",
+  "version": "1.6.0",
   "description": "Open-source MCP server that turns any AI agent into your technical co-founder",
   "license": "MIT",
   "main": "index.js",

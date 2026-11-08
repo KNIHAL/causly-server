@@ -10,6 +10,9 @@
   <a href="./CONTRIBUTING.md"><img src="https://img.shields.io/badge/PRs-welcome-brightgreen.svg" alt="PRs welcome"></a>
 </p>
 
+[![Causly Server MCP server](https://mcprush.com/badge/causly-server-mcp/card.svg)](https://mcprush.com/to/causly-server-mcp?ref=badge)
+[![Causly Server MCP server – quality and maintenance score on Glama](https://glama.ai/mcp/servers/KNIHAL/causly-server/badges/card.svg)](https://glama.ai/mcp/servers/KNIHAL/causly-server)
+
 Most agents can write text. Causly Server gives them hands: they ship code, hunt for clients, track deals, take meeting notes, handle your calendar and remind you on Telegram, all from one conversation, all on your own machine.
 
 ```bash
@@ -18,7 +21,7 @@ causly-server init
 ```
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/KNIHAL/causly-server/master/docs/images/demo.gif" alt="Install, init and doctor in under ten seconds" width="85%">
+  <img src="https://raw.githubusercontent.com/KNIHAL/causly-server/master/assets/demo.gif" alt="Install, init and doctor in under ten seconds" width="85%">
 </p>
 
 ## Contents
@@ -52,7 +55,7 @@ A founder's week is not only code. It is also finding clients, following up, rem
 
 ## Quick start
 
-Requires Node.js 20 or newer.
+Requires Node.js 22.13 or newer. Full guide: [Getting started](https://server.causly.in/docs/server/getting-started).
 
 **1. Install**
 
@@ -104,14 +107,14 @@ causly-server init --toolsets research,pipeline,meetings   # choose which packs 
 ## How it works
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/KNIHAL/causly-server/master/docs/images/architecture.png" alt="Architecture: your AI agent talks MCP to Causly Server, which has a tool router, a safety layer, tool packs and a local store, and calls your services over their APIs." width="100%">
+  <img src="https://raw.githubusercontent.com/KNIHAL/causly-server/master/assets/architecture.png" alt="Architecture: your AI agent talks MCP to Causly Server, which has a tool router, a safety layer, tool packs and a local store, and calls your services over their APIs." width="100%">
 </p>
 
 Your agent talks to Causly Server over MCP (stdio). Inside the server:
 
 1. **Tool router.** `search_tools`, `load_toolset` and `use_tool` let the agent find a tool and call it by name. Packs load on demand, and `use_tool` works even in editors that do not refresh their tool list mid-chat, so you do not need to restart.
 2. **Safety layer.** Permission levels, confirmation for risky actions, an optional workspace limit, secret redaction and an activity log.
-3. **Tool packs.** About 230 tools grouped into packs (below).
+3. **Tool packs.** About 245 tools grouped into packs (below).
 4. **Local store.** SQLite for pipeline, meetings and reminders in `~/.causly`, encrypted secrets, and your API keys in `~/.causly/.env`.
 5. **Your services.** GitHub, Vercel, Docker, Terraform, Postgres, Slack, Notion, Linear, Gmail, Google Calendar, Telegram and more, reached with your own keys.
 
@@ -215,6 +218,7 @@ Changes are picked up without restarting your editor.
 | Groq (meeting transcription) | `GROQ_API_KEY` | Free tier available. Audio is uploaded to Groq only when you confirm a transcription |
 | Secrets manager | `SECRETS_MASTER_KEY` | 32-byte hex key you generate and keep |
 | Timezone (optional) | `CAUSLY_TIMEZONE` | IANA name, e.g. `Asia/Kolkata`; defaults to your machine's zone |
+| Safety (optional) | `CAUSLY_WORKSPACE`, `CAUSLY_READ_ONLY`, `CAUSLY_PASSTHROUGH_ENV` | One folder only, read tools only, extra variables for child processes. See [Security](https://server.causly.in/docs/server/security) |
 
 Docker and Terraform need no key, only the CLI on your `PATH`. Postgres and MySQL take a connection string on each call. Transcribing recordings over 25 MB needs `ffmpeg` on your `PATH`.
 
@@ -273,17 +277,24 @@ console.log(result.content[0].text);
 
 Causly can touch your files, repositories and infrastructure, so the controls live in the server itself. See [SECURITY.md](./SECURITY.md) to report a vulnerability.
 
-- **Permission levels.** Every tool is `READ`, `LOW`, `MEDIUM`, `HIGH` or `DESTRUCTIVE`. `HIGH` and `DESTRUCTIVE` actions (deploys, merges, shell commands, deletes, raw SQL, Terraform apply and destroy, Docker removal) need an explicit `confirm: true`.
-- **Workspace limit.** `causly-server init --workspace <folder>` restricts file and command tools to one folder.
+- **Permission levels.** Every tool is `READ`, `LOW`, `MEDIUM`, `HIGH` or `DESTRUCTIVE`. `HIGH` and `DESTRUCTIVE` actions (deploys, merges, shell commands, deletes, raw SQL, Terraform apply and destroy, Docker removal) need approval.
+- **You approve, not the agent.** When your editor supports MCP prompts (elicitation), it asks you, and the agent cannot answer for you. Other clients keep the explicit `confirm: true` flag. An optional `~/.causly/policy.json` sets allow, ask or deny per tool or per risk level, and a broken file blocks instead of allowing.
+- **Read-only mode.** `CAUSLY_READ_ONLY=true` keeps only read tools. Everything else disappears from the tool list and is refused, whatever the policy says.
+- **Workspace limit.** `causly-server init --workspace <folder>` restricts file and command tools to one folder. It also covers Docker volumes, Compose files and project resources.
+- **Minimal child environment.** Commands and tools you run get a small environment, not every key Causly holds. `CAUSLY_PASSTHROUGH_ENV` adds names you choose.
 - **Command risk checks.** Drive wipes, formatting and shutdown commands are blocked. Force-pushes, `DROP TABLE`, `curl | bash` and `sudo` are flagged.
 - **Path protection.** Writes and deletes inside protected system directories are blocked.
 - **Secret redaction.** Tokens, passwords and API keys are redacted before anything is written to logs.
 - **Local encrypted secrets.** The built-in secrets manager uses AES-256-GCM with a key you control. No external vault needed.
-- **Activity log.** Every call is recorded in `logs/activity.log` as structured JSONL (timestamp, operation ID, risk level, status, redacted input, duration).
+- **Untrusted content.** Email and GitHub text the agent reads is marked as untrusted, so instructions hidden in it are not followed as yours.
+- **Activity log.** Every call is recorded in `logs/activity.log` as structured JSONL (timestamp, operation ID, risk level, status, redacted input, duration). It rotates at 10 MB and keeps 5 files.
+- **Private files.** Causly's own files in `~/.causly` are readable only by you and are written atomically.
+
+More detail, settings and limits: [Security](https://server.causly.in/docs/server/security).
 
 **Privacy.** Causly Server has no Causly cloud and no Causly account. Your pipeline, meetings and reminders are stored in a local SQLite file, and your keys stay in `~/.causly/.env`. Data leaves your machine only when you use a service you configured, for example GitHub, Gmail, Telegram, or Groq for transcription, and only to that service.
 
-Optional BoundaryAttest receipts for `ship_change`, `verify_ci_fix` and `deploy_project` are described in [the docs](https://agenv.causly.in/docs/server/tools/boundaryattest).
+Optional BoundaryAttest receipts for `ship_change`, `verify_ci_fix` and `deploy_project` are described in [the docs](https://server.causly.in/docs/server/tools/boundaryattest).
 
 ## Command reference
 
@@ -315,7 +326,7 @@ Start with `causly-server doctor`. It tells you what is missing.
 | `causly-server` is not recognized after install | Open a new terminal so your `PATH` refreshes. Check that your npm global folder (`npm config get prefix`) is on `PATH`. |
 | Editor does not show the tools after `init` | Quit the editor completely (including the system tray) and open it again. |
 | The agent cannot see a tool that is not loaded | Ask it to call the tool with `use_tool`, or run `causly-server toolsets add <pack>`. |
-| Gmail or Calendar stopped working | Your Google token expired (7 days in Testing mode). Run `causly-server login google`. |
+| Gmail or Calendar stopped working | Your Google token expired (7 days in Testing mode). Run `causly-server login google`. `status` and `doctor` warn from day 5. Publish your Google app to stop it for good, then set `CAUSLY_GOOGLE_PUBLISHED=true`. |
 | `redirect_uri_mismatch` during Google sign-in | Your OAuth client is a "Web application". Create a **Desktop app** client instead. |
 | A reminder never reached Telegram | Set both `TELEGRAM_BOT_TOKEN` and `TELEGRAM_CHAT_ID`, then run `causly-server doctor --test`. |
 | Transcription fails on a large file | Install `ffmpeg` and make sure it is on your `PATH`. Files above 25 MB are compressed first. |
@@ -346,9 +357,8 @@ Start with `causly-server doctor`. It tells you what is missing.
 
 | | Status |
 | --- | --- |
-| Node.js | 20 or newer |
-| Windows | Tested |
-| macOS and Linux | Expected to work; not yet tested on real machines. Reports welcome. |
+| Node.js | 22.13 or newer (CI runs Node 22 and 24) |
+| Windows, macOS, Linux | Tested on every pull request in CI. Reports from real machines are welcome. |
 | Editors | Claude Desktop, Cursor, Windsurf (tested); Claude Code (command printed by `init`) |
 
 ## Known limitations
@@ -361,7 +371,7 @@ Start with `causly-server doctor`. It tells you what is missing.
 
 ## Contributing, roadmap, license
 
-- Docs: [agenv.causly.in/docs/server](https://agenv.causly.in/docs/server/intro)
+- Docs: [server.causly.in/docs/server](https://server.causly.in/docs/server/getting-started)
 - [CONTRIBUTING.md](./CONTRIBUTING.md) explains how to add a tool pack and the manual testing checklist. Please read the [Code of Conduct](./CODE_OF_CONDUCT.md) too.
 - [ROADMAP.md](./ROADMAP.md) has what is planned next. [CHANGELOG.md](./CHANGELOG.md) has release history.
 - License: [MIT](./LICENSE).

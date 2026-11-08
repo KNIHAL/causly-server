@@ -4,6 +4,8 @@ All notable changes to this project are documented here.
 
 ## [1.6.0] - unreleased
 
+Version 1.5.4 was never published to npm. Its changes (below) ship in 1.6.0.
+
 ### Behavior changes
 - Commands and other child processes (`run_command`, project commands, Docker, Terraform, git, ffmpeg) now get a minimal environment instead of every variable the server holds, so your API keys stay out of them. Add names with `CAUSLY_PASSTHROUGH_ENV` (`*` restores the old behavior).
 - `run_command` results no longer echo the command and folder. `directory_tree` skips build folders and defaults to depth 3 and 1000 entries.
@@ -13,7 +15,7 @@ All notable changes to this project are documented here.
 - Calendar `update` and `delete` on recurring events take a `scope` of `this`, `following` or `all`.
 
 ### Security
-- Operator approval: when the client supports MCP elicitation, `HIGH` and `DESTRUCTIVE` calls ask the operator, not the agent's `confirm` flag. An optional `~/.causly/policy.json` sets allow, ask or deny per tool or risk level, and a broken file fails closed.
+- Operator approval: when the client supports MCP elicitation, `HIGH` and `DESTRUCTIVE` calls ask you in your editor, and the agent cannot answer for you. Other clients keep the `confirm: true` flag. An optional `~/.causly/policy.json` sets allow, ask or deny per tool or risk level, and a broken file fails closed.
 - Read-only mode: `CAUSLY_READ_ONLY=true` keeps only `READ` tools. The rest are hidden, refused by `use_tool` and refused by the approval gate, whatever `confirm` or the policy says.
 - `CAUSLY_STRICT_PROJECT_COMMANDS=true` makes `run_tests`, `run_lint`, `run_typecheck` and `run_build` need approval.
 - Causly's own files are owner-only and written atomically.
