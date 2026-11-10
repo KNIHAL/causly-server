@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "causly-server": {
+      "command": "npx",
+      "args": ["-y", "causly-server"],
+      "env": {
+        "CAUSLY_TOOLSETS": "research,leads,seo,pipeline,reminders,meetings"
+      }
+    }
+  }
+}
